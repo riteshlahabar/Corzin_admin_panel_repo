@@ -234,27 +234,31 @@ class AnalyticsController extends Controller
 
         $topDoctorEarnings = DoctorAppointment::query()
             ->leftJoin('doctors', 'doctors.id', '=', 'doctor_appointments.doctor_id')
-            ->selectRaw("TRIM(CONCAT(COALESCE(doctors.first_name, ''), ' ', COALESCE(doctors.last_name, ''))) as label, COALESCE(SUM(COALESCE(doctor_appointments.charges, 0)), 0) as total")
+            ->selectRaw("doctor_appointments.doctor_id as doctor_id, COALESCE(SUM(COALESCE(doctor_appointments.charges, 0)), 0) as total, MAX(doctors.first_name) as first_name, MAX(doctors.last_name) as last_name")
             ->whereNotNull('doctor_appointments.charges')
             ->whereNotIn('doctor_appointments.status', ['cancelled', 'declined', 'rejected'])
-            ->groupByRaw("TRIM(CONCAT(COALESCE(doctors.first_name, ''), ' ', COALESCE(doctors.last_name, '')))")
+            ->groupBy('doctor_appointments.doctor_id')
             ->orderByDesc('total')
             ->limit(5)
             ->get()
             ->map(fn ($row) => [
-                'label' => trim((string) $row->label) !== '' ? $row->label : 'Unknown Doctor',
+                'label' => trim(((string) ($row->first_name ?? '')).' '.((string) ($row->last_name ?? ''))) !== ''
+                    ? trim(((string) ($row->first_name ?? '')).' '.((string) ($row->last_name ?? '')))
+                    : 'Unknown Doctor',
                 'total' => (float) $row->total,
             ]);
 
         $topDairyEarnings = MilkProduction::query()
             ->leftJoin('dairies', 'dairies.id', '=', 'milk_productions.dairy_id')
-            ->selectRaw("COALESCE(NULLIF(TRIM(dairies.dairy_name), ''), 'Unknown Dairy') as label, COALESCE(SUM(milk_productions.total_milk * COALESCE(milk_productions.rate, 0)), 0) as total")
-            ->groupByRaw("COALESCE(NULLIF(TRIM(dairies.dairy_name), ''), 'Unknown Dairy')")
+            ->selectRaw("milk_productions.dairy_id as dairy_id, COALESCE(SUM(milk_productions.total_milk * COALESCE(milk_productions.rate, 0)), 0) as total, MAX(dairies.dairy_name) as dairy_name")
+            ->groupBy('milk_productions.dairy_id')
             ->orderByDesc('total')
             ->limit(5)
             ->get()
             ->map(fn ($row) => [
-                'label' => $row->label,
+                'label' => trim((string) ($row->dairy_name ?? '')) !== ''
+                    ? trim((string) $row->dairy_name)
+                    : 'Unknown Dairy',
                 'total' => (float) $row->total,
             ]);
 
@@ -329,4 +333,3 @@ class AnalyticsController extends Controller
         return round((($current - $previous) / $previous) * 100, 1);
     }
 }
-
