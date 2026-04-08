@@ -33,6 +33,8 @@
                 <li class="menu-item"><a href="{{ route('farmer.milk') }}" class="nav-link"><i class="iconoir-droplet me-2"></i> Milk Production</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.feeding') }}" class="nav-link"><i class="iconoir-leaf me-2"></i> Feeding</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.dairy') }}" class="nav-link"><i class="iconoir-building me-2"></i> Dairy</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.plan.index') }}" class="nav-link"><i class="iconoir-coins me-2"></i> Farmer Plan</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.subscription.index') }}" class="nav-link"><i class="iconoir-wallet me-2"></i> Farmer Subscription</a></li>
             </ul>
         </div>
     </li>
@@ -106,6 +108,16 @@
                 <li class="menu-item">
                     <a href="{{ route('doctor.settings') }}" class="nav-link {{ request()->routeIs('doctor.settings', 'doctor.settings.update') ? 'active' : '' }}">
                         <i class="iconoir-settings me-2"></i> Settings
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ route('doctor.plan.index') }}" class="nav-link {{ request()->routeIs('doctor.plan.*') ? 'active' : '' }}">
+                        <i class="iconoir-coins me-2"></i> Doctor Plan
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ route('doctor.subscription.index') }}" class="nav-link {{ request()->routeIs('doctor.subscription.*') ? 'active' : '' }}">
+                        <i class="iconoir-wallet me-2"></i> Doctor Subscription
                     </a>
                 </li>
             </ul>

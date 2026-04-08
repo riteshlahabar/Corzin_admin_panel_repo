@@ -10,6 +10,10 @@ use App\Http\Controllers\Api\Farmer\DairyController;
 use App\Http\Controllers\Api\Farmer\FeedingController;
 use App\Http\Controllers\Api\Farmer\ReproductiveController;
 use App\Http\Controllers\Api\Farmer\HealthController;
+use App\Http\Controllers\Api\Farmer\SubscriptionController;
+use App\Http\Controllers\Api\Doctor\DoctorController as FarmerDoctorController;
+use App\Http\Controllers\Api\Doctor\DoctorAppointmentController as FarmerDoctorAppointmentController;
+use App\Http\Controllers\Api\Doctor\DoctorSettingController as FarmerDoctorSettingController;
 use App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController as DoctorAppAppointmentController;
 use App\Http\Controllers\Api\DoctorApp\DoctorAppController;
 use App\Http\Controllers\Api\DoctorApp\DoctorSettingController as DoctorAppSettingController;
@@ -67,6 +71,30 @@ Route::prefix('health')->group(function () {
     Route::post('/dmi', [HealthController::class, 'storeDmi']);
 });
 Route::prefix('doctor')->group(function () {
+    Route::get('/list', [FarmerDoctorController::class, 'index']);
+
+    // Keep these for existing corzin_doctor clients using /doctor/*
+    Route::post('/register', [DoctorAppController::class, 'register']);
+    Route::post('/login', [DoctorAppController::class, 'login']);
+    Route::post('/forgot-password', [DoctorAppController::class, 'forgotPassword']);
+    Route::get('/profile/{doctor}', [DoctorAppController::class, 'profile']);
+    Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
+    Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
+
+    // dairycorzin doctor related APIs now use Api\Doctor\... controllers
+    Route::post('/appointments', [FarmerDoctorAppointmentController::class, 'store']);
+    Route::get('/appointments/farmer/{farmer}', [FarmerDoctorAppointmentController::class, 'indexByFarmer']);
+    Route::get('/appointments/{doctor}', [FarmerDoctorAppointmentController::class, 'indexByDoctor']);
+    Route::post('/appointments/{appointment}/farmer-approval', [FarmerDoctorAppointmentController::class, 'farmerApproval']);
+    Route::get('/settings', [FarmerDoctorSettingController::class, 'show']);
+
+    // corzin_doctor appointment actions
+    Route::post('/appointments/{appointment}/propose', [DoctorAppAppointmentController::class, 'propose']);
+    Route::post('/appointments/{appointment}/complete', [DoctorAppAppointmentController::class, 'complete']);
+    Route::post('/appointments/{appointment}/doctor-decision', [DoctorAppAppointmentController::class, 'doctorDecision']);
+});
+
+Route::prefix('doctor-app')->group(function () {
     Route::get('/list', [DoctorAppController::class, 'index']);
     Route::post('/register', [DoctorAppController::class, 'register']);
     Route::post('/login', [DoctorAppController::class, 'login']);
@@ -75,12 +103,17 @@ Route::prefix('doctor')->group(function () {
     Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
     Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
     Route::post('/appointments', [DoctorAppAppointmentController::class, 'store']);
+    Route::get('/appointments/farmer/{farmer}', [DoctorAppAppointmentController::class, 'indexByFarmer']);
     Route::get('/appointments/{doctor}', [DoctorAppAppointmentController::class, 'indexByDoctor']);
     Route::post('/appointments/{appointment}/propose', [DoctorAppAppointmentController::class, 'propose']);
     Route::post('/appointments/{appointment}/complete', [DoctorAppAppointmentController::class, 'complete']);
     Route::post('/appointments/{appointment}/doctor-decision', [DoctorAppAppointmentController::class, 'doctorDecision']);
     Route::post('/appointments/{appointment}/farmer-approval', [DoctorAppAppointmentController::class, 'farmerApproval']);
     Route::get('/settings', [DoctorAppSettingController::class, 'show']);
+});
+
+Route::prefix('subscription')->group(function () {
+    Route::get('/plans', [SubscriptionController::class, 'plans']);
 });
 
 Route::prefix('shop')->group(function () {

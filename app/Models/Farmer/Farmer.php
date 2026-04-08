@@ -34,4 +34,9 @@ class Farmer extends Model
     {
         return $this->hasMany(Dairy::class);
     }
+
+    public function subscription()
+    {
+        return $this->hasOne(FarmerSubscription::class);
+    }
 }

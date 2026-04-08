@@ -87,6 +87,11 @@ class Doctor extends Model
         return $this->hasMany(DoctorAppointment::class);
     }
 
+    public function subscription()
+    {
+        return $this->hasOne(DoctorSubscription::class);
+    }
+
     protected function documentUrl(?string $path): ?string
     {
         if (blank($path)) {

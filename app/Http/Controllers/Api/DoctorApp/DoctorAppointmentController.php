@@ -16,6 +16,7 @@ class DoctorAppointmentController extends Controller
     {
         $appointments = DoctorAppointment::query()
             ->where('doctor_id', $doctor->id)
+            ->with('doctor')
             ->latest('requested_at')
             ->latest()
             ->get()
@@ -24,6 +25,23 @@ class DoctorAppointmentController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Doctor appointments fetched successfully.',
+            'data' => $appointments,
+        ]);
+    }
+
+    public function indexByFarmer(Farmer $farmer)
+    {
+        $appointments = DoctorAppointment::query()
+            ->where('farmer_id', $farmer->id)
+            ->with('doctor')
+            ->latest('requested_at')
+            ->latest()
+            ->get()
+            ->map(fn (DoctorAppointment $appointment) => $this->appointmentPayload($appointment));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Farmer appointments fetched successfully.',
             'data' => $appointments,
         ]);
     }
@@ -198,6 +216,7 @@ class DoctorAppointmentController extends Controller
         return [
             'id' => $appointment->id,
             'doctor_id' => $appointment->doctor_id,
+            'doctor_name' => optional($appointment->doctor)->full_name ?? '',
             'farmer_id' => $appointment->farmer_id,
             'animal_id' => $appointment->animal_id,
             'farmer_name' => $appointment->farmer_name ?? '',

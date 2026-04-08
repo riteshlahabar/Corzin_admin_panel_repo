@@ -9,10 +9,14 @@ use App\Http\Controllers\Farmer\FeedingListController;
 use App\Http\Controllers\Farmer\DairyListController;
 use App\Http\Controllers\Farmer\AnimalLifecycleController;
 use App\Http\Controllers\Farmer\HealthManagementController;
+use App\Http\Controllers\Farmer\FarmerPlanController;
+use App\Http\Controllers\Farmer\FarmerSubscriptionController;
 use App\Http\Controllers\Doctor\DoctorAppointmentController;
 use App\Http\Controllers\Doctor\DoctorListController;
 use App\Http\Controllers\Doctor\DoctorSettingController;
 use App\Http\Controllers\Doctor\DoctorVisitedController;
+use App\Http\Controllers\Doctor\DoctorPlanController;
+use App\Http\Controllers\Doctor\DoctorSubscriptionController;
 use App\Http\Controllers\Shop\ShopProductController;
 use App\Http\Controllers\Reproductive\ReproductiveListController;
 
@@ -48,6 +52,11 @@ Route::prefix('farmer')->group(function () {
     Route::post('/feeding', [FeedingListController::class, 'store'])->name('farmer.feeding.store');
     Route::get('/dairy', [DairyListController::class, 'index'])->name('farmer.dairy');
     Route::post('/dairy', [DairyListController::class, 'store'])->name('farmer.dairy.store');
+    Route::get('/plan', [FarmerPlanController::class, 'index'])->name('farmer.plan.index');
+    Route::post('/plan', [FarmerPlanController::class, 'store'])->name('farmer.plan.store');
+    Route::put('/plan/{farmerPlan}', [FarmerPlanController::class, 'update'])->name('farmer.plan.update');
+    Route::get('/subscription', [FarmerSubscriptionController::class, 'index'])->name('farmer.subscription.index');
+    Route::post('/subscription', [FarmerSubscriptionController::class, 'store'])->name('farmer.subscription.store');
 });
 
 Route::prefix('animal-lifecycle')->group(function () {
@@ -80,6 +89,11 @@ Route::prefix('doctor')->group(function () {
     Route::post('/settings', [DoctorSettingController::class, 'update'])->name('doctor.settings.update');
     Route::post('/settings/banner', [DoctorSettingController::class, 'uploadBanner'])->name('doctor.settings.banner.upload');
     Route::delete('/settings/banner/{doctorBanner}', [DoctorSettingController::class, 'destroyBanner'])->name('doctor.settings.banner.destroy');
+    Route::get('/plan', [DoctorPlanController::class, 'index'])->name('doctor.plan.index');
+    Route::post('/plan', [DoctorPlanController::class, 'store'])->name('doctor.plan.store');
+    Route::put('/plan/{doctorPlan}', [DoctorPlanController::class, 'update'])->name('doctor.plan.update');
+    Route::get('/subscription', [DoctorSubscriptionController::class, 'index'])->name('doctor.subscription.index');
+    Route::post('/subscription', [DoctorSubscriptionController::class, 'store'])->name('doctor.subscription.store');
     Route::get('/{doctor}', [DoctorListController::class, 'show'])->name('doctor.show');
     Route::post('/{doctor}/toggle-approval', [DoctorListController::class, 'toggleApproval'])->name('doctor.toggle_approval');
 });
