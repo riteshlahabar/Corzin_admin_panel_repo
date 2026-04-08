@@ -209,6 +209,11 @@ class DoctorAppController extends Controller
             'district' => ['required', 'string', 'max:255'],
             'state' => ['required', 'string', 'max:255'],
             'pincode' => ['required', 'string', 'max:15'],
+            'doctor_photo' => ['nullable', 'image', 'max:5120'],
+            'adhar_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'pan_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'mmc_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'clinic_registration_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
 
         $doctor->update([
@@ -230,6 +235,13 @@ class DoctorAppController extends Controller
             'state' => $data['state'],
             'pincode' => $data['pincode'],
         ]);
+
+        foreach (['adhar_document', 'pan_document', 'mmc_document', 'clinic_registration_document', 'doctor_photo'] as $field) {
+            if ($request->hasFile($field)) {
+                $doctor->{$field} = $this->storeDocument($request->file($field), $field, $doctor->id);
+            }
+        }
+        $doctor->save();
 
         return response()->json([
             'status' => true,
