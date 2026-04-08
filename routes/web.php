@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Analytics\AnalyticsController;
 use App\Http\Controllers\Farmer\FarmerListController;
 use App\Http\Controllers\Farmer\AnimalListController;
 use App\Http\Controllers\Farmer\MilkProduceListController;
@@ -100,5 +101,11 @@ Route::prefix('doctor')->group(function () {
 Route::prefix('shop')->group(function () {
     Route::get('/', [ShopProductController::class, 'index'])->name('shop.index');
     Route::post('/', [ShopProductController::class, 'store'])->name('shop.store');
+});
+
+Route::prefix('analytics')->name('analytics.')->group(function () {
+    Route::get('/farmer', [AnalyticsController::class, 'farmerAnalysis'])->name('farmer');
+    Route::get('/doctor', [AnalyticsController::class, 'doctorAnalysis'])->name('doctor');
+    Route::get('/earnings', [AnalyticsController::class, 'earnings'])->name('earnings');
 });
 
