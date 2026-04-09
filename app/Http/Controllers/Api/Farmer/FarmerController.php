@@ -29,7 +29,7 @@ class FarmerController extends Controller
             ->where('mobile', $request->mobile)
             ->first();
 
-        /// 🔄 UPDATE EXISTING FARMER
+        /// UPDATE EXISTING FARMER
         if ($farmer) {
             DB::table('farmers')
                 ->where('mobile', $request->mobile)
@@ -74,7 +74,7 @@ class FarmerController extends Controller
             ], 200);
         }
 
-        /// 🆕 CREATE NEW FARMER
+        /// CREATE NEW FARMER
         $farmerId = DB::table('farmers')->insertGetId([
             'mobile' => $request->mobile,
             'first_name' => $request->first_name,

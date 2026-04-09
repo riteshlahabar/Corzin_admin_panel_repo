@@ -37,7 +37,7 @@
             'sub' => 'Doctor appointments this month',
             'change' => $visitAvgTrend,
             'iconBg' => 'bg-danger-subtle text-danger',
-            'icon' => 'iconoir-stethoscope',
+            'icon' => 'iconoir-wallet',
             'image' => 'assets/images/extra/tree.png',
         ],
     ];
@@ -71,8 +71,8 @@
             $isPositive = $card['change'] >= 0;
         @endphp
         <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column h-100">
                     <div class="d-flex align-items-center mb-3">
                         <div class="flex-shrink-0 {{ $card['iconBg'] }} thumb-md rounded-circle">
                             <i class="{{ $card['icon'] }} fs-4"></i>
@@ -87,7 +87,7 @@
                             </p>
                         </div>
                     </div>
-                    <div class="row d-flex justify-content-center">
+                    <div class="row d-flex justify-content-center mt-auto">
                         <div class="col">
                             <h3 class="mt-2 mb-0 fw-bold">{{ $card['value'] }}</h3>
                             <small class="text-muted">{{ $card['sub'] }}</small>
@@ -128,19 +128,7 @@
                     <div class="col">
                         <h4 class="card-title">System Distribution</h4>
                     </div>
-                    <div class="col-auto">
-                        <div class="img-group d-flex">
-                            <a class="user-avatar position-relative d-inline-block" href="#">
-                                <img src="{{ asset('assets/images/users/avatar-1.jpg') }}" alt="avatar" class="thumb-md shadow-sm rounded-circle">
-                            </a>
-                            <a class="user-avatar position-relative d-inline-block ms-n2" href="#">
-                                <img src="{{ asset('assets/images/users/avatar-2.jpg') }}" alt="avatar" class="thumb-md shadow-sm rounded-circle">
-                            </a>
-                            <a class="user-avatar position-relative d-inline-block ms-n2" href="#">
-                                <img src="{{ asset('assets/images/users/avatar-4.jpg') }}" alt="avatar" class="thumb-md shadow-sm rounded-circle">
-                            </a>
-                        </div>
-                    </div>
+
                 </div>
             </div>
             <div class="card-body pt-0">
@@ -177,7 +165,7 @@
                                 <tr>
                                     <td class="px-0">
                                         <div class="d-flex align-items-center">
-                                            <img src="{{ asset($flags[$index % count($flags)]) }}" class="me-2 align-self-center thumb-md rounded" alt="">
+                                            
                                             <div class="flex-grow-1 text-truncate">
                                                 <h6 class="m-0 text-truncate">{{ $state['name'] }}</h6>
                                                 <div class="d-flex align-items-center">
@@ -368,4 +356,5 @@
     });
 </script>
 @endpush
+
 
