@@ -71,7 +71,7 @@
             $isPositive = $card['change'] >= 0;
         @endphp
         <div class="col-md-6 col-lg-3">
-            <div class="card h-100" style="height: 170px;">
+            <div class="card" style="height: 70%;">
                 <div class="card-body d-flex flex-column h-100">
                     <div class="d-flex align-items-center mb-3">
                         <div class="flex-shrink-0 {{ $card['iconBg'] }} thumb-md rounded-circle">
@@ -356,6 +356,7 @@
     });
 </script>
 @endpush
+
 
 
 
