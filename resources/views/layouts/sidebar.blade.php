@@ -165,11 +165,13 @@
         </a>
         <div class="collapse {{ request()->routeIs('settings.*') ? 'show' : '' }}" id="settingsMenu">
             <ul class="nav flex-column ms-4">
+                @if (Route::has('settings.diseases.index'))
                 <li class="menu-item">
                     <a href="{{ route('settings.diseases.index') }}" class="nav-link {{ request()->routeIs('settings.diseases.*') ? 'active' : '' }}">
                         <i class="iconoir-plus-circle me-2"></i> Add Disease
                     </a>
                 </li>
+                @endif
             </ul>
         </div>
     </li>
@@ -204,6 +206,7 @@ document.addEventListener('click', function(e) {
     background: rgba(0,0,0,0.08);
 }
 </style>
+
 
 
 

@@ -110,4 +110,9 @@ Route::prefix('analytics')->name('analytics.')->group(function () {
     Route::get('/earnings', [AnalyticsController::class, 'earnings'])->name('earnings');
 });
 
-
+Route::prefix('settings')->name('settings.')->group(function () {
+    Route::get('/diseases', [DiseaseController::class, 'index'])->name('diseases.index');
+    Route::post('/diseases', [DiseaseController::class, 'store'])->name('diseases.store');
+    Route::put('/diseases/{disease}', [DiseaseController::class, 'update'])->name('diseases.update');
+    Route::post('/diseases/{disease}/toggle', [DiseaseController::class, 'toggle'])->name('diseases.toggle');
+});
