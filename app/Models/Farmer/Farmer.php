@@ -19,6 +19,7 @@ class Farmer extends Model
         'state',
         'pincode',
         'is_active',
+        'fcm_token',
     ];
 
     protected $casts = [
@@ -40,3 +41,4 @@ class Farmer extends Model
         return $this->hasOne(FarmerSubscription::class);
     }
 }
+

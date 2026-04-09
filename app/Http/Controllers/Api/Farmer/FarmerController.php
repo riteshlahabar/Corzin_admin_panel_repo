@@ -192,6 +192,32 @@ class FarmerController extends Controller
         ], 200);
     }
 
+
+    public function updateFcmToken(Request $request, $id)
+    {
+        $request->validate([
+            'fcm_token' => 'required|string',
+        ]);
+
+        $farmer = DB::table('farmers')->where('id', $id)->first();
+
+        if (! $farmer) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Farmer not found',
+            ], 404);
+        }
+
+        DB::table('farmers')->where('id', $id)->update([
+            'fcm_token' => $request->fcm_token,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'FCM token updated successfully.',
+        ]);
+    }
     private function storeFarmerPhoto($file, int $farmerId, ?string $oldPhoto = null): string
     {
         $directory = public_path('assets/farmer_photo');
@@ -233,3 +259,4 @@ class FarmerController extends Controller
         ];
     }
 }
+

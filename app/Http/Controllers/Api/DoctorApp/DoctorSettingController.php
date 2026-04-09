@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\DoctorApp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor\DoctorBanner;
+use App\Models\Doctor\DoctorDisease;
 use App\Models\Doctor\DoctorSetting;
 
 class DoctorSettingController extends Controller
@@ -43,6 +44,28 @@ class DoctorSettingController extends Controller
                 'privacy_policy' => $setting->privacy_policy ?? '',
                 'banners' => $banners,
             ],
+        ]);
+    }
+
+    public function diseases()
+    {
+        $items = DoctorDisease::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(function (DoctorDisease $disease) {
+                return [
+                    'id' => $disease->id,
+                    'name' => $disease->name,
+                    'description' => $disease->description ?? '',
+                ];
+            })->values();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Doctor diseases fetched successfully.',
+            'data' => $items,
         ]);
     }
 }

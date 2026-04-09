@@ -29,6 +29,7 @@ Route::prefix('farmer')->group(function () {
     Route::post('/store', [FarmerController::class, 'store']);
     Route::get('/profile/{mobile}', [FarmerController::class, 'getProfileByMobile']);
     Route::post('/update/{id}', [FarmerController::class, 'update']);
+    Route::post('/fcm-token/{id}', [FarmerController::class, 'updateFcmToken']);
 });
 
 Route::prefix('animal')->group(function () {
@@ -70,10 +71,11 @@ Route::prefix('health')->group(function () {
     Route::get('/dmi/{farmer_id}', [HealthController::class, 'dmiList']);
     Route::post('/dmi', [HealthController::class, 'storeDmi']);
 });
+
 Route::prefix('doctor')->group(function () {
     Route::get('/list', [FarmerDoctorController::class, 'index']);
 
-    // Keep these for existing corzin_doctor clients using /doctor/*
+    // corzin_doctor auth/profile APIs stay in DoctorApp folder controllers
     Route::post('/register', [DoctorAppController::class, 'register']);
     Route::post('/login', [DoctorAppController::class, 'login']);
     Route::post('/forgot-password', [DoctorAppController::class, 'forgotPassword']);
@@ -81,17 +83,22 @@ Route::prefix('doctor')->group(function () {
     Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
     Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
 
-    // dairycorzin doctor related APIs now use Api\Doctor\... controllers
+    // dairycorzin doctor APIs use Api\Doctor folder controllers
     Route::post('/appointments', [FarmerDoctorAppointmentController::class, 'store']);
     Route::get('/appointments/farmer/{farmer}', [FarmerDoctorAppointmentController::class, 'indexByFarmer']);
     Route::get('/appointments/{doctor}', [FarmerDoctorAppointmentController::class, 'indexByDoctor']);
     Route::post('/appointments/{appointment}/farmer-approval', [FarmerDoctorAppointmentController::class, 'farmerApproval']);
     Route::get('/settings', [FarmerDoctorSettingController::class, 'show']);
+    Route::get('/diseases', [FarmerDoctorSettingController::class, 'diseases']);
 
-    // corzin_doctor appointment actions
+    // corzin_doctor appointment actions use DoctorApp folder controllers
     Route::post('/appointments/{appointment}/propose', [DoctorAppAppointmentController::class, 'propose']);
     Route::post('/appointments/{appointment}/complete', [DoctorAppAppointmentController::class, 'complete']);
     Route::post('/appointments/{appointment}/doctor-decision', [DoctorAppAppointmentController::class, 'doctorDecision']);
+    Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
+    Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
+    Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);
+    Route::post('/appointments/{appointment}/live-location', [DoctorAppAppointmentController::class, 'updateLiveLocation']);
 });
 
 Route::prefix('doctor-app')->group(function () {
@@ -109,7 +116,12 @@ Route::prefix('doctor-app')->group(function () {
     Route::post('/appointments/{appointment}/complete', [DoctorAppAppointmentController::class, 'complete']);
     Route::post('/appointments/{appointment}/doctor-decision', [DoctorAppAppointmentController::class, 'doctorDecision']);
     Route::post('/appointments/{appointment}/farmer-approval', [DoctorAppAppointmentController::class, 'farmerApproval']);
+    Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
+    Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
+    Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);
+    Route::post('/appointments/{appointment}/live-location', [DoctorAppAppointmentController::class, 'updateLiveLocation']);
     Route::get('/settings', [DoctorAppSettingController::class, 'show']);
+    Route::get('/diseases', [DoctorAppSettingController::class, 'diseases']);
 });
 
 Route::prefix('subscription')->group(function () {
@@ -120,4 +132,3 @@ Route::prefix('shop')->group(function () {
     Route::get('/categories', [ShopController::class, 'categories']);
     Route::get('/products', [ShopController::class, 'products']);
 });
-

@@ -21,6 +21,7 @@ use App\Http\Controllers\Doctor\DoctorPlanController;
 use App\Http\Controllers\Doctor\DoctorSubscriptionController;
 use App\Http\Controllers\Shop\ShopProductController;
 use App\Http\Controllers\Reproductive\ReproductiveListController;
+use App\Http\Controllers\Setting\DiseaseController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -108,4 +109,5 @@ Route::prefix('analytics')->name('analytics.')->group(function () {
     Route::get('/doctor', [AnalyticsController::class, 'doctorAnalysis'])->name('doctor');
     Route::get('/earnings', [AnalyticsController::class, 'earnings'])->name('earnings');
 });
+
 

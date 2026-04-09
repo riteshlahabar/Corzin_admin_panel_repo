@@ -157,6 +157,22 @@
             </ul>
         </div>
     </li>
+    <li class="nav-item">
+        <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" href="#settingsMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('settings.*') ? 'true' : 'false' }}">
+            <i class="iconoir-settings menu-icon me-2"></i>
+            <span>Settings</span>
+            <span class="menu-arrow"></span>
+        </a>
+        <div class="collapse {{ request()->routeIs('settings.*') ? 'show' : '' }}" id="settingsMenu">
+            <ul class="nav flex-column ms-4">
+                <li class="menu-item">
+                    <a href="{{ route('settings.diseases.index') }}" class="nav-link {{ request()->routeIs('settings.diseases.*') ? 'active' : '' }}">
+                        <i class="iconoir-plus-circle me-2"></i> Add Disease
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </li>
 
 </ul></div>
         </div></div></div>
@@ -188,6 +204,7 @@ document.addEventListener('click', function(e) {
     background: rgba(0,0,0,0.08);
 }
 </style>
+
 
 
 
