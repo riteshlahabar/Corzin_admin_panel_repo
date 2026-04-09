@@ -71,8 +71,8 @@
             $isPositive = $card['change'] >= 0;
         @endphp
         <div class="col-md-6 col-lg-3">
-            <div class="card" style="height: 70%; overflow: hidden;">
-                <div class="card-body d-flex flex-column justify-content-between p-2">
+            <div class="card" style="overflow: hidden;">
+                <div class="card-body d-flex flex-column justify-content-between p-3">
                     <div class="d-flex align-items-start gap-2 mb-1">
                         <div class="flex-shrink-0 {{ $card['iconBg'] }} rounded-circle d-flex align-items-center justify-content-center" style="height: 34px; width: 34px;">
                             <i class="{{ $card['icon'] }}" style="font-size: 17px;"></i>
@@ -354,6 +354,7 @@
     });
 </script>
 @endpush
+
 
 
 
