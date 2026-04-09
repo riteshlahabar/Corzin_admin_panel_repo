@@ -71,15 +71,15 @@
             $isPositive = $card['change'] >= 0;
         @endphp
         <div class="col-md-6 col-lg-3">
-            <div class="card" style="height: 70%;">
-                <div class="card-body d-flex flex-column h-100">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="flex-shrink-0 {{ $card['iconBg'] }} thumb-md rounded-circle">
-                            <i class="{{ $card['icon'] }} fs-4"></i>
+            <div class="card" style="height: 70%; overflow: hidden;">
+                <div class="card-body d-flex flex-column justify-content-between p-2">
+                    <div class="d-flex align-items-start gap-2 mb-1">
+                        <div class="flex-shrink-0 {{ $card['iconBg'] }} rounded-circle d-flex align-items-center justify-content-center" style="height: 34px; width: 34px;">
+                            <i class="{{ $card['icon'] }}" style="font-size: 17px;"></i>
                         </div>
-                        <div class="flex-grow-1 ms-2 text-truncate">
-                            <p class="text-dark mb-0 fw-semibold fs-14">{{ $card['title'] }}</p>
-                            <p class="mb-0 text-truncate text-muted">
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <p class="text-dark mb-1 fw-semibold text-truncate" style="font-size: 12px; line-height: 1.2;">{{ $card['title'] }}</p>
+                            <p class="mb-0 text-truncate text-muted" style="font-size: 11px; line-height: 1.2;">
                                 <span class="{{ $isPositive ? 'text-success' : 'text-danger' }}">
                                     {{ $isPositive ? '+' : '' }}{{ number_format((float) $card['change'], 1) }}%
                                 </span>
@@ -87,14 +87,12 @@
                             </p>
                         </div>
                     </div>
-                    <div class="row d-flex justify-content-center mt-auto">
-                        <div class="col">
-                            <h3 class="mt-2 mb-0 fw-bold">{{ $card['value'] }}</h3>
-                            <small class="text-muted">{{ $card['sub'] }}</small>
+                    <div class="d-flex align-items-end justify-content-between gap-2">
+                        <div style="min-width: 0;">
+                            <h5 class="mb-0 fw-bold text-truncate" style="font-size: 17px; line-height: 1.2;">{{ $card['value'] }}</h5>
+                            <small class="text-muted d-block text-truncate" style="font-size: 10.5px;">{{ $card['sub'] }}</small>
                         </div>
-                        <div class="col align-self-center">
-                            <img src="{{ asset($card['image']) }}" alt="" class="img-fluid">
-                        </div>
+                        <img src="{{ asset($card['image']) }}" alt="" class="flex-shrink-0" style="max-width: 38px; opacity: .8;">
                     </div>
                 </div>
             </div>
@@ -356,6 +354,7 @@
     });
 </script>
 @endpush
+
 
 
 
