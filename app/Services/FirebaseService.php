@@ -16,22 +16,24 @@ class FirebaseService
 
     public function __construct()
     {
-        $serviceAccountPath = config_path('firebase.json');
-
-        if (! is_file($serviceAccountPath) || filesize($serviceAccountPath) === 0) {
-            return;
-        }
-
         try {
-            $factory = (new Factory)->withServiceAccount($serviceAccountPath);
+            $credentials = $this->resolveServiceAccountCredentials();
+            if ($credentials === null) {
+                Log::warning('FCM init skipped: service account credentials not found.');
+                return;
+            }
+
+            $factory = (new Factory)->withServiceAccount($credentials);
 
             $this->auth = $factory->createAuth();
             $this->messaging = $factory->createMessaging();
             $this->configured = true;
+            Log::info('FCM init success: Firebase messaging configured.');
         } catch (Throwable $exception) {
             $this->auth = null;
             $this->messaging = null;
             $this->configured = false;
+            Log::error('FCM init failed', ['error' => $exception->getMessage()]);
         }
     }
 
@@ -81,5 +83,39 @@ class FirebaseService
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    protected function resolveServiceAccountCredentials(): array|string|null
+    {
+        // 1) Preferred: explicit env path
+        $envPath = trim((string) env('FIREBASE_CREDENTIALS'));
+        if ($envPath !== '' && is_file($envPath) && filesize($envPath) > 0) {
+            return $envPath;
+        }
+
+        // 2) Optional: raw JSON in env (advanced setup)
+        $envJson = trim((string) env('FIREBASE_CREDENTIALS_JSON'));
+        if ($envJson !== '') {
+            $decoded = json_decode($envJson, true);
+            if (is_array($decoded) && ! empty($decoded['client_email'])) {
+                return $decoded;
+            }
+        }
+
+        // 3) File fallbacks commonly used in shared hosting deployments
+        $candidates = [
+            config_path('firebase.json'),
+            base_path('firebase.json'),
+            storage_path('app/firebase.json'),
+            public_path('firebase.json'),
+        ];
+
+        foreach ($candidates as $path) {
+            if (is_file($path) && filesize($path) > 0) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 }
