@@ -49,7 +49,8 @@ class FirebaseService
             return;
         }
 
-        $message = CloudMessage::withTarget('token', $token)
+        $message = CloudMessage::new()
+            ->withChangedTarget('token', $token)
             ->withNotification(Notification::create($title, $body))
             ->withData($data);
 
