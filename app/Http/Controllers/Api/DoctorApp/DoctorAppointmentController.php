@@ -163,6 +163,7 @@ class DoctorAppointmentController extends Controller
             'notes' => ['nullable', 'string'],
             'treatment_details' => ['nullable', 'string'],
             'followup_required' => ['nullable', 'boolean'],
+            'next_followup_date' => ['nullable', 'date'],
         ]);
 
         $appointment->update([
@@ -171,6 +172,7 @@ class DoctorAppointmentController extends Controller
             'notes' => $data['notes'] ?? $appointment->notes,
             'treatment_details' => $data['treatment_details'] ?? $appointment->treatment_details,
             'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
+            'next_followup_date' => $data['next_followup_date'] ?? $appointment->next_followup_date,
         ]);
 
         $appointment->refresh()->loadMissing(['doctor', 'farmer']);
@@ -389,12 +391,21 @@ class DoctorAppointmentController extends Controller
         $data = $request->validate([
             'treatment_details' => ['required', 'string'],
             'followup_required' => ['nullable', 'boolean'],
+            'next_followup_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
+
+        if (! empty($data['followup_required']) && empty($data['next_followup_date'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'next_followup_date is required when follow-up is selected.',
+            ], 422);
+        }
 
         $appointment->update([
             'treatment_details' => $data['treatment_details'],
             'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
+            'next_followup_date' => $data['next_followup_date'] ?? $appointment->next_followup_date,
             'notes' => $data['notes'] ?? $appointment->notes,
         ]);
 
@@ -491,6 +502,7 @@ class DoctorAppointmentController extends Controller
             'treatment_started_at' => optional($appointment->treatment_started_at)->toIso8601String(),
             'treatment_details' => $appointment->treatment_details ?? '',
             'followup_required' => (bool) ($appointment->followup_required ?? false),
+            'next_followup_date' => optional($appointment->next_followup_date)->toDateString(),
             'charges' => $appointment->charges !== null ? (float) $appointment->charges : null,
             'latitude' => $appointment->latitude !== null ? (float) $appointment->latitude : null,
             'longitude' => $appointment->longitude !== null ? (float) $appointment->longitude : null,
@@ -560,4 +572,3 @@ class DoctorAppointmentController extends Controller
         return 'assets/doctor_appointment_images/'.$filename;
     }
 }
-
