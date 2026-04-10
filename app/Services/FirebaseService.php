@@ -51,9 +51,13 @@ class FirebaseService
 
         $normalizedData = [];
         foreach ($data as $key => $value) {
-            $normalizedData[(string) $key] = is_scalar($value) || $value === null
-                ? (string) ($value ?? '')
-                : json_encode($value);
+            if (is_scalar($value) || $value === null) {
+                $normalizedData[(string) $key] = (string) ($value ?? '');
+                continue;
+            }
+
+            $encoded = json_encode($value);
+            $normalizedData[(string) $key] = $encoded === false ? '' : $encoded;
         }
 
         $message = CloudMessage::new()
