@@ -81,6 +81,7 @@
                             <th>Farmer</th>
                             <th>Animal</th>
                             <th>Concern</th>
+                            <th>On-Site Treatment</th>
                             <th>Requested</th>
                             <th>Scheduled</th>
                             <th>Charges</th>
@@ -108,6 +109,7 @@
                                 </td>
                                 <td>{{ $appointment->animal_name ?: '-' }}</td>
                                 <td style="min-width: 220px;">{{ $appointment->concern ?: '-' }}</td>
+                                <td style="min-width: 220px;">{{ $appointment->onsite_treatment ?: '-' }}</td>
                                 <td>{{ optional($appointment->requested_at ?: $appointment->created_at)->format('d-m-Y h:i A') ?: '-' }}</td>
                                 <td>{{ optional($appointment->scheduled_at)->format('d-m-Y h:i A') ?: '-' }}</td>
                                 <td>{{ $appointment->charges !== null ? '₹ '.number_format((float) $appointment->charges, 2) : '-' }}</td>
@@ -115,7 +117,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">No appointments found</td>
+                                <td colspan="10" class="text-center text-muted py-4">No appointments found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -130,4 +132,3 @@
     </div>
 </div>
 @endsection
-

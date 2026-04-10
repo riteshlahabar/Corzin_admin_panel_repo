@@ -23,6 +23,7 @@ class DoctorAppointment extends Model
         'otp_verified_at',
         'treatment_started_at',
         'treatment_details',
+        'onsite_treatment',
         'followup_required',
         'next_followup_date',
         'doctor_live_latitude',

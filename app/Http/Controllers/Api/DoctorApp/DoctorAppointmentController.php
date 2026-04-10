@@ -162,6 +162,7 @@ class DoctorAppointmentController extends Controller
         $data = $request->validate([
             'notes' => ['nullable', 'string'],
             'treatment_details' => ['nullable', 'string'],
+            'onsite_treatment' => ['nullable', 'string'],
             'followup_required' => ['nullable', 'boolean'],
             'next_followup_date' => ['nullable', 'date'],
         ]);
@@ -171,6 +172,9 @@ class DoctorAppointmentController extends Controller
             'completed_at' => now(),
             'notes' => $data['notes'] ?? $appointment->notes,
             'treatment_details' => $data['treatment_details'] ?? $appointment->treatment_details,
+            'onsite_treatment' => $data['onsite_treatment']
+                ?? $this->extractOnsiteTreatment($data['treatment_details'] ?? $appointment->treatment_details)
+                ?? $appointment->onsite_treatment,
             'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
             'next_followup_date' => $data['next_followup_date'] ?? $appointment->next_followup_date,
         ]);
@@ -390,6 +394,7 @@ class DoctorAppointmentController extends Controller
     {
         $data = $request->validate([
             'treatment_details' => ['required', 'string'],
+            'onsite_treatment' => ['nullable', 'string'],
             'followup_required' => ['nullable', 'boolean'],
             'next_followup_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
@@ -404,6 +409,9 @@ class DoctorAppointmentController extends Controller
 
         $appointment->update([
             'treatment_details' => $data['treatment_details'],
+            'onsite_treatment' => $data['onsite_treatment']
+                ?? $this->extractOnsiteTreatment($data['treatment_details'])
+                ?? $appointment->onsite_treatment,
             'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
             'next_followup_date' => $data['next_followup_date'] ?? $appointment->next_followup_date,
             'notes' => $data['notes'] ?? $appointment->notes,
@@ -501,6 +509,7 @@ class DoctorAppointmentController extends Controller
             'otp_verified_at' => optional($appointment->otp_verified_at)->toIso8601String(),
             'treatment_started_at' => optional($appointment->treatment_started_at)->toIso8601String(),
             'treatment_details' => $appointment->treatment_details ?? '',
+            'onsite_treatment' => $appointment->onsite_treatment ?? '',
             'followup_required' => (bool) ($appointment->followup_required ?? false),
             'next_followup_date' => optional($appointment->next_followup_date)->toDateString(),
             'charges' => $appointment->charges !== null ? (float) $appointment->charges : null,
@@ -557,6 +566,21 @@ class DoctorAppointmentController extends Controller
         }
 
         return $base;
+    }
+
+    protected function extractOnsiteTreatment(?string $treatmentDetails): ?string
+    {
+        $treatmentDetails = trim((string) $treatmentDetails);
+
+        if ($treatmentDetails === '') {
+            return null;
+        }
+
+        if (preg_match('/On-Site-Treatment:\s*(.+)/i', $treatmentDetails, $matches) === 1) {
+            return trim((string) ($matches[1] ?? '')) ?: null;
+        }
+
+        return null;
     }
 
     protected function storeAnimalPhoto($file): string

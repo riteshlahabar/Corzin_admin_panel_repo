@@ -34,6 +34,7 @@
                             <th>Farmer</th>
                             <th>Animal</th>
                             <th>Concern</th>
+                            <th>On-Site Treatment</th>
                             <th>Completed Date</th>
                             <th>Charges</th>
                             <th>Status</th>
@@ -50,13 +51,14 @@
                                 </td>
                                 <td>{{ $visit->animal_name ?: '-' }}</td>
                                 <td style="min-width:220px;">{{ $visit->concern ?: '-' }}</td>
+                                <td style="min-width:220px;">{{ $visit->onsite_treatment ?: '-' }}</td>
                                 <td>{{ optional($visit->completed_at ?: $visit->updated_at)->format('d-m-Y h:i A') ?: '-' }}</td>
                                 <td>{{ $visit->charges !== null ? '₹ '.number_format((float) $visit->charges, 2) : '-' }}</td>
                                 <td><span class="badge bg-success">Completed</span></td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">No visited records found</td>
+                                <td colspan="9" class="text-center text-muted py-4">No visited records found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -71,4 +73,3 @@
     </div>
 </div>
 @endsection
-
