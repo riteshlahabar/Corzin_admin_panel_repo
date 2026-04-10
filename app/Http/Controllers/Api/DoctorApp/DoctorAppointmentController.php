@@ -39,7 +39,12 @@ class DoctorAppointmentController extends Controller
     public function indexByFarmer(Farmer $farmer)
     {
         $appointments = DoctorAppointment::query()
-            ->where('farmer_id', $farmer->id)
+            ->where(function ($query) use ($farmer) {
+                $query->where('farmer_id', $farmer->id);
+                if (! blank($farmer->mobile)) {
+                    $query->orWhere('farmer_phone', $farmer->mobile);
+                }
+            })
             ->with(['doctor', 'farmer'])
             ->latest('requested_at')
             ->latest()
@@ -529,6 +534,10 @@ class DoctorAppointmentController extends Controller
     {
         $appointment->loadMissing(['doctor', 'farmer']);
         $token = optional($appointment->doctor)->fcm_token;
+        if (blank($token) && ! empty($appointment->doctor_id)) {
+            $fallbackDoctor = Doctor::find((int) $appointment->doctor_id);
+            $token = optional($fallbackDoctor)->fcm_token;
+        }
 
         $this->firebaseService->sendToDevice(
             $token,
@@ -542,6 +551,18 @@ class DoctorAppointmentController extends Controller
     {
         $appointment->loadMissing(['doctor', 'farmer']);
         $token = optional($appointment->farmer)->fcm_token;
+        if (blank($token)) {
+            $fallbackFarmer = null;
+            if (! empty($appointment->farmer_id)) {
+                $fallbackFarmer = Farmer::find((int) $appointment->farmer_id);
+            }
+            if (! $fallbackFarmer && ! empty($appointment->farmer_phone)) {
+                $fallbackFarmer = Farmer::query()
+                    ->where('mobile', (string) $appointment->farmer_phone)
+                    ->first();
+            }
+            $token = optional($fallbackFarmer)->fcm_token;
+        }
 
         $this->firebaseService->sendToDevice(
             $token,

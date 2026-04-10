@@ -5,6 +5,7 @@ namespace App\Services;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class FirebaseService
@@ -45,7 +46,13 @@ class FirebaseService
 
     public function sendToDevice(?string $token, string $title, string $body, array $data = []): void
     {
-        if (! $this->configured || ! $this->messaging || blank($token)) {
+        if (! $this->configured || ! $this->messaging) {
+            Log::warning('FCM skipped: Firebase is not configured.');
+            return;
+        }
+
+        if (blank($token)) {
+            Log::warning('FCM skipped: target token is empty.');
             return;
         }
 
@@ -60,11 +67,19 @@ class FirebaseService
             $normalizedData[(string) $key] = $encoded === false ? '' : $encoded;
         }
 
-        $message = CloudMessage::new()
-            ->withToken((string) $token)
-            ->withNotification(Notification::create($title, $body))
-            ->withData($normalizedData);
+        try {
+            $message = CloudMessage::new()
+                ->withToken((string) $token)
+                ->withNotification(Notification::create($title, $body))
+                ->withData($normalizedData);
 
-        $this->messaging->send($message);
+            $this->messaging->send($message);
+        } catch (Throwable $exception) {
+            Log::error('FCM send failed', [
+                'token_prefix' => substr((string) $token, 0, 16),
+                'title' => $title,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

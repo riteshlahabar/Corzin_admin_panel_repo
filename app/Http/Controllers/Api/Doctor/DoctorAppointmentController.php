@@ -36,6 +36,10 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         $farmer = null;
         if (!empty($data['farmer_id'])) {
             $farmer = Farmer::find($data['farmer_id']);
+        } elseif (! empty($data['farmer_phone'])) {
+            $farmer = Farmer::query()
+                ->where('mobile', (string) $data['farmer_phone'])
+                ->first();
         }
 
         $animal = null;
@@ -62,7 +66,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         foreach ($targetDoctors as $doctor) {
             $appointment = DoctorAppointment::create([
                 'doctor_id' => $doctor->id,
-                'farmer_id' => $data['farmer_id'] ?? null,
+                'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
                 'animal_id' => $data['animal_id'] ?? null,
                 'farmer_name' => $data['farmer_name']
                     ?? ($farmer ? trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) : null),
