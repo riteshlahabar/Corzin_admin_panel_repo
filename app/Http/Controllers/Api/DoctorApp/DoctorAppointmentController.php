@@ -10,6 +10,7 @@ use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class DoctorAppointmentController extends Controller
@@ -211,9 +212,12 @@ class DoctorAppointmentController extends Controller
                 'charges' => $data['charges'],
             ]);
         } elseif ($action === 'approved') {
+            $otpCode = (string) random_int(100000, 999999);
             $appointment->update([
                 'status' => 'approved',
                 'farmer_approved_at' => now(),
+                'otp_code' => $otpCode,
+                'otp_verified_at' => null,
             ]);
         } else {
             $appointment->update([
@@ -226,7 +230,7 @@ class DoctorAppointmentController extends Controller
             $this->notifyFarmer(
                 $appointment,
                 'Appointment Approved',
-                'Doctor approved your appointment request.',
+                'Doctor approved your visit. Share this OTP at visit time: '.($appointment->otp_code ?? ''),
                 ['event' => 'appointment_doctor_approved']
             );
         } elseif ($action === 'rescheduled') {
@@ -393,6 +397,24 @@ class DoctorAppointmentController extends Controller
             'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
             'notes' => $data['notes'] ?? $appointment->notes,
         ]);
+
+        $appointment->refresh()->loadMissing(['doctor', 'farmer']);
+        $summary = Str::limit((string) $data['treatment_details'], 120);
+        $this->notifyFarmer(
+            $appointment,
+            'Treatment details updated',
+            $summary !== '' ? $summary : 'Doctor saved treatment notes for your animal.',
+            ['event' => 'appointment_treatment_updated']
+        );
+
+        if (! empty($data['followup_required'])) {
+            $this->notifyFarmer(
+                $appointment,
+                'Follow-up visit suggested',
+                'Your doctor indicated a follow-up appointment may be needed.',
+                ['event' => 'appointment_followup_suggested']
+            );
+        }
 
         return response()->json([
             'status' => true,
