@@ -49,10 +49,17 @@ class FirebaseService
             return;
         }
 
+        $normalizedData = [];
+        foreach ($data as $key => $value) {
+            $normalizedData[(string) $key] = is_scalar($value) || $value === null
+                ? (string) ($value ?? '')
+                : json_encode($value);
+        }
+
         $message = CloudMessage::new()
-            ->withChangedTarget('token', $token)
+            ->withToken((string) $token)
             ->withNotification(Notification::create($title, $body))
-            ->withData($data);
+            ->withData($normalizedData);
 
         $this->messaging->send($message);
     }
