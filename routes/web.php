@@ -103,6 +103,7 @@ Route::prefix('doctor')->group(function () {
 Route::prefix('shop')->group(function () {
     Route::get('/', [ShopProductController::class, 'index'])->name('shop.index');
     Route::post('/', [ShopProductController::class, 'store'])->name('shop.store');
+    Route::post('/orders/{order}/status', [ShopProductController::class, 'updateOrderStatus'])->name('shop.orders.status');
 });
 
 Route::prefix('analytics')->name('analytics.')->group(function () {

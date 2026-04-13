@@ -156,6 +156,7 @@ class ShopController extends Controller
                 'farmer_phone' => $farmer->mobile ?? null,
                 'shipping_address' => trim((string) $data['shipping_address']),
                 'payment_method' => $paymentMethod,
+                'payment_status' => 'pending',
                 'status' => 'placed',
                 'subtotal' => $subtotal,
                 'delivery_charge' => $deliveryCharge,

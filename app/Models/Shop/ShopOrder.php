@@ -13,6 +13,7 @@ class ShopOrder extends Model
         'farmer_phone',
         'shipping_address',
         'payment_method',
+        'payment_status',
         'status',
         'subtotal',
         'delivery_charge',

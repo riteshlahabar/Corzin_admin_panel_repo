@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Shop\ShopOrder;
 use App\Models\Shop\ShopProduct;
 use Illuminate\Http\Request;
 
@@ -10,14 +11,37 @@ class ShopProductController extends Controller
 {
     public function index()
     {
+        $activeTab = request()->query('tab', 'add-product');
         $products = ShopProduct::latest()->get();
+        $orders = ShopOrder::query()
+            ->with(['items', 'farmer'])
+            ->latest()
+            ->get();
+
         $summary = [
             'total' => $products->count(),
             'categories' => $products->pluck('category')->filter()->unique()->count(),
             'active' => $products->where('is_active', true)->count(),
+            'new_orders' => $orders->whereIn('status', ['placed', 'new', 'pending'])->count(),
+            'in_progress_orders' => $orders->where('status', 'in_progress')->count(),
+            'completed_orders' => $orders->where('status', 'completed')->count(),
+            'payment_pending' => $orders->where('payment_status', 'pending')->count(),
         ];
 
-        return view('shop.index', compact('products', 'summary'));
+        $newOrders = $orders->whereIn('status', ['placed', 'new', 'pending'])->values();
+        $inProgressOrders = $orders->where('status', 'in_progress')->values();
+        $completedOrders = $orders->where('status', 'completed')->values();
+        $paymentOrders = $orders->values();
+
+        return view('shop.index', compact(
+            'products',
+            'summary',
+            'newOrders',
+            'inProgressOrders',
+            'completedOrders',
+            'paymentOrders',
+            'activeTab',
+        ));
     }
 
     public function store(Request $request)
@@ -57,7 +81,30 @@ class ShopProductController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]);
 
-        return redirect()->route('shop.index')->with('success', 'Shop product saved successfully.');
+        return redirect()->route('shop.index', ['tab' => 'add-product'])
+            ->with('success', 'Shop product saved successfully.');
+    }
+
+    public function updateOrderStatus(Request $request, ShopOrder $order)
+    {
+        $data = $request->validate([
+            'status' => 'required|in:placed,in_progress,completed,cancelled',
+            'payment_status' => 'nullable|in:pending,paid',
+        ]);
+
+        $nextStatus = $data['status'];
+        $paymentStatus = $data['payment_status'] ?? $order->payment_status;
+        if ($nextStatus === 'completed' && blank($data['payment_status']) && strtolower((string) $order->payment_method) === 'cod') {
+            $paymentStatus = 'paid';
+        }
+
+        $order->update([
+            'status' => $nextStatus,
+            'payment_status' => $paymentStatus,
+        ]);
+
+        return redirect()->route('shop.index', ['tab' => $request->input('tab', 'new-order')])
+            ->with('success', 'Order status updated successfully.');
     }
 
     protected function storeImage($file): string

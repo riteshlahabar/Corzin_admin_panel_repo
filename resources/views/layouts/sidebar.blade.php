@@ -125,10 +125,20 @@
     </li>
 
     <li class="nav-item">
-        <a class="nav-link" href="{{ route('shop.index') }}">
+        <a class="nav-link {{ request()->routeIs('shop.*') ? 'active' : '' }}" href="#shopMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('shop.*') ? 'true' : 'false' }}">
             <i class="iconoir-cart menu-icon me-2"></i>
             <span>Shop</span>
+            <span class="menu-arrow"></span>
         </a>
+        <div class="collapse {{ request()->routeIs('shop.*') ? 'show' : '' }}" id="shopMenu">
+            <ul class="nav flex-column ms-4">
+                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'add-product']) }}" class="nav-link {{ request('tab', 'add-product') === 'add-product' ? 'active' : '' }}">Add Product</a></li>
+                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'new-order']) }}" class="nav-link {{ request('tab') === 'new-order' ? 'active' : '' }}">New Order</a></li>
+                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'in-progress']) }}" class="nav-link {{ request('tab') === 'in-progress' ? 'active' : '' }}">Order In Progress</a></li>
+                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'completed']) }}" class="nav-link {{ request('tab') === 'completed' ? 'active' : '' }}">Order Completed</a></li>
+                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'payment']) }}" class="nav-link {{ request('tab') === 'payment' ? 'active' : '' }}">Order Payment</a></li>
+            </ul>
+        </div>
     </li>
 
     <li class="nav-item">
