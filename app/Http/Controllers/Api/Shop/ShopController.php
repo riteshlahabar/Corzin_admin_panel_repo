@@ -200,6 +200,7 @@ class ShopController extends Controller
                     'id' => $order->id,
                     'status' => $order->status,
                     'payment_method' => $order->payment_method,
+                    'payment_status' => $order->payment_status ?: 'pending',
                     'shipping_address' => $order->shipping_address,
                     'subtotal' => (float) $order->subtotal,
                     'delivery_charge' => (float) $order->delivery_charge,
