@@ -10,7 +10,7 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row g-3 mb-3">
+    <div class="row g-3 mt-2 mb-3">
         <div class="col-md-3">
             <div class="card bg-primary-subtle border-0">
                 <div class="card-body">
