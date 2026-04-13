@@ -73,6 +73,7 @@
                                 <th>Image</th>
                                 <th>Category</th>
                                 <th>Name</th>
+                                <th style="min-width: 260px;">Description</th>
                                 <th>Price</th>
                                 <th>Unit</th>
                                 <th>Status</th>
@@ -85,12 +86,26 @@
                                     <td>@if(!empty($product->image))<img src="{{ asset($product->image) }}" alt="{{ $product->name }}" style="height:46px;width:46px;object-fit:cover;border-radius:10px;">@else <span class="text-muted">-</span>@endif</td>
                                     <td><span class="badge bg-light text-dark text-capitalize">{{ $product->category }}</span></td>
                                     <td>{{ $product->name }}</td>
+                                    <td>
+                                        @php
+                                            $fullDescription = trim((string) ($product->description ?? ''));
+                                            $shortDescription = \Illuminate\Support\Str::limit($fullDescription, 55, '');
+                                        @endphp
+                                        @if($fullDescription !== '')
+                                            <span>{{ $shortDescription }}</span>
+                                            @if(\Illuminate\Support\Str::length($fullDescription) > 55)
+                                                <span class="text-primary ms-1" style="cursor: help;" title="{{ $fullDescription }}">more...</span>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                     <td>Rs {{ number_format((float) $product->price, 2) }}</td>
                                     <td>{{ $product->unit ?: '-' }}</td>
                                     <td><span class="badge {{ $product->is_active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">{{ $product->is_active ? 'Active' : 'Inactive' }}</span></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-center text-muted">No products found</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted">No products found</td></tr>
                             @endforelse
                         </tbody>
                     </table>
