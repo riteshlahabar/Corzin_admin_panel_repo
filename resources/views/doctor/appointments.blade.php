@@ -77,12 +77,12 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Doctor</th>
                             <th>Farmer</th>
                             <th>Animal</th>
                             <th>Concern</th>
                             <th>On-Site Treatment</th>
                             <th>Requested</th>
+                            <th>Doctor</th>
                             <th>Scheduled</th>
                             <th>Charges</th>
                             <th>Status</th>
@@ -92,6 +92,7 @@
                         @forelse($appointments as $appointment)
                             @php
                                 $status = strtolower($appointment->status ?? 'pending');
+                                $allowAssign = in_array($status, ['pending', 'new', 'requested', 'proposed', 'awaiting_farmer_approval', 'awaiting_approval'], true);
                                 $badgeClass = match ($status) {
                                     'approved', 'scheduled', 'in_progress' => 'bg-success',
                                     'completed' => 'bg-primary',
@@ -102,7 +103,6 @@
                             @endphp
                             <tr>
                                 <td>{{ $appointments->firstItem() + $loop->index }}</td>
-                                <td>{{ $appointment->doctor->full_name ?: $appointment->doctor->name ?: '-' }}</td>
                                 <td>
                                     <div class="fw-semibold">{{ $appointment->farmer_name ?: '-' }}</div>
                                     <small class="text-muted">{{ $appointment->farmer_phone ?: '-' }}</small>
@@ -111,6 +111,27 @@
                                 <td style="min-width: 220px;">{{ $appointment->concern ?: '-' }}</td>
                                 <td style="min-width: 220px;">{{ $appointment->onsite_treatment ?: '-' }}</td>
                                 <td>{{ optional($appointment->requested_at ?: $appointment->created_at)->format('d-m-Y h:i A') ?: '-' }}</td>
+                                <td style="min-width: 240px;">
+                                    @if($allowAssign)
+                                        <form method="POST" action="{{ route('doctor.appointments.assign', $appointment) }}" class="d-flex gap-2">
+                                            @csrf
+                                            <select name="doctor_id" class="form-select form-select-sm" required>
+                                                <option value="">Select doctor</option>
+                                                @foreach($doctors as $doctor)
+                                                    @php
+                                                        $doctorName = trim(($doctor->first_name ?? '').' '.($doctor->last_name ?? ''));
+                                                    @endphp
+                                                    <option value="{{ $doctor->id }}" {{ (int) $appointment->doctor_id === (int) $doctor->id ? 'selected' : '' }}>
+                                                        {{ $doctorName !== '' ? $doctorName : ($doctor->name ?: 'Doctor #'.$doctor->id) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <button type="submit" class="btn btn-success btn-sm">Assign</button>
+                                        </form>
+                                    @else
+                                        {{ optional($appointment->doctor)->full_name ?: optional($appointment->doctor)->name ?: '-' }}
+                                    @endif
+                                </td>
                                 <td>{{ optional($appointment->scheduled_at)->format('d-m-Y h:i A') ?: '-' }}</td>
                                 <td>{{ $appointment->charges !== null ? '₹ '.number_format((float) $appointment->charges, 2) : '-' }}</td>
                                 <td><span class="badge {{ $badgeClass }}">{{ ucwords(str_replace('_', ' ', $status)) }}</span></td>

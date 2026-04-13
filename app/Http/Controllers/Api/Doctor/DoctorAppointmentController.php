@@ -8,6 +8,7 @@ use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController
 {
@@ -62,10 +63,12 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             ], 422);
         }
 
+        $groupId = (string) Str::uuid();
         $appointments = collect();
         foreach ($targetDoctors as $doctor) {
             $appointment = DoctorAppointment::create([
                 'doctor_id' => $doctor->id,
+                'appointment_group_id' => $groupId,
                 'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
                 'animal_id' => $data['animal_id'] ?? null,
                 'farmer_name' => $data['farmer_name']

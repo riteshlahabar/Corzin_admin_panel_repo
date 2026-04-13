@@ -99,6 +99,7 @@ class DoctorAppointmentController extends Controller
 
         $appointment = DoctorAppointment::create([
             'doctor_id' => (int) $data['doctor_id'],
+            'appointment_group_id' => (string) Str::uuid(),
             'farmer_id' => $data['farmer_id'] ?? null,
             'animal_id' => $data['animal_id'] ?? null,
             'farmer_name' => $data['farmer_name']
@@ -469,6 +470,9 @@ class DoctorAppointmentController extends Controller
 
     protected function appointmentPayload(DoctorAppointment $appointment, bool $includeOtp = false): array
     {
+        $followupDueToday = $this->isFollowupDueToday($appointment);
+        $effectiveStatus = $followupDueToday ? 'followup' : ($appointment->status ?? 'pending');
+
         $diseaseIds = collect($appointment->disease_ids ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter(fn (int $id) => $id > 0)
@@ -508,6 +512,8 @@ class DoctorAppointmentController extends Controller
             'disease_details' => $appointment->disease_details ?? '',
             'diseases' => $diseases,
             'status' => $appointment->status ?? 'pending',
+            'effective_status' => $effectiveStatus,
+            'followup_due_today' => $followupDueToday,
             'requested_at' => optional($appointment->requested_at)->toIso8601String(),
             'scheduled_at' => optional($appointment->scheduled_at)->toIso8601String(),
             'completed_at' => optional($appointment->completed_at)->toIso8601String(),
@@ -574,12 +580,17 @@ class DoctorAppointmentController extends Controller
 
     protected function notificationData(DoctorAppointment $appointment, array $extraData = []): array
     {
+        $effectiveStatus = $this->isFollowupDueToday($appointment)
+            ? 'followup'
+            : (string) ($appointment->status ?? '');
+
         $base = [
             'type' => 'doctor_appointment',
             'appointment_id' => (string) $appointment->id,
             'doctor_id' => (string) ($appointment->doctor_id ?? ''),
             'farmer_id' => (string) ($appointment->farmer_id ?? ''),
             'status' => (string) ($appointment->status ?? ''),
+            'effective_status' => $effectiveStatus,
         ];
 
         foreach ($extraData as $key => $value) {
@@ -615,5 +626,13 @@ class DoctorAppointmentController extends Controller
         $file->move($directory, $filename);
 
         return 'assets/doctor_appointment_images/'.$filename;
+    }
+
+    protected function isFollowupDueToday(DoctorAppointment $appointment): bool
+    {
+        return (bool) ($appointment->followup_required ?? false)
+            && ($appointment->status ?? '') === 'completed'
+            && ! empty($appointment->next_followup_date)
+            && optional($appointment->next_followup_date)->toDateString() === now()->toDateString();
     }
 }

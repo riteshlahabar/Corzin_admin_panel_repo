@@ -10,6 +10,7 @@ class DoctorAppointment extends Model
 {
     protected $fillable = [
         'doctor_id',
+        'appointment_group_id',
         'farmer_id',
         'animal_id',
         'farmer_name',
@@ -39,6 +40,7 @@ class DoctorAppointment extends Model
         'notes',
         'farmer_approved_at',
         'completed_at',
+        'followup_notified_on',
     ];
 
     protected $casts = [
@@ -51,6 +53,7 @@ class DoctorAppointment extends Model
         'otp_verified_at' => 'datetime',
         'treatment_started_at' => 'datetime',
         'next_followup_date' => 'date',
+        'followup_notified_on' => 'date',
         'doctor_live_updated_at' => 'datetime',
         'charges' => 'decimal:2',
         'latitude' => 'decimal:7',
