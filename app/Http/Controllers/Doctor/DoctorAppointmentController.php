@@ -20,6 +20,7 @@ class DoctorAppointmentController extends Controller
     {
         $rows = DoctorAppointment::query()
             ->with('doctor')
+            ->where('status', '!=', 'completed')
             ->latest('requested_at')
             ->latest()
             ->get();
