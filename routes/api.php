@@ -131,4 +131,6 @@ Route::prefix('subscription')->group(function () {
 Route::prefix('shop')->group(function () {
     Route::get('/categories', [ShopController::class, 'categories']);
     Route::get('/products', [ShopController::class, 'products']);
+    Route::post('/orders', [ShopController::class, 'placeOrder']);
+    Route::get('/orders/farmer/{farmer}', [ShopController::class, 'farmerOrders']);
 });

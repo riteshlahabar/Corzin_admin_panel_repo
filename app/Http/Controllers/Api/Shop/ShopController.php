@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Farmer\Farmer;
+use App\Models\Shop\ShopOrder;
+use App\Models\Shop\ShopOrderItem;
 use App\Models\Shop\ShopProduct;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ShopController extends Controller
 {
@@ -46,6 +50,27 @@ class ShopController extends Controller
         }
 
         $products = $query->get()->map(function (ShopProduct $product) {
+            $gallery = collect($product->gallery_images ?? [])
+                ->filter()
+                ->map(function ($path) {
+                    if (! is_string($path)) {
+                        return null;
+                    }
+                    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                        return $path;
+                    }
+
+                    return asset($path);
+                })
+                ->filter()
+                ->values()
+                ->all();
+
+            if ($product->image_url) {
+                array_unshift($gallery, $product->image_url);
+                $gallery = array_values(array_unique(array_filter($gallery)));
+            }
+
             return [
                 'id' => $product->id,
                 'category' => $product->category,
@@ -55,6 +80,13 @@ class ShopController extends Controller
                 'price_label' => 'Rs '.number_format((float) $product->price, 2),
                 'unit' => $product->unit,
                 'description' => $product->description,
+                'features' => collect(preg_split("/\r\n|\n|\r/", (string) ($product->features ?? '')))
+                    ->map(fn ($line) => trim((string) $line))
+                    ->filter()
+                    ->values()
+                    ->all(),
+                'image_url' => $product->image_url,
+                'gallery_image_urls' => $gallery,
             ];
         });
 
@@ -62,6 +94,132 @@ class ShopController extends Controller
             'status' => true,
             'message' => 'Shop products fetched successfully',
             'data' => $products,
+        ]);
+    }
+
+    public function placeOrder(Request $request)
+    {
+        $data = $request->validate([
+            'farmer_id' => ['required', 'exists:farmers,id'],
+            'shipping_address' => ['required', 'string'],
+            'payment_method' => ['nullable', 'in:cod'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'exists:shop_products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $farmer = Farmer::findOrFail((int) $data['farmer_id']);
+        $paymentMethod = $data['payment_method'] ?? 'cod';
+        $requestedItems = collect($data['items']);
+        $productIds = $requestedItems->pluck('product_id')->map(fn ($id) => (int) $id)->unique()->values();
+        $products = ShopProduct::query()
+            ->whereIn('id', $productIds->all())
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('id');
+
+        if ($products->count() !== $productIds->count()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Some products are unavailable.',
+            ], 422);
+        }
+
+        $subtotal = 0.0;
+        $lineItems = [];
+        foreach ($requestedItems as $row) {
+            $productId = (int) ($row['product_id'] ?? 0);
+            $qty = (int) ($row['quantity'] ?? 1);
+            /** @var ShopProduct $product */
+            $product = $products[$productId];
+            $price = (float) $product->price;
+            $lineTotal = $price * $qty;
+            $subtotal += $lineTotal;
+
+            $lineItems[] = [
+                'shop_product_id' => $product->id,
+                'product_name' => $product->name,
+                'price' => $price,
+                'quantity' => $qty,
+                'line_total' => $lineTotal,
+                'unit' => $product->unit,
+            ];
+        }
+
+        $deliveryCharge = 0.0;
+        $total = $subtotal + $deliveryCharge;
+
+        $order = DB::transaction(function () use ($farmer, $data, $paymentMethod, $subtotal, $deliveryCharge, $total, $lineItems) {
+            $order = ShopOrder::create([
+                'farmer_id' => $farmer->id,
+                'farmer_name' => trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')),
+                'farmer_phone' => $farmer->mobile ?? null,
+                'shipping_address' => trim((string) $data['shipping_address']),
+                'payment_method' => $paymentMethod,
+                'status' => 'placed',
+                'subtotal' => $subtotal,
+                'delivery_charge' => $deliveryCharge,
+                'total' => $total,
+            ]);
+
+            foreach ($lineItems as $item) {
+                ShopOrderItem::create([
+                    'shop_order_id' => $order->id,
+                    ...$item,
+                ]);
+            }
+
+            return $order->load('items');
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Order placed successfully.',
+            'data' => [
+                'order_id' => $order->id,
+                'status' => $order->status,
+                'payment_method' => strtoupper($order->payment_method),
+                'subtotal' => (float) $order->subtotal,
+                'delivery_charge' => (float) $order->delivery_charge,
+                'total' => (float) $order->total,
+                'created_at' => optional($order->created_at)->toIso8601String(),
+            ],
+        ], 201);
+    }
+
+    public function farmerOrders(Farmer $farmer)
+    {
+        $orders = ShopOrder::query()
+            ->with('items')
+            ->where('farmer_id', $farmer->id)
+            ->latest()
+            ->get()
+            ->map(function (ShopOrder $order) {
+                return [
+                    'id' => $order->id,
+                    'status' => $order->status,
+                    'payment_method' => $order->payment_method,
+                    'shipping_address' => $order->shipping_address,
+                    'subtotal' => (float) $order->subtotal,
+                    'delivery_charge' => (float) $order->delivery_charge,
+                    'total' => (float) $order->total,
+                    'created_at' => optional($order->created_at)->toIso8601String(),
+                    'items' => $order->items->map(function (ShopOrderItem $item) {
+                        return [
+                            'product_name' => $item->product_name,
+                            'price' => (float) $item->price,
+                            'quantity' => (int) $item->quantity,
+                            'line_total' => (float) $item->line_total,
+                            'unit' => $item->unit,
+                        ];
+                    })->values(),
+                ];
+            });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Shop orders fetched successfully',
+            'data' => $orders,
         ]);
     }
 }

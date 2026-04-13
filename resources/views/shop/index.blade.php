@@ -52,6 +52,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
+                            <th>Image</th>
                             <th>Category</th>
                             <th>Name</th>
                             <th>Subtitle</th>
@@ -64,6 +65,13 @@
                         @forelse($products as $key => $product)
                             <tr class="shop-row" data-search="{{ strtolower($product->category.' '.$product->name.' '.($product->subtitle ?? '').' '.($product->description ?? '')) }}">
                                 <td>{{ $key + 1 }}</td>
+                                <td>
+                                    @if(!empty($product->image))
+                                        <img src="{{ asset($product->image) }}" alt="{{ $product->name }}" style="height:46px;width:46px;object-fit:cover;border-radius:10px;">
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
                                 <td><span class="badge bg-light text-dark text-capitalize">{{ $product->category }}</span></td>
                                 <td>{{ $product->name }}</td>
                                 <td>{{ $product->subtitle ?: '-' }}</td>
@@ -77,7 +85,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted">No products found</td>
+                                <td colspan="8" class="text-center text-muted">No products found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -90,7 +98,7 @@
 <div class="modal fade" id="addShopModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="{{ route('shop.store') }}">
+            <form method="POST" action="{{ route('shop.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Add Shop Product</h5>
@@ -121,6 +129,18 @@
                         <div class="col-12">
                             <label class="form-label">Description</label>
                             <textarea name="description" rows="3" class="form-control"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Features (one per line)</label>
+                            <textarea name="features" rows="3" class="form-control" placeholder="High protein&#10;Fast delivery&#10;Best for milking cows"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Main Image</label>
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Gallery Images</label>
+                            <input type="file" name="gallery_images[]" class="form-control" accept="image/*" multiple>
                         </div>
                         <div class="col-12">
                             <div class="form-check">
