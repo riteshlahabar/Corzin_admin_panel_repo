@@ -20,7 +20,6 @@ class DoctorAppointmentController extends Controller
     {
         $rows = DoctorAppointment::query()
             ->with('doctor')
-            ->where('status', '!=', 'completed')
             ->latest('requested_at')
             ->latest()
             ->get();
@@ -152,6 +151,13 @@ class DoctorAppointmentController extends Controller
                 return sha1($farmerKey.'|'.$animalKey.'|'.$concernKey.'|'.$requestedKey);
             })
             ->map(function (Collection $group) {
+                $hasCompleted = $group->contains(function (DoctorAppointment $row) {
+                    return strtolower((string) $row->status) === 'completed';
+                });
+                if ($hasCompleted) {
+                    return null;
+                }
+
                 $preferred = $group->first(function (DoctorAppointment $row) {
                     return in_array(strtolower((string) $row->status), [
                         'approved',

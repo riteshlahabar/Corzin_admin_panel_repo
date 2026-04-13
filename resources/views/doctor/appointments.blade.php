@@ -62,7 +62,7 @@
                 <div class="col-md-3">
                     <select name="status" class="form-select">
                         <option value="">All Status</option>
-                        @foreach(['pending', 'proposed', 'approved', 'scheduled', 'in_progress', 'completed', 'cancelled'] as $status)
+                        @foreach(['pending', 'proposed', 'approved', 'scheduled', 'in_progress', 'cancelled'] as $status)
                             <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>{{ ucwords(str_replace('_', ' ', $status)) }}</option>
                         @endforeach
                     </select>
