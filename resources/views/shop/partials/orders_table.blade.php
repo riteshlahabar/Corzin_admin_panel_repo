@@ -1,6 +1,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">{{ $title ?? 'Orders' }}</h5>
 </div>
+@php
+    $currentTab = $tab ?? 'new-order';
+@endphp
 
 <div class="table-responsive">
     <table class="table table-bordered align-middle mb-0">
@@ -42,21 +45,32 @@
                         </span>
                     </td>
                     <td>
-                        <form method="POST" action="{{ route('shop.orders.status', $order) }}" class="d-flex gap-2 align-items-center flex-wrap">
-                            @csrf
-                            <input type="hidden" name="tab" value="{{ $tab ?? 'new-order' }}">
-                            <select name="status" class="form-select form-select-sm" style="width: 140px;">
-                                <option value="placed" {{ $order->status === 'placed' ? 'selected' : '' }}>Placed</option>
-                                <option value="in_progress" {{ $order->status === 'in_progress' ? 'selected' : '' }}>In Progress</option>
-                                <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>Completed</option>
-                                <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                            </select>
-                            <select name="payment_status" class="form-select form-select-sm" style="width: 120px;">
-                                <option value="pending" {{ ($order->payment_status ?? 'pending') === 'pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="paid" {{ $order->payment_status === 'paid' ? 'selected' : '' }}>Paid</option>
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-primary">Update</button>
-                        </form>
+                        @if($currentTab === 'payment')
+                            <span class="text-muted">No action</span>
+                        @elseif($currentTab === 'completed')
+                            <form method="POST" action="{{ route('shop.orders.status', $order) }}" class="d-flex gap-2 align-items-center flex-wrap">
+                                @csrf
+                                <input type="hidden" name="tab" value="completed">
+                                <input type="hidden" name="status" value="completed">
+                                <select name="payment_status" class="form-select form-select-sm" style="width: 120px;">
+                                    <option value="pending" {{ ($order->payment_status ?? 'pending') === 'pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="paid" {{ $order->payment_status === 'paid' ? 'selected' : '' }}>Paid</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('shop.orders.status', $order) }}" class="d-flex gap-2 align-items-center flex-wrap">
+                                @csrf
+                                <input type="hidden" name="tab" value="{{ $currentTab }}">
+                                <select name="status" class="form-select form-select-sm" style="width: 140px;">
+                                    <option value="placed" {{ $order->status === 'placed' ? 'selected' : '' }}>Placed</option>
+                                    <option value="in_progress" {{ $order->status === 'in_progress' ? 'selected' : '' }}>In Progress</option>
+                                    <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>Completed</option>
+                                    <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @empty
