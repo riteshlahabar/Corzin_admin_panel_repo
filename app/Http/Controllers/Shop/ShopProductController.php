@@ -3,12 +3,18 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Shop\ShopAdminNotification;
 use App\Models\Shop\ShopOrder;
 use App\Models\Shop\ShopProduct;
+use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 
 class ShopProductController extends Controller
 {
+    public function __construct(protected FirebaseService $firebaseService)
+    {
+    }
+
     public function index()
     {
         $activeTab = request()->query('tab', 'add-product');
@@ -32,6 +38,10 @@ class ShopProductController extends Controller
         $inProgressOrders = $orders->where('status', 'in_progress')->values();
         $completedOrders = $orders->where('status', 'completed')->values();
         $paymentOrders = $orders->values();
+        $shopNotifications = ShopAdminNotification::query()
+            ->latest()
+            ->limit(5)
+            ->get();
 
         return view('shop.index', compact(
             'products',
@@ -41,6 +51,7 @@ class ShopProductController extends Controller
             'completedOrders',
             'paymentOrders',
             'activeTab',
+            'shopNotifications',
         ));
     }
 
@@ -102,6 +113,19 @@ class ShopProductController extends Controller
             'status' => $nextStatus,
             'payment_status' => $paymentStatus,
         ]);
+
+        $this->firebaseService->sendToDevice(
+            optional($order->farmer)->fcm_token,
+            'Shop Order Updated',
+            'Order #'.$order->id.' is now '.$order->status.' (Payment: '.($order->payment_status ?? 'pending').').',
+            [
+                'type' => 'shop_order',
+                'event' => 'updated',
+                'order_id' => (string) $order->id,
+                'status' => (string) $order->status,
+                'payment_status' => (string) ($order->payment_status ?? 'pending'),
+            ]
+        );
 
         return redirect()->route('shop.index', ['tab' => $request->input('tab', 'new-order')])
             ->with('success', 'Order status updated successfully.');

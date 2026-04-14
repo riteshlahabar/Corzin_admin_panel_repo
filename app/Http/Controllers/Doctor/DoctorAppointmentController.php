@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
+use App\Models\Doctor\DoctorAdminNotification;
 use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
 use App\Services\FirebaseService;
@@ -76,7 +77,12 @@ class DoctorAppointmentController extends Controller
             ->orderBy('last_name')
             ->get();
 
-        return view('doctor.appointments', compact('appointments', 'summary', 'doctors'));
+        $adminNotifications = DoctorAdminNotification::query()
+            ->latest()
+            ->limit(8)
+            ->get();
+
+        return view('doctor.appointments', compact('appointments', 'summary', 'doctors', 'adminNotifications'));
     }
 
     public function assignDoctor(Request $request, DoctorAppointment $appointment)
@@ -131,6 +137,14 @@ class DoctorAppointmentController extends Controller
                 'status' => (string) $target->status,
             ]
         );
+
+        DoctorAdminNotification::create([
+            'doctor_appointment_id' => $target->id,
+            'event' => 'appointment_assigned_by_admin',
+            'title' => 'Doctor assigned by admin',
+            'message' => 'Appointment #'.$target->id.' assigned to doctor #'.$doctorId.'.',
+            'is_read' => false,
+        ]);
 
         return back()->with('success', 'Doctor assigned and notified successfully.');
     }

@@ -101,6 +101,12 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         /** @var DoctorAppointment $primaryAppointment */
         $primaryAppointment = $appointments->first();
         $broadcastCount = $appointments->count();
+        $this->notifyWebAdmin(
+            $primaryAppointment,
+            'appointment_created_broadcast',
+            'New appointment request (broadcast)',
+            trim(($primaryAppointment->farmer_name ?? 'Farmer').' appointment broadcast to '.$broadcastCount.' doctor(s).')
+        );
 
         return response()->json([
             'status' => true,

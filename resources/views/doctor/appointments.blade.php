@@ -6,6 +6,14 @@
     @if(session('success'))
         <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
     @endif
+    @if(!empty($adminNotifications) && $adminNotifications->count() > 0)
+        <div class="alert alert-info border-0 shadow-sm">
+            <div class="fw-semibold mb-1">Latest Appointment Notifications</div>
+            @foreach($adminNotifications as $n)
+                <div class="small">• {{ $n->message }} <span class="text-muted">({{ optional($n->created_at)->format('d-m-Y h:i A') }})</span></div>
+            @endforeach
+        </div>
+    @endif
 
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h4 class="mb-0 text-dark">Appointment</h4>

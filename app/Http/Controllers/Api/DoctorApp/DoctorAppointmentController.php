@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\DoctorApp;
 
 use App\Http\Controllers\Controller;
+use App\Models\Doctor\DoctorAdminNotification;
 use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
 use App\Models\Doctor\DoctorDisease;
@@ -125,6 +126,12 @@ class DoctorAppointmentController extends Controller
             trim(($appointment->farmer_name ?? 'Farmer').' requested a visit for '.($appointment->animal_name ?? 'animal')),
             ['event' => 'appointment_created']
         );
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_created',
+            'New appointment request',
+            trim(($appointment->farmer_name ?? 'Farmer').' created appointment #'.$appointment->id)
+        );
 
         return response()->json([
             'status' => true,
@@ -154,6 +161,12 @@ class DoctorAppointmentController extends Controller
             'Doctor Shared Slot',
             'Your appointment has a proposed time and charge. Please review and approve.',
             ['event' => 'appointment_proposed']
+        );
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_proposed',
+            'Doctor proposed appointment slot',
+            'Appointment #'.$appointment->id.' moved to proposed with schedule and charges.'
         );
 
         return response()->json([
@@ -191,6 +204,12 @@ class DoctorAppointmentController extends Controller
             'Treatment Completed',
             'Doctor marked your appointment as completed.',
             ['event' => 'appointment_completed']
+        );
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_completed',
+            'Appointment completed',
+            'Appointment #'.$appointment->id.' has been marked completed by doctor.'
         );
 
         return response()->json([
@@ -260,6 +279,12 @@ class DoctorAppointmentController extends Controller
                 ['event' => 'appointment_declined']
             );
         }
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_doctor_decision_'.$action,
+            'Doctor updated appointment',
+            'Appointment #'.$appointment->id.' doctor action: '.$action.'.'
+        );
 
         return response()->json([
             'status' => true,
@@ -310,6 +335,12 @@ class DoctorAppointmentController extends Controller
                 ['event' => 'appointment_farmer_cancelled']
             );
         }
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_farmer_'.$status,
+            'Farmer updated appointment',
+            'Appointment #'.$appointment->id.' farmer status: '.$status.'.'
+        );
 
         return response()->json([
             'status' => true,
@@ -354,6 +385,12 @@ class DoctorAppointmentController extends Controller
             'Doctor verified your appointment OTP successfully.',
             ['event' => 'appointment_otp_verified']
         );
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_otp_verified',
+            'Appointment OTP verified',
+            'OTP verified for appointment #'.$appointment->id.'.'
+        );
 
         return response()->json([
             'status' => true,
@@ -387,6 +424,12 @@ class DoctorAppointmentController extends Controller
             'Treatment Started',
             'Doctor started treatment for this appointment.',
             ['event' => 'treatment_started']
+        );
+        $this->notifyWebAdmin(
+            $appointment,
+            'treatment_started',
+            'Treatment started',
+            'Doctor started treatment for appointment #'.$appointment->id.'.'
         );
 
         return response()->json([
@@ -440,6 +483,12 @@ class DoctorAppointmentController extends Controller
                 ['event' => 'appointment_followup_suggested']
             );
         }
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_treatment_updated',
+            'Treatment details updated',
+            'Treatment details updated for appointment #'.$appointment->id.'.'
+        );
 
         return response()->json([
             'status' => true,
@@ -598,6 +647,17 @@ class DoctorAppointmentController extends Controller
         }
 
         return $base;
+    }
+
+    protected function notifyWebAdmin(DoctorAppointment $appointment, string $event, string $title, string $message): void
+    {
+        DoctorAdminNotification::create([
+            'doctor_appointment_id' => $appointment->id,
+            'event' => $event,
+            'title' => $title,
+            'message' => $message,
+            'is_read' => false,
+        ]);
     }
 
     protected function extractOnsiteTreatment(?string $treatmentDetails): ?string

@@ -9,6 +9,14 @@
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    @if(!empty($shopNotifications) && $shopNotifications->count() > 0)
+        <div class="alert alert-info">
+            <div class="fw-semibold mb-1">Latest Shop Notifications</div>
+            @foreach($shopNotifications as $notification)
+                <div class="small">• {{ $notification->message }} <span class="text-muted">({{ optional($notification->created_at)->format('d-m-Y h:i A') }})</span></div>
+            @endforeach
+        </div>
+    @endif
 
     <div class="row g-3 mt-2 mb-3">
         <div class="col-md-3">

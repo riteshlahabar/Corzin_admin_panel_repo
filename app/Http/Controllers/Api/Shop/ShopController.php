@@ -4,14 +4,20 @@ namespace App\Http\Controllers\Api\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Farmer;
+use App\Models\Shop\ShopAdminNotification;
 use App\Models\Shop\ShopOrder;
 use App\Models\Shop\ShopOrderItem;
 use App\Models\Shop\ShopProduct;
+use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ShopController extends Controller
 {
+    public function __construct(protected FirebaseService $firebaseService)
+    {
+    }
+
     public function categories()
     {
         $categories = ShopProduct::query()
@@ -172,6 +178,26 @@ class ShopController extends Controller
 
             return $order->load('items');
         });
+
+        $this->firebaseService->sendToDevice(
+            $farmer->fcm_token ?? null,
+            'Order Placed',
+            'Your order #'.$order->id.' has been placed successfully.',
+            [
+                'type' => 'shop_order',
+                'event' => 'created',
+                'order_id' => (string) $order->id,
+                'status' => (string) $order->status,
+                'payment_status' => (string) ($order->payment_status ?? 'pending'),
+            ]
+        );
+
+        ShopAdminNotification::create([
+            'shop_order_id' => $order->id,
+            'title' => 'New Shop Order',
+            'message' => 'Farmer '.$farmer->first_name.' created order #'.$order->id.'.',
+            'is_read' => false,
+        ]);
 
         return response()->json([
             'status' => true,
