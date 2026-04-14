@@ -94,7 +94,7 @@ class ShopProductController extends Controller
 
         $nextStatus = $data['status'];
         $paymentStatus = $data['payment_status'] ?? $order->payment_status;
-        if ($nextStatus === 'completed' && blank($data['payment_status']) && strtolower((string) $order->payment_method) === 'cod') {
+        if ($nextStatus === 'completed' && blank($data['payment_status'] ?? null) && strtolower((string) $order->payment_method) === 'cod') {
             $paymentStatus = 'paid';
         }
 
