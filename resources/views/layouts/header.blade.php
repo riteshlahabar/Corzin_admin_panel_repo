@@ -1,3 +1,54 @@
+@php
+    $topNotifications = collect();
+    $topUnreadCount = 0;
+    try {
+        $shopRows = collect();
+        $doctorRows = collect();
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('shop_admin_notifications')) {
+            $shopRows = \App\Models\Shop\ShopAdminNotification::query()
+                ->latest()
+                ->limit(20)
+                ->get()
+                ->map(function ($row) {
+                    return (object) [
+                        'title' => $row->title,
+                        'message' => $row->message,
+                        'is_read' => (bool) $row->is_read,
+                        'created_at' => $row->created_at,
+                        'source' => 'Shop',
+                    ];
+                });
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('doctor_admin_notifications')) {
+            $doctorRows = \App\Models\Doctor\DoctorAdminNotification::query()
+                ->latest()
+                ->limit(20)
+                ->get()
+                ->map(function ($row) {
+                    return (object) [
+                        'title' => $row->title,
+                        'message' => $row->message,
+                        'is_read' => (bool) $row->is_read,
+                        'created_at' => $row->created_at,
+                        'source' => 'Appointment',
+                    ];
+                });
+        }
+
+        $topNotifications = $shopRows
+            ->concat($doctorRows)
+            ->sortByDesc(fn ($item) => optional($item->created_at)->timestamp ?? 0)
+            ->take(12)
+            ->values();
+
+        $topUnreadCount = $topNotifications->where('is_read', false)->count();
+    } catch (\Throwable $e) {
+        $topNotifications = collect();
+        $topUnreadCount = 0;
+    }
+@endphp
 <div class="topbar d-print-none">
     <div class="container-fluid">
         <nav class="topbar-custom d-flex justify-content-between" id="topbar-custom"> 
@@ -14,12 +65,6 @@
                     </li>                   
             </ul>
             <ul class="topbar-item list-unstyled d-inline-flex align-items-center mb-0">
-                <li class="hide-phone app-search">
-                    <form role="search" action="#" method="get">
-                        <input type="search" name="search" class="form-control top-search mb-0" placeholder="Search here...">
-                        <button type="submit"><i class="iconoir-search"></i></button>
-                    </form>
-                </li>     
                <li class="topbar-item">
                     <a class="nav-link nav-icon" href="javascript:void(0);" id="light-dark-mode">
                         <i class="iconoir-half-moon dark-mode"></i>
@@ -31,17 +76,34 @@
                     <a class="nav-link dropdown-toggle arrow-none nav-icon" data-bs-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false" data-bs-offset="0,19">
                         <i class="iconoir-bell"></i>
-                        <span class="alert-badge"></span>
+                        @if($topUnreadCount > 0)
+                            <span class="alert-badge"></span>
+                        @endif
                     </a>
                     <div class="dropdown-menu stop dropdown-menu-end dropdown-lg py-0">
                         <h5 class="dropdown-item-text m-0 py-3 d-flex justify-content-between align-items-center">
-                            Notifications <a href="#" class="badge text-body-tertiary badge-pill">
-                                <i class="iconoir-plus-circle fs-4"></i>
-                            </a>
+                            Notifications
+                            <span class="badge text-bg-light">{{ $topNotifications->count() }}</span>
                         </h5>
-                        <a href="pages-notifications.html" class="dropdown-item text-center text-dark fs-13 py-2">
-                            View All <i class="fi-arrow-right"></i>
-                        </a>
+                        <div style="max-height: 280px; overflow-y: auto;">
+                            @forelse($topNotifications as $n)
+                                <div class="dropdown-item py-2 border-top">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <small class="fw-semibold text-dark">{{ $n->title }}</small>
+                                        <small class="text-muted">{{ optional($n->created_at)->diffForHumans() }}</small>
+                                    </div>
+                                    <div class="small text-muted">{{ $n->message }}</div>
+                                    <div class="mt-1">
+                                        <span class="badge text-bg-secondary">{{ $n->source }}</span>
+                                        @if(!$n->is_read)
+                                            <span class="badge text-bg-warning">New</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="dropdown-item py-3 text-center text-muted">No notifications yet</div>
+                            @endforelse
+                        </div>
                     </div>
                 </li>
     

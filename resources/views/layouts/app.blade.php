@@ -7,6 +7,16 @@
     <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
     <meta content="" name="author" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <script>
+        (function () {
+            try {
+                var storedTheme = localStorage.getItem('corzin_theme');
+                if (storedTheme === 'dark' || storedTheme === 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', storedTheme);
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}">
 
@@ -36,6 +46,26 @@
     </div>
     <script src="{{ asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/app.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                var root = document.documentElement;
+                var toggle = document.getElementById('light-dark-mode');
+                var current = root.getAttribute('data-bs-theme');
+                if (current === 'dark' || current === 'light') {
+                    localStorage.setItem('corzin_theme', current);
+                }
+                if (toggle) {
+                    toggle.addEventListener('click', function () {
+                        setTimeout(function () {
+                            var next = root.getAttribute('data-bs-theme') || 'light';
+                            localStorage.setItem('corzin_theme', next);
+                        }, 0);
+                    });
+                }
+            } catch (e) {}
+        });
+    </script>
     
     @stack('scripts')
     
