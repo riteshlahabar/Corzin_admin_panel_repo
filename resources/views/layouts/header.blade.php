@@ -108,7 +108,7 @@
                 </li>
     
                 <li class="dropdown topbar-item">
-                    <a class="nav-link dropdown-toggle arrow-none nav-icon" data-bs-toggle="dropdown" href="#" role="button"
+                    <a id="profile-menu-toggle" class="nav-link dropdown-toggle arrow-none nav-icon" data-bs-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false" data-bs-offset="0,19">
                         <img src="{{ asset('assets/images/users/avatar-1.jpg') }}" alt="" class="thumb-md rounded-circle">
                     </a>

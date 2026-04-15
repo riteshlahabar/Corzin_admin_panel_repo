@@ -64,6 +64,17 @@
                     });
                 }
             } catch (e) {}
+
+            try {
+                var profileToggle = document.getElementById('profile-menu-toggle');
+                if (profileToggle && window.bootstrap && window.bootstrap.Dropdown) {
+                    var profileDropdown = window.bootstrap.Dropdown.getOrCreateInstance(profileToggle);
+                    profileToggle.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        profileDropdown.toggle();
+                    });
+                }
+            } catch (e) {}
         });
     </script>
     <script type="module">
