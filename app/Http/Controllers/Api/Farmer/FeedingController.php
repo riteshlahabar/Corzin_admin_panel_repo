@@ -91,6 +91,58 @@ class FeedingController extends Controller
         ]);
     }
 
+    public function update(Request $request, $feeding_id)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'quantity' => 'required|numeric|min:0.01',
+            'unit' => 'required|in:Kg,Gram',
+            'feeding_time' => 'nullable|in:Morning,Afternoon,Evening',
+            'date' => 'required|date',
+            'notes' => 'nullable|string',
+            'feed_type_id' => 'nullable|exists:feed_types,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $record = FeedingRecord::find($feeding_id);
+        if (! $record) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Feeding record not found.',
+            ], 404);
+        }
+
+        if ((int) $record->farmer_id !== (int) $request->farmer_id) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not allowed to update this record.',
+            ], 403);
+        }
+
+        $record->update([
+            'quantity' => $request->quantity,
+            'unit' => $request->unit,
+            'feeding_time' => $request->feeding_time ?: $record->feeding_time,
+            'date' => $request->date,
+            'notes' => $request->notes,
+            'feed_type_id' => $request->filled('feed_type_id')
+                ? $request->feed_type_id
+                : $record->feed_type_id,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Feeding entry updated successfully',
+            'data' => $this->transformRecord($record->load(['animal', 'feedType'])),
+        ]);
+    }
+
     public function summary($farmer_id)
     {
         $records = FeedingRecord::where('farmer_id', $farmer_id)->get();
