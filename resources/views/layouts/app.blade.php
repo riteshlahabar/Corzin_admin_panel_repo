@@ -66,6 +66,72 @@
             } catch (e) {}
         });
     </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-messaging.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDl71BcXPsQVeR1DSjoPzyfxIzBVdCJeb0",
+            authDomain: "corzindairymanagementsystem.firebaseapp.com",
+            projectId: "corzindairymanagementsystem",
+            storageBucket: "corzindairymanagementsystem.firebasestorage.app",
+            messagingSenderId: "152533202294",
+            appId: "1:152533202294:web:f7717de2654ee5353a3657"
+        };
+
+        const vapidKey = "BFLLbKIdALmrxeJ7iBx9MMTbtR1qU4d-A3ysNZUu2Jrbo9WsdAwFr2Vl9fEZR5SWw8o4bYG1YtCQ-VGYIclDlMY";
+
+        async function registerWebPush() {
+            try {
+                if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+                    return;
+                }
+
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    return;
+                }
+
+                const app = initializeApp(firebaseConfig);
+                const messaging = getMessaging(app);
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+                const token = await getToken(messaging, {
+                    vapidKey,
+                    serviceWorkerRegistration: registration,
+                });
+
+                if (!token) {
+                    return;
+                }
+
+                await fetch('/api/web-push/register-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        device_name: 'Admin Web',
+                        user_agent: navigator.userAgent || '',
+                    }),
+                });
+
+                onMessage(messaging, (payload) => {
+                    const title = payload?.notification?.title || 'Notification';
+                    const body = payload?.notification?.body || 'You have a new update.';
+                    try {
+                        new Notification(title, { body });
+                    } catch (e) {}
+                });
+            } catch (e) {
+                console.warn('Web push init failed:', e);
+            }
+        }
+
+        registerWebPush();
+    </script>
     
     @stack('scripts')
     

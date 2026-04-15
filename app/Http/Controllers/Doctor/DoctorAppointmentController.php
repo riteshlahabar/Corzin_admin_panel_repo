@@ -145,6 +145,17 @@ class DoctorAppointmentController extends Controller
             'message' => 'Appointment #'.$target->id.' assigned to doctor #'.$doctorId.'.',
             'is_read' => false,
         ]);
+        $this->firebaseService->sendToWebAdmins(
+            'Doctor assigned by admin',
+            'Appointment #'.$target->id.' assigned to doctor #'.$doctorId.'.',
+            [
+                'type' => 'web_admin',
+                'event' => 'appointment_assigned_by_admin',
+                'appointment_id' => (string) $target->id,
+                'doctor_id' => (string) $doctorId,
+                'status' => (string) $target->status,
+            ]
+        );
 
         return back()->with('success', 'Doctor assigned and notified successfully.');
     }

@@ -126,6 +126,17 @@ class ShopProductController extends Controller
                 'payment_status' => (string) ($order->payment_status ?? 'pending'),
             ]
         );
+        $this->firebaseService->sendToWebAdmins(
+            'Shop Order Updated',
+            'Order #'.$order->id.' is now '.$order->status.' (Payment: '.($order->payment_status ?? 'pending').').',
+            [
+                'type' => 'web_admin',
+                'event' => 'shop_order_updated',
+                'order_id' => (string) $order->id,
+                'status' => (string) $order->status,
+                'payment_status' => (string) ($order->payment_status ?? 'pending'),
+            ]
+        );
 
         return redirect()->route('shop.index', ['tab' => $request->input('tab', 'new-order')])
             ->with('success', 'Order status updated successfully.');

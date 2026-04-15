@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController as DoctorAppA
 use App\Http\Controllers\Api\DoctorApp\DoctorAppController;
 use App\Http\Controllers\Api\DoctorApp\DoctorSettingController as DoctorAppSettingController;
 use App\Http\Controllers\Api\Shop\ShopController;
+use App\Http\Controllers\Api\WebPushTokenController;
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -134,4 +135,8 @@ Route::prefix('shop')->group(function () {
     Route::get('/products', [ShopController::class, 'products']);
     Route::post('/orders', [ShopController::class, 'placeOrder']);
     Route::get('/orders/farmer/{farmer}', [ShopController::class, 'farmerOrders']);
+});
+
+Route::prefix('web-push')->group(function () {
+    Route::post('/register-token', [WebPushTokenController::class, 'register']);
 });

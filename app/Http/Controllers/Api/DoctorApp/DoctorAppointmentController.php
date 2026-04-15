@@ -658,6 +658,19 @@ class DoctorAppointmentController extends Controller
             'message' => $message,
             'is_read' => false,
         ]);
+
+        $this->firebaseService->sendToWebAdmins(
+            $title,
+            $message,
+            [
+                'type' => 'web_admin',
+                'event' => $event,
+                'appointment_id' => (string) $appointment->id,
+                'doctor_id' => (string) ($appointment->doctor_id ?? ''),
+                'farmer_id' => (string) ($appointment->farmer_id ?? ''),
+                'status' => (string) ($appointment->status ?? ''),
+            ]
+        );
     }
 
     protected function extractOnsiteTreatment(?string $treatmentDetails): ?string

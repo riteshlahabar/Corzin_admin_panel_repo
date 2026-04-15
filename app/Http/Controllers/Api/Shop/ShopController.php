@@ -198,6 +198,15 @@ class ShopController extends Controller
             'message' => 'Farmer '.$farmer->first_name.' created order #'.$order->id.'.',
             'is_read' => false,
         ]);
+        $this->firebaseService->sendToWebAdmins(
+            'New Shop Order',
+            'Order #'.$order->id.' created by '.$farmer->first_name.'.',
+            [
+                'type' => 'web_admin',
+                'event' => 'shop_order_created',
+                'order_id' => (string) $order->id,
+            ]
+        );
 
         return response()->json([
             'status' => true,

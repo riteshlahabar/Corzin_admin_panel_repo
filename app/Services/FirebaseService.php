@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\WebPushToken;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
@@ -69,6 +70,34 @@ class FirebaseService
             ->withData($normalizedData);
 
         $this->messaging->send($message);
+    }
+
+    public function sendToWebAdmins(string $title, string $body, array $data = []): void
+    {
+        if (! $this->configured || ! $this->messaging) {
+            return;
+        }
+
+        try {
+            $tokens = WebPushToken::query()
+                ->where('is_active', true)
+                ->pluck('token')
+                ->filter()
+                ->values();
+
+            foreach ($tokens as $token) {
+                try {
+                    $this->sendToDevice((string) $token, $title, $body, $data);
+                } catch (Throwable $exception) {
+                    Log::warning('Web push send failed', [
+                        'token' => substr((string) $token, 0, 24).'...',
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Web push broadcast skipped', ['error' => $exception->getMessage()]);
+        }
     }
 
     protected function resolveServiceAccountCredentials(): array|string|null
