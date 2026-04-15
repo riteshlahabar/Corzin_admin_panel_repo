@@ -131,7 +131,12 @@
                         <a class="dropdown-item" href="pages-profile.html"><i class="las la-lock fs-18 me-1 align-text-bottom"></i> Security</a>
                         <a class="dropdown-item" href="pages-faq.html"><i class="las la-question-circle fs-18 me-1 align-text-bottom"></i> Help Center</a>                        
                         <div class="dropdown-divider mb-0"></div>
-                        <a class="dropdown-item text-danger" href="auth-login.html"><i class="las la-power-off fs-18 me-1 align-text-bottom"></i> Logout</a>
+                        <form id="header-logout-form" action="{{ route('logout') }}" method="POST" class="m-0">
+                            @csrf
+                            <button type="submit" class="dropdown-item text-danger border-0 bg-transparent text-start w-100">
+                                <i class="las la-power-off fs-18 me-1 align-text-bottom"></i> Logout
+                            </button>
+                        </form>
                     </div>
                 </li>
             </ul></nav>
