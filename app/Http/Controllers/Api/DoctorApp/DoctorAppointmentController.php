@@ -39,7 +39,7 @@ class DoctorAppointmentController extends Controller
 
     public function indexByFarmer(Farmer $farmer)
     {
-        $appointments = DoctorAppointment::query()
+        $rows = DoctorAppointment::query()
             ->where(function ($query) use ($farmer) {
                 $query->where('farmer_id', $farmer->id);
                 if (! blank($farmer->mobile)) {
@@ -49,13 +49,36 @@ class DoctorAppointmentController extends Controller
             ->with(['doctor', 'farmer'])
             ->latest('requested_at')
             ->latest()
-            ->get()
+            ->get();
+
+        // Farmer app should receive one card per appointment request group.
+        $grouped = $rows
+            ->groupBy(function (DoctorAppointment $appointment) {
+                return blank($appointment->appointment_group_id)
+                    ? 'id_'.$appointment->id
+                    : (string) $appointment->appointment_group_id;
+            })
+            ->map(function ($items) {
+                $items = $items->sort(function (DoctorAppointment $a, DoctorAppointment $b) {
+                    $rankDiff = $this->farmerStatusRank($b) <=> $this->farmerStatusRank($a);
+                    if ($rankDiff !== 0) {
+                        return $rankDiff;
+                    }
+
+                    $aTime = optional($a->requested_at)->timestamp ?? optional($a->created_at)->timestamp ?? 0;
+                    $bTime = optional($b->requested_at)->timestamp ?? optional($b->created_at)->timestamp ?? 0;
+                    return $bTime <=> $aTime;
+                });
+
+                return $items->first();
+            })
+            ->values()
             ->map(fn (DoctorAppointment $appointment) => $this->appointmentPayload($appointment, true));
 
         return response()->json([
             'status' => true,
             'message' => 'Farmer appointments fetched successfully.',
-            'data' => $appointments,
+            'data' => $grouped,
         ]);
     }
 
@@ -548,6 +571,7 @@ class DoctorAppointmentController extends Controller
 
         return [
             'id' => $appointment->id,
+            'appointment_group_id' => $appointment->appointment_group_id,
             'doctor_id' => $appointment->doctor_id,
             'doctor_name' => optional($appointment->doctor)->full_name ?? '',
             'farmer_id' => $appointment->farmer_id,
@@ -583,6 +607,25 @@ class DoctorAppointmentController extends Controller
             'notes' => $appointment->notes ?? '',
             'created_at' => optional($appointment->created_at)->toIso8601String(),
         ];
+    }
+
+    protected function farmerStatusRank(DoctorAppointment $appointment): int
+    {
+        $status = strtolower((string) ($appointment->status ?? ''));
+
+        if ($this->isFollowupDueToday($appointment)) {
+            return 8;
+        }
+
+        return match ($status) {
+            'in_progress' => 7,
+            'approved', 'farmer_approved', 'scheduled', 'rescheduled' => 6,
+            'proposed', 'awaiting_farmer_approval', 'awaiting_approval' => 5,
+            'pending', 'new', 'requested' => 4,
+            'completed' => 3,
+            'declined', 'cancelled', 'rejected' => 2,
+            default => 1,
+        };
     }
 
     protected function notifyDoctor(DoctorAppointment $appointment, string $title, string $body, array $extraData = []): void
