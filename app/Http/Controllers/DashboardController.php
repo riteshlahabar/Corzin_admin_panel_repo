@@ -82,9 +82,10 @@ class DashboardController extends Controller
 
         $topMilkProducer = null;
         $topMilkProducerRow = MilkProduction::query()
-            ->selectRaw('farmer_id, COALESCE(SUM(total_milk), 0) as total_milk')
-            ->whereNotNull('farmer_id')
-            ->groupBy('farmer_id')
+            ->join('animals', 'animals.id', '=', 'milk_productions.animal_id')
+            ->selectRaw('animals.farmer_id as farmer_id, COALESCE(SUM(milk_productions.total_milk), 0) as total_milk')
+            ->whereNotNull('animals.farmer_id')
+            ->groupBy('animals.farmer_id')
             ->orderByDesc('total_milk')
             ->first();
 
