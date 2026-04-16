@@ -63,7 +63,10 @@
                         @php
                             $documents = [
                                 'Doctor Photo' => $doctor->doctorPhotoUrl(),
-                                'Aadhar Document' => $doctor->documents()['adhar_document'] ?? null,
+                                'Aadhar Front Document' => $doctor->documents()['adhar_document_front']
+                                    ?? $doctor->documents()['adhar_document']
+                                    ?? null,
+                                'Aadhar Back Document' => $doctor->documents()['adhar_document_back'] ?? null,
                                 'PAN Document' => $doctor->documents()['pan_document'] ?? null,
                                 'MMC Document' => $doctor->documents()['mmc_document'] ?? null,
                                 'Clinic Registration Document' => $doctor->documents()['clinic_registration_document'] ?? null,

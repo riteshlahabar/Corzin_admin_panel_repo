@@ -148,9 +148,17 @@
                         <div class="col-md-6 col-xl-4">
                             <label class="doctor-upload-card">
                                 <span class="doctor-upload-icon"><i class="iconoir-page"></i></span>
-                                <span class="doctor-upload-title">Aadhar Attachment</span>
+                                <span class="doctor-upload-title">Aadhar Front Attachment</span>
                                 <span class="doctor-upload-subtitle">PDF, JPG, JPEG, PNG</span>
-                                <input type="file" name="adhar_document" class="form-control @error('adhar_document') is-invalid @enderror mt-3" required>
+                                <input type="file" name="adhar_document_front" class="form-control @error('adhar_document_front') is-invalid @enderror mt-3" required>
+                            </label>
+                        </div>
+                        <div class="col-md-6 col-xl-4">
+                            <label class="doctor-upload-card">
+                                <span class="doctor-upload-icon"><i class="iconoir-page"></i></span>
+                                <span class="doctor-upload-title">Aadhar Back Attachment</span>
+                                <span class="doctor-upload-subtitle">PDF, JPG, JPEG, PNG</span>
+                                <input type="file" name="adhar_document_back" class="form-control @error('adhar_document_back') is-invalid @enderror mt-3" required>
                             </label>
                         </div>
                         <div class="col-md-6 col-xl-4">

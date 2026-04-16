@@ -50,7 +50,8 @@ class DoctorListController extends Controller
             'pincode' => ['required', 'string', 'max:15'],
             'password' => ['required', 'confirmed', 'min:8'],
             'doctor_photo' => ['required', 'image', 'max:5120'],
-            'adhar_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'adhar_document_front' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'adhar_document_back' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'pan_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'mmc_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'clinic_registration_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
@@ -78,9 +79,26 @@ class DoctorListController extends Controller
             'terms_accepted' => true,
             'terms_text' => 'Doctor agrees to all onboarding verification and approval conditions.',
             'status' => 'pending',
+            'adhar_document' => '',
+            'adhar_document_back' => '',
+            'pan_document' => '',
+            'mmc_document' => '',
+            'clinic_registration_document' => '',
+            'doctor_photo' => '',
         ]);
 
-        foreach (['adhar_document', 'pan_document', 'mmc_document', 'clinic_registration_document', 'doctor_photo'] as $field) {
+        $doctor->adhar_document = $this->storeDocument(
+            $request->file('adhar_document_front'),
+            'adhar_document_front',
+            $doctor->id
+        );
+        $doctor->adhar_document_back = $this->storeDocument(
+            $request->file('adhar_document_back'),
+            'adhar_document_back',
+            $doctor->id
+        );
+
+        foreach (['pan_document', 'mmc_document', 'clinic_registration_document', 'doctor_photo'] as $field) {
             $doctor->{$field} = $this->storeDocument($request->file($field), $field, $doctor->id);
         }
 
