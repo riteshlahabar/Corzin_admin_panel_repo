@@ -46,6 +46,20 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         $animal = null;
         if (!empty($data['animal_id'])) {
             $animal = Animal::find($data['animal_id']);
+            if (! $animal) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected animal not found. Please refresh and try again.',
+                ], 422);
+            }
+
+            $resolvedFarmerId = (int) ($data['farmer_id'] ?? ($farmer->id ?? 0));
+            if ($resolvedFarmerId > 0 && (int) $animal->farmer_id !== $resolvedFarmerId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected animal does not belong to this farmer.',
+                ], 422);
+            }
         }
 
         $animalPhoto = $data['animal_photo'] ?? null;
