@@ -13,7 +13,7 @@
 
     <div class="row g-3 mb-3">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100" style="background: #eef5ff; border-left: 4px solid #2f80ed !important;">
                 <div class="card-body">
                     <p class="text-muted mb-1">Total</p>
                     <h4 class="mb-0">{{ $summary['total'] }}</h4>
@@ -21,7 +21,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100" style="background: #fff8e8; border-left: 4px solid #f5a623 !important;">
                 <div class="card-body">
                     <p class="text-muted mb-1">Pending</p>
                     <h4 class="mb-0 text-warning">{{ $summary['pending'] }}</h4>
@@ -29,7 +29,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100" style="background: #ecfdf3; border-left: 4px solid #27ae60 !important;">
                 <div class="card-body">
                     <p class="text-muted mb-1">Approved</p>
                     <h4 class="mb-0 text-success">{{ $summary['approved'] }}</h4>
@@ -37,7 +37,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100" style="background: #f0f7ff; border-left: 4px solid #2d9cdb !important;">
                 <div class="card-body">
                     <p class="text-muted mb-1">Completed</p>
                     <h4 class="mb-0 text-primary">{{ $summary['completed'] }}</h4>
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f6fff7 0%, #f2fbff 100%); border: 1px solid #e4f1e7;">
+    <div class="card border-0 shadow-sm">
         <div class="card-body">
             <form id="appointmentsSearchForm" method="GET" action="{{ route('doctor.appointments') }}" class="row g-2 mb-3">
                 <div class="col-md-4 col-lg-3">
