@@ -69,7 +69,15 @@ class FirebaseService
             ->withNotification(Notification::create($title, $body))
             ->withData($normalizedData);
 
-        $this->messaging->send($message);
+        try {
+            $this->messaging->send($message);
+        } catch (Throwable $exception) {
+            Log::warning('FCM device send failed', [
+                'token' => substr((string) $token, 0, 24).'...',
+                'title' => $title,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function sendToWebAdmins(string $title, string $body, array $data = []): void
