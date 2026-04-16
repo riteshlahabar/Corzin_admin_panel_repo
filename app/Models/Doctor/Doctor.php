@@ -26,6 +26,7 @@ class Doctor extends Model
         'state',
         'pincode',
         'adhar_document',
+        'adhar_document_back',
         'pan_document',
         'mmc_document',
         'clinic_registration_document',
@@ -71,6 +72,8 @@ class Doctor extends Model
     {
         return [
             'adhar_document' => $this->documentUrl($this->adhar_document),
+            'adhar_document_front' => $this->documentUrl($this->adhar_document),
+            'adhar_document_back' => $this->documentUrl($this->adhar_document_back),
             'pan_document' => $this->documentUrl($this->pan_document),
             'mmc_document' => $this->documentUrl($this->mmc_document),
             'clinic_registration_document' => $this->documentUrl($this->clinic_registration_document),

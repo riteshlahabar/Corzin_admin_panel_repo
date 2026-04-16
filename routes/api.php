@@ -35,6 +35,7 @@ Route::prefix('farmer')->group(function () {
 
 Route::prefix('animal')->group(function () {
     Route::post('/store', [AnimalController::class, 'store']);
+    Route::post('/update/{animal_id}', [AnimalController::class, 'update']);
     Route::get('/types', [AnimalTypeController::class, 'index']);
     Route::get('/list/{farmer_id}', [AnimalController::class, 'listByFarmer']);
     Route::post('/lifecycle/{animal_id}', [AnimalController::class, 'updateLifecycle']);
