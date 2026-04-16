@@ -614,15 +614,15 @@ class DoctorAppointmentController extends Controller
         $status = strtolower((string) ($appointment->status ?? ''));
 
         if ($this->isFollowupDueToday($appointment)) {
-            return 8;
+            return 10;
         }
 
         return match ($status) {
-            'in_progress' => 7,
-            'approved', 'farmer_approved', 'scheduled', 'rescheduled' => 6,
-            'proposed', 'awaiting_farmer_approval', 'awaiting_approval' => 5,
-            'pending', 'new', 'requested' => 4,
-            'completed' => 3,
+            'completed' => 9,
+            'in_progress' => 8,
+            'approved', 'farmer_approved', 'scheduled', 'rescheduled' => 7,
+            'proposed', 'awaiting_farmer_approval', 'awaiting_approval' => 6,
+            'pending', 'new', 'requested' => 5,
             'declined', 'cancelled', 'rejected' => 2,
             default => 1,
         };
