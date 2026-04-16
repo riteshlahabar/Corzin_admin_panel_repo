@@ -544,6 +544,7 @@ class DoctorAppointmentController extends Controller
     {
         $followupDueToday = $this->isFollowupDueToday($appointment);
         $effectiveStatus = $followupDueToday ? 'followup' : ($appointment->status ?? 'pending');
+        $previousSelfHistories = $this->previousSelfTreatmentHistories($appointment);
 
         $diseaseIds = collect($appointment->disease_ids ?? [])
             ->map(fn ($id) => (int) $id)
@@ -605,8 +606,54 @@ class DoctorAppointmentController extends Controller
             'visit_otp' => $includeOtp ? ($appointment->otp_code ?? null) : null,
             'address' => $appointment->address ?? '',
             'notes' => $appointment->notes ?? '',
+            'previous_histories' => $previousSelfHistories,
             'created_at' => optional($appointment->created_at)->toIso8601String(),
         ];
+    }
+
+    protected function previousSelfTreatmentHistories(DoctorAppointment $appointment): array
+    {
+        $query = DoctorAppointment::query()
+            ->with('doctor')
+            ->where('doctor_id', $appointment->doctor_id)
+            ->where('status', 'completed')
+            ->where('id', '<>', $appointment->id);
+
+        if (! empty($appointment->farmer_id)) {
+            $query->where('farmer_id', $appointment->farmer_id);
+        } elseif (! empty($appointment->farmer_phone)) {
+            $query->where('farmer_phone', $appointment->farmer_phone);
+        } else {
+            return [];
+        }
+
+        if (! empty($appointment->animal_id)) {
+            $query->where('animal_id', $appointment->animal_id);
+        } elseif (! empty($appointment->animal_name)) {
+            $query->where('animal_name', $appointment->animal_name);
+        }
+
+        return $query
+            ->latest('completed_at')
+            ->latest('requested_at')
+            ->limit(10)
+            ->get()
+            ->map(function (DoctorAppointment $row) {
+                return [
+                    'id' => $row->id,
+                    'status' => $row->status ?? '',
+                    'requested_at' => optional($row->requested_at)->toIso8601String(),
+                    'completed_at' => optional($row->completed_at)->toIso8601String(),
+                    'concern' => $row->concern ?? '',
+                    'treatment_details' => $row->treatment_details ?? '',
+                    'onsite_treatment' => $row->onsite_treatment ?? '',
+                    'notes' => $row->notes ?? '',
+                    'doctor_id' => $row->doctor_id,
+                    'doctor_name' => optional($row->doctor)->full_name ?? '',
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     protected function farmerStatusRank(DoctorAppointment $appointment): int
