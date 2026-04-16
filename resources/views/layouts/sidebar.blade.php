@@ -137,6 +137,7 @@
                 <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'in-progress']) }}" class="nav-link {{ request('tab') === 'in-progress' ? 'active' : '' }}">Order In Progress</a></li>
                 <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'completed']) }}" class="nav-link {{ request('tab') === 'completed' ? 'active' : '' }}">Order Completed</a></li>
                 <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'payment']) }}" class="nav-link {{ request('tab') === 'payment' ? 'active' : '' }}">Order Payment</a></li>
+                <li class="menu-item"><a href="{{ route('shop.animal_buy_sell') }}" class="nav-link {{ request()->routeIs('shop.animal_buy_sell') ? 'active' : '' }}">Animal Buy/Sell</a></li>
             </ul>
         </div>
     </li>

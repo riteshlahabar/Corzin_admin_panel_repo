@@ -20,12 +20,16 @@ class Animal extends Model
         'image',
         'lifecycle_status',
         'is_active',
+        'is_for_sale',
+        'listed_for_sale_at',
         'sold_at',
         'death_at',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_for_sale' => 'boolean',
+        'listed_for_sale_at' => 'datetime',
         'sold_at' => 'datetime',
         'death_at' => 'datetime',
     ];

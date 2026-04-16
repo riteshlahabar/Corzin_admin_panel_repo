@@ -7,11 +7,17 @@ use Illuminate\Http\Request;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\AnimalType;
 use App\Models\Farmer\AnimalLifecycleHistory;
+use App\Models\Farmer\Farmer;
+use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
 class AnimalController extends Controller
 {
+    public function __construct(protected FirebaseService $firebaseService)
+    {
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -68,6 +74,7 @@ class AnimalController extends Controller
             'image' => $imagePath,
             'lifecycle_status' => 'active',
             'is_active' => true,
+            'is_for_sale' => false,
         ]);
 
         return response()->json([
@@ -167,6 +174,73 @@ class AnimalController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Animal updated successfully',
+            'data' => $this->transformAnimal($animal->fresh()->load('animalType')),
+        ], 200);
+    }
+
+    public function markForSale(Request $request, $animalId)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $animal = Animal::with('farmer')
+            ->where('id', $animalId)
+            ->where('farmer_id', $request->farmer_id)
+            ->first();
+
+        if (! $animal) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Animal not found.',
+            ], 404);
+        }
+
+        if ((bool) $animal->is_for_sale) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Animal is already listed for sale.',
+                'data' => $this->transformAnimal($animal->load('animalType')),
+            ], 200);
+        }
+
+        $animal->update([
+            'is_for_sale' => true,
+            'listed_for_sale_at' => now(),
+        ]);
+
+        $seller = $animal->farmer;
+        $sellerName = trim(($seller->first_name ?? '').' '.($seller->last_name ?? ''));
+        $animalLabel = trim(($animal->animal_name ?: 'Animal').' (Tag: '.($animal->tag_number ?: '-').')');
+
+        Farmer::query()
+            ->where('id', '!=', (int) $request->farmer_id)
+            ->whereNotNull('fcm_token')
+            ->chunkById(100, function ($farmers) use ($sellerName, $animalLabel, $animal) {
+                foreach ($farmers as $farmer) {
+                    $this->firebaseService->sendToDevice(
+                        $farmer->fcm_token,
+                        'Animal For Sale',
+                        trim(($sellerName !== '' ? $sellerName : 'A farmer').' listed '.$animalLabel.' for selling.'),
+                        [
+                            'type' => 'animal_sell',
+                            'event' => 'animal_listed_for_sale',
+                            'animal_id' => (string) $animal->id,
+                        ]
+                    );
+                }
+            });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Animal listed for sale and notification sent.',
             'data' => $this->transformAnimal($animal->fresh()->load('animalType')),
         ], 200);
     }
@@ -279,6 +353,8 @@ class AnimalController extends Controller
             'weight' => $animal->weight,
             'lifecycle_status' => $animal->lifecycle_status ?? 'active',
             'is_active' => (bool) $animal->is_active,
+            'is_for_sale' => (bool) ($animal->is_for_sale ?? false),
+            'listed_for_sale_at' => optional($animal->listed_for_sale_at)->toDateTimeString(),
             'image' => $animal->image_url,
         ];
     }

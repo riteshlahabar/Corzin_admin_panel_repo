@@ -20,6 +20,7 @@ use App\Http\Controllers\Doctor\DoctorVisitedController;
 use App\Http\Controllers\Doctor\DoctorPlanController;
 use App\Http\Controllers\Doctor\DoctorSubscriptionController;
 use App\Http\Controllers\Shop\ShopProductController;
+use App\Http\Controllers\Shop\AnimalBuySellController;
 use App\Http\Controllers\Reproductive\ReproductiveListController;
 use App\Http\Controllers\Setting\DiseaseController;
 
@@ -104,6 +105,7 @@ Route::prefix('shop')->group(function () {
     Route::get('/', [ShopProductController::class, 'index'])->name('shop.index');
     Route::post('/', [ShopProductController::class, 'store'])->name('shop.store');
     Route::post('/orders/{order}/status', [ShopProductController::class, 'updateOrderStatus'])->name('shop.orders.status');
+    Route::get('/animal-buy-sell', [AnimalBuySellController::class, 'index'])->name('shop.animal_buy_sell');
 });
 
 Route::prefix('analytics')->name('analytics.')->group(function () {

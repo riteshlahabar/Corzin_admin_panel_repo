@@ -187,6 +187,21 @@
                         </tbody>
                     </table>
                 </div>
+                <hr class="my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted" style="font-size: 12px;">Top Farmer By Milk Production</div>
+                        <div class="fw-semibold">
+                            {{ $topMilkProducer['name'] ?? 'No data available' }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted" style="font-size: 12px;">Total Milk</div>
+                        <div class="fw-bold text-success">
+                            {{ isset($topMilkProducer['milk']) ? number_format((float) $topMilkProducer['milk'], 2).' L' : '-' }}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

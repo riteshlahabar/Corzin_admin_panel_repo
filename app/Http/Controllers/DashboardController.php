@@ -80,6 +80,25 @@ class DashboardController extends Controller
                 ];
             });
 
+        $topMilkProducer = null;
+        $topMilkProducerRow = MilkProduction::query()
+            ->selectRaw('farmer_id, COALESCE(SUM(total_milk), 0) as total_milk')
+            ->whereNotNull('farmer_id')
+            ->groupBy('farmer_id')
+            ->orderByDesc('total_milk')
+            ->first();
+
+        if ($topMilkProducerRow && (int) $topMilkProducerRow->farmer_id > 0) {
+            $topFarmer = Farmer::find((int) $topMilkProducerRow->farmer_id);
+            if ($topFarmer) {
+                $name = trim(($topFarmer->first_name ?? '').' '.($topFarmer->last_name ?? ''));
+                $topMilkProducer = [
+                    'name' => $name !== '' ? $name : 'Farmer #'.$topFarmer->id,
+                    'milk' => round((float) ($topMilkProducerRow->total_milk ?? 0), 2),
+                ];
+            }
+        }
+
         $popularProducts = ShopProduct::query()
             ->latest('updated_at')
             ->take(6)
@@ -110,6 +129,7 @@ class DashboardController extends Controller
             'distributionLabels',
             'distributionSeries',
             'topStates',
+            'topMilkProducer',
             'popularProducts',
             'recentActivities'
         ));
