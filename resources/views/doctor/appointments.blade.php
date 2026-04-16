@@ -7,9 +7,8 @@
         <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
     @endif
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 mt-4 pt-2">
         <h4 class="mb-0 text-dark">Appointment</h4>
-        <small class="text-muted">Appointments created by farmer are shown here.</small>
     </div>
 
     <div class="row g-3 mb-3">
@@ -47,11 +46,12 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f6fff7 0%, #f2fbff 100%); border: 1px solid #e4f1e7;">
         <div class="card-body">
-            <form method="GET" action="{{ route('doctor.appointments') }}" class="row g-2 mb-3">
-                <div class="col-md-12">
+            <form id="appointmentsSearchForm" method="GET" action="{{ route('doctor.appointments') }}" class="row g-2 mb-3">
+                <div class="col-md-4 col-lg-3">
                     <input
+                        id="appointmentsSearchInput"
                         type="text"
                         name="search"
                         value="{{ request('search') }}"
@@ -59,16 +59,12 @@
                         placeholder="Search farmer, animal, disease, doctor..."
                     >
                 </div>
-                <div class="col-md-12 d-grid">
-                    <button type="submit" class="btn btn-success">Filter</button>
-                </div>
             </form>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Appointment ID</th>
                             <th>Farmer</th>
                             <th>Animal</th>
@@ -93,7 +89,6 @@
                                 };
                             @endphp
                             <tr>
-                                <td>{{ $appointments->firstItem() + $loop->index }}</td>
                                 <td><span class="fw-semibold">{{ $appointment->appointment_code }}</span></td>
                                 <td>
                                     <div class="fw-semibold">{{ $appointment->farmer_name ?: '-' }}</div>
@@ -128,7 +123,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">No appointments found</td>
+                                <td colspan="8" class="text-center text-muted py-4">No appointments found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -142,4 +137,20 @@
         @endif
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('appointmentsSearchInput');
+    const form = document.getElementById('appointmentsSearchForm');
+    if (!input || !form) return;
+
+    let timer = null;
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+            form.submit();
+        }, 350);
+    });
+});
+</script>
 @endsection
