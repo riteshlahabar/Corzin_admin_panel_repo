@@ -143,6 +143,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         }
 
         $approvedDoctors = Doctor::query()->where('status', 'approved');
+        $ranked = collect();
 
         $pincode = trim((string) ($farmer->pincode ?? ''));
         $city = trim((string) ($farmer->city ?? ''));
@@ -156,7 +157,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ->limit(10)
                 ->get();
             if ($byPincode->isNotEmpty()) {
-                return $byPincode;
+                $ranked = $ranked->concat($byPincode);
             }
         }
 
@@ -171,7 +172,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
             $cityDoctors = $byCity->orderByDesc('approved_at')->limit(10)->get();
             if ($cityDoctors->isNotEmpty()) {
-                return $cityDoctors;
+                $ranked = $ranked->concat($cityDoctors);
             }
         }
 
@@ -183,13 +184,21 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
             $districtDoctors = $byDistrict->orderByDesc('approved_at')->limit(10)->get();
             if ($districtDoctors->isNotEmpty()) {
-                return $districtDoctors;
+                $ranked = $ranked->concat($districtDoctors);
             }
         }
 
-        return (clone $approvedDoctors)
+        // Always include all approved doctors as fallback broadcast pool,
+        // while keeping nearby doctors first in order.
+        $allApproved = (clone $approvedDoctors)
             ->orderByDesc('approved_at')
-            ->limit(10)
+            ->limit(50)
             ->get();
+
+        return $ranked
+            ->concat($allApproved)
+            ->unique('id')
+            ->values()
+            ->take(50);
     }
 }
