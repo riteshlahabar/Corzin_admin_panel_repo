@@ -25,6 +25,7 @@ class AnimalController extends Controller
             'animal_name' => 'required|string|max:255',
             'tag_number' => 'required|string|max:255',
             'animal_type_id' => 'required|exists:animal_types,id',
+            'mother_animal_id' => 'nullable|exists:animals,id',
             'birth_date' => 'required|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
@@ -36,6 +37,19 @@ class AnimalController extends Controller
                 'status' => false,
                 'message' => $validator->errors()
             ], 422);
+        }
+
+        if ($request->filled('mother_animal_id')) {
+            $motherAnimal = Animal::where('id', $request->mother_animal_id)
+                ->where('farmer_id', $request->farmer_id)
+                ->first();
+
+            if (! $motherAnimal) {
+                return response()->json([
+                    'status' => false,
+                    'message' => ['mother_animal_id' => ['Selected mother animal is invalid.']],
+                ], 422);
+            }
         }
 
         $birthDateObj = Carbon::createFromFormat('d/m/Y', $request->birth_date);
@@ -67,6 +81,7 @@ class AnimalController extends Controller
             'animal_name' => $request->animal_name,
             'tag_number' => $request->tag_number,
             'animal_type_id' => $request->animal_type_id,
+            'mother_animal_id' => $request->filled('mother_animal_id') ? (int) $request->mother_animal_id : null,
             'age' => $age,
             'birth_date' => $birthDate,
             'gender' => $request->gender,
@@ -80,14 +95,14 @@ class AnimalController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Animal created successfully',
-            'data' => $this->transformAnimal($animal->load('animalType')),
+            'data' => $this->transformAnimal($animal->load(['animalType', 'motherAnimal'])),
         ]);
     }
 
     public function listByFarmer(Request $request, $farmer_id)
     {
         try {
-            $query = Animal::with('animalType')->where('farmer_id', $farmer_id);
+            $query = Animal::with(['animalType', 'motherAnimal'])->where('farmer_id', $farmer_id);
 
             if (! $request->boolean('include_inactive')) {
                 $query->where('is_active', true);
@@ -120,6 +135,7 @@ class AnimalController extends Controller
             'animal_name' => 'required|string|max:255',
             'tag_number' => 'required|string|max:255',
             'animal_type_id' => 'required|exists:animal_types,id',
+            'mother_animal_id' => 'nullable|exists:animals,id',
             'birth_date' => 'required|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
@@ -131,6 +147,19 @@ class AnimalController extends Controller
                 'status' => false,
                 'message' => $validator->errors(),
             ], 422);
+        }
+
+        if ($request->filled('mother_animal_id')) {
+            $motherAnimal = Animal::where('id', $request->mother_animal_id)
+                ->where('farmer_id', $request->farmer_id)
+                ->first();
+
+            if (! $motherAnimal) {
+                return response()->json([
+                    'status' => false,
+                    'message' => ['mother_animal_id' => ['Selected mother animal is invalid.']],
+                ], 422);
+            }
         }
 
         $animal = Animal::where('id', $animal_id)
@@ -164,6 +193,7 @@ class AnimalController extends Controller
             'animal_name' => $request->animal_name,
             'tag_number' => $request->tag_number,
             'animal_type_id' => $request->animal_type_id,
+            'mother_animal_id' => $request->filled('mother_animal_id') ? (int) $request->mother_animal_id : null,
             'age' => $age,
             'birth_date' => $birthDate,
             'gender' => $request->gender,
@@ -174,7 +204,7 @@ class AnimalController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Animal updated successfully',
-            'data' => $this->transformAnimal($animal->fresh()->load('animalType')),
+            'data' => $this->transformAnimal($animal->fresh()->load(['animalType', 'motherAnimal'])),
         ], 200);
     }
 
@@ -347,6 +377,9 @@ class AnimalController extends Controller
             'tag_number' => $animal->tag_number,
             'animal_type_id' => $animal->animal_type_id,
             'animal_type_name' => optional($animal->animalType)->name,
+            'mother_animal_id' => $animal->mother_animal_id,
+            'mother_animal_name' => optional($animal->motherAnimal)->animal_name,
+            'mother_tag_number' => optional($animal->motherAnimal)->tag_number,
             'age' => $animal->calculated_age,
             'birth_date' => $animal->birth_date ? Carbon::parse($animal->birth_date)->format('d/m/Y') : null,
             'gender' => $animal->gender,

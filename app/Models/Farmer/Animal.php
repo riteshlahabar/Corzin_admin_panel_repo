@@ -13,6 +13,7 @@ class Animal extends Model
         'animal_name',
         'tag_number',
         'animal_type_id',
+        'mother_animal_id',
         'age',
         'birth_date',
         'gender',
@@ -47,6 +48,11 @@ class Animal extends Model
     public function animalType()
     {
         return $this->belongsTo(AnimalType::class, 'animal_type_id');
+    }
+
+    public function motherAnimal()
+    {
+        return $this->belongsTo(self::class, 'mother_animal_id');
     }
 
     public function lifecycleHistories()
