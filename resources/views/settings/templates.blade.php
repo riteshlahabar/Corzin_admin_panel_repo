@@ -19,7 +19,6 @@
                     <thead>
                         <tr>
                             <th style="min-width: 200px;">Template</th>
-                            <th style="min-width: 160px;">Key</th>
                             <th style="min-width: 260px;">Title</th>
                             <th style="min-width: 320px;">Body</th>
                             <th style="min-width: 100px;">Status</th>
@@ -32,7 +31,6 @@
                                 <td>
                                     <div class="fw-semibold">{{ $template->template_name }}</div>
                                 </td>
-                                <td><code>{{ $template->template_key }}</code></td>
                                 <td>{{ $template->title_template }}</td>
                                 <td>{{ $template->body_template }}</td>
                                 <td>
@@ -61,11 +59,6 @@
                                                 <div class="mb-3">
                                                     <label class="form-label">Template Name</label>
                                                     <input type="text" name="template_name" class="form-control" value="{{ $template->template_name }}" required>
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label">Template Key</label>
-                                                    <input type="text" class="form-control" value="{{ $template->template_key }}" disabled>
-                                                    <small class="text-muted">Used in backend mapping. Not editable.</small>
                                                 </div>
                                                 <div class="mb-3">
                                                     <label class="form-label">Title Template</label>
@@ -101,7 +94,7 @@
                             </div>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">No templates available.</td>
+                                <td colspan="5" class="text-center text-muted py-4">No templates available.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -111,4 +104,3 @@
     </div>
 </div>
 @endsection
-

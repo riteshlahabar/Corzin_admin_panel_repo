@@ -49,16 +49,10 @@ class NotificationTemplateController extends Controller
                 'body_template' => '{{farmer_name}} requested a visit for {{animal_name}}.',
             ],
             [
-                'template_key' => 'appointment_proposed',
-                'template_name' => 'Appointment Proposed',
-                'title_template' => 'Doctor Shared Slot',
-                'body_template' => 'Doctor shared slot for {{animal_name}}.',
-            ],
-            [
                 'template_key' => 'appointment_doctor_approved',
-                'template_name' => 'Doctor Approved Appointment',
-                'title_template' => 'Appointment Approved',
-                'body_template' => 'Doctor approved your appointment for {{animal_name}}.',
+                'template_name' => 'Doctor Accepted Appointment',
+                'title_template' => 'Appointment Accepted',
+                'body_template' => 'Doctor accepted your appointment for {{animal_name}}.',
             ],
             [
                 'template_key' => 'appointment_declined',
@@ -109,12 +103,6 @@ class NotificationTemplateController extends Controller
                 'body_template' => 'Doctor suggested follow-up for {{animal_name}}.',
             ],
             [
-                'template_key' => 'appointment_rescheduled',
-                'template_name' => 'Appointment Rescheduled',
-                'title_template' => 'Appointment Rescheduled',
-                'body_template' => 'Doctor proposed a new slot for {{animal_name}}.',
-            ],
-            [
                 'template_key' => 'appointment_farmer_approved',
                 'template_name' => 'Farmer Approved Appointment',
                 'title_template' => 'Appointment Confirmed',
@@ -163,5 +151,12 @@ class NotificationTemplateController extends Controller
                 ]
             );
         }
+
+        NotificationTemplate::query()
+            ->whereIn('template_key', [
+                'appointment_proposed',
+                'appointment_rescheduled',
+            ])
+            ->delete();
     }
 }
