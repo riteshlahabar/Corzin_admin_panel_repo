@@ -85,4 +85,14 @@ class DoctorAppointment extends Model
 
         return asset($this->animal_photo);
     }
+
+    public function getAppointmentCodeAttribute(): string
+    {
+        $id = (int) ($this->id ?? 0);
+        if ($id <= 0) {
+            return 'C/APP/00';
+        }
+
+        return 'C/APP/'.str_pad((string) $id, 2, '0', STR_PAD_LEFT);
+    }
 }

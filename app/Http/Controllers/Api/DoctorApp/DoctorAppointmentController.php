@@ -7,6 +7,7 @@ use App\Models\Doctor\DoctorAdminNotification;
 use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
 use App\Models\Doctor\DoctorDisease;
+use App\Models\NotificationTemplate;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\FeedingRecord;
@@ -578,6 +579,7 @@ class DoctorAppointmentController extends Controller
 
         return [
             'id' => $appointment->id,
+            'appointment_code' => $appointment->appointment_code,
             'appointment_group_id' => $appointment->appointment_group_id,
             'doctor_id' => $appointment->doctor_id,
             'doctor_name' => optional($appointment->doctor)->full_name ?? '',
@@ -775,10 +777,18 @@ class DoctorAppointmentController extends Controller
             $token = optional($fallbackDoctor)->fcm_token;
         }
 
-        $this->firebaseService->sendToDevice(
-            $token,
+        [$finalTitle, $finalBody] = $this->resolveTemplateMessage(
+            (string) ($extraData['event'] ?? ''),
             $title,
             $body,
+            $appointment,
+            $extraData
+        );
+
+        $this->firebaseService->sendToDevice(
+            $token,
+            $finalTitle,
+            $finalBody,
             $this->notificationData($appointment, $extraData)
         );
     }
@@ -800,12 +810,78 @@ class DoctorAppointmentController extends Controller
             $token = optional($fallbackFarmer)->fcm_token;
         }
 
-        $this->firebaseService->sendToDevice(
-            $token,
+        [$finalTitle, $finalBody] = $this->resolveTemplateMessage(
+            (string) ($extraData['event'] ?? ''),
             $title,
             $body,
+            $appointment,
+            $extraData
+        );
+
+        $this->firebaseService->sendToDevice(
+            $token,
+            $finalTitle,
+            $finalBody,
             $this->notificationData($appointment, $extraData)
         );
+    }
+
+    protected function resolveTemplateMessage(
+        string $eventKey,
+        string $fallbackTitle,
+        string $fallbackBody,
+        DoctorAppointment $appointment,
+        array $extraData = []
+    ): array {
+        $eventKey = trim($eventKey);
+        if ($eventKey === '') {
+            return [$fallbackTitle, $fallbackBody];
+        }
+
+        $template = NotificationTemplate::query()
+            ->where('template_key', $eventKey)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $template) {
+            return [$fallbackTitle, $fallbackBody];
+        }
+
+        $vars = array_merge([
+            'appointment_id' => (string) ($appointment->appointment_code ?? $appointment->id),
+            'doctor_id' => (string) ($appointment->doctor_id ?? ''),
+            'doctor_name' => (string) (optional($appointment->doctor)->full_name ?? ''),
+            'farmer_id' => (string) ($appointment->farmer_id ?? ''),
+            'farmer_name' => (string) ($appointment->farmer_name ?? ''),
+            'animal_name' => (string) ($appointment->animal_name ?? ''),
+            'status' => (string) ($appointment->status ?? ''),
+            'otp' => (string) ($appointment->otp_code ?? ''),
+        ], $extraData);
+
+        $title = $this->replaceTemplateVars((string) $template->title_template, $vars);
+        $body = $this->replaceTemplateVars((string) $template->body_template, $vars);
+
+        return [
+            trim($title) !== '' ? $title : $fallbackTitle,
+            trim($body) !== '' ? $body : $fallbackBody,
+        ];
+    }
+
+    protected function replaceTemplateVars(string $text, array $vars): string
+    {
+        return preg_replace_callback('/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/', function ($matches) use ($vars) {
+            $key = (string) ($matches[1] ?? '');
+            if ($key === '') {
+                return '';
+            }
+
+            $value = $vars[$key] ?? '';
+            if (is_scalar($value) || $value === null) {
+                return (string) ($value ?? '');
+            }
+
+            return '';
+        }, $text) ?? $text;
     }
 
     protected function notificationData(DoctorAppointment $appointment, array $extraData = []): array

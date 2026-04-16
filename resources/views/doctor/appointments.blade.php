@@ -85,6 +85,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Appointment ID</th>
                             <th>Farmer</th>
                             <th>Animal</th>
                             <th>Concern</th>
@@ -111,6 +112,7 @@
                             @endphp
                             <tr>
                                 <td>{{ $appointments->firstItem() + $loop->index }}</td>
+                                <td><span class="fw-semibold">{{ $appointment->appointment_code }}</span></td>
                                 <td>
                                     <div class="fw-semibold">{{ $appointment->farmer_name ?: '-' }}</div>
                                     <small class="text-muted">{{ $appointment->farmer_phone ?: '-' }}</small>
@@ -146,7 +148,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">No appointments found</td>
+                                <td colspan="11" class="text-center text-muted py-4">No appointments found</td>
                             </tr>
                         @endforelse
                     </tbody>

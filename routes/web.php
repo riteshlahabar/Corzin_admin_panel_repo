@@ -23,6 +23,7 @@ use App\Http\Controllers\Shop\ShopProductController;
 use App\Http\Controllers\Shop\AnimalBuySellController;
 use App\Http\Controllers\Reproductive\ReproductiveListController;
 use App\Http\Controllers\Setting\DiseaseController;
+use App\Http\Controllers\Setting\NotificationTemplateController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -119,4 +120,6 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::post('/diseases', [DiseaseController::class, 'store'])->name('diseases.store');
     Route::put('/diseases/{disease}', [DiseaseController::class, 'update'])->name('diseases.update');
     Route::post('/diseases/{disease}/toggle', [DiseaseController::class, 'toggle'])->name('diseases.toggle');
+    Route::get('/templates', [NotificationTemplateController::class, 'index'])->name('templates.index');
+    Route::put('/templates/{template}', [NotificationTemplateController::class, 'update'])->name('templates.update');
 });

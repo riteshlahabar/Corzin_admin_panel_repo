@@ -30,6 +30,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Appointment ID</th>
                             <th>Doctor</th>
                             <th>Farmer</th>
                             <th>Animal</th>
@@ -44,6 +45,7 @@
                         @forelse($visits as $visit)
                             <tr>
                                 <td>{{ $visits->firstItem() + $loop->index }}</td>
+                                <td><span class="fw-semibold">{{ $visit->appointment_code }}</span></td>
                                 <td>{{ $visit->doctor->full_name ?: $visit->doctor->name ?: '-' }}</td>
                                 <td>
                                     <div class="fw-semibold">{{ $visit->farmer_name ?: '-' }}</div>
@@ -58,7 +60,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">No visited records found</td>
+                                <td colspan="10" class="text-center text-muted py-4">No visited records found</td>
                             </tr>
                         @endforelse
                     </tbody>

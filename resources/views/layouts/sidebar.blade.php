@@ -189,6 +189,13 @@
                     </a>
                 </li>
                 @endif
+                @if (Route::has('settings.templates.index'))
+                <li class="menu-item">
+                    <a href="{{ route('settings.templates.index') }}" class="nav-link {{ request()->routeIs('settings.templates.*') ? 'active' : '' }}">
+                        <i class="iconoir-edit-pencil me-2"></i> Edit Templates
+                    </a>
+                </li>
+                @endif
             </ul>
         </div>
     </li>
