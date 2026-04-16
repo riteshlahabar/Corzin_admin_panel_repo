@@ -9,6 +9,9 @@ use App\Models\Doctor\DoctorAppointment;
 use App\Models\Doctor\DoctorDisease;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
+use App\Models\Farmer\FeedingRecord;
+use App\Models\Farmer\MilkProduction;
+use App\Models\Reproductive\ReproductiveRecord;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -545,6 +548,9 @@ class DoctorAppointmentController extends Controller
         $followupDueToday = $this->isFollowupDueToday($appointment);
         $effectiveStatus = $followupDueToday ? 'followup' : ($appointment->status ?? 'pending');
         $previousSelfHistories = $this->previousSelfTreatmentHistories($appointment);
+        $recentMilkHistory = $this->recentMilkHistory($appointment);
+        $recentFeedingHistory = $this->recentFeedingHistory($appointment);
+        $recentPregnancyHistory = $this->recentPregnancyHistory($appointment);
 
         $diseaseIds = collect($appointment->disease_ids ?? [])
             ->map(fn ($id) => (int) $id)
@@ -607,6 +613,9 @@ class DoctorAppointmentController extends Controller
             'address' => $appointment->address ?? '',
             'notes' => $appointment->notes ?? '',
             'previous_histories' => $previousSelfHistories,
+            'recent_milk_history' => $recentMilkHistory,
+            'recent_feeding_history' => $recentFeedingHistory,
+            'recent_pregnancy_history' => $recentPregnancyHistory,
             'created_at' => optional($appointment->created_at)->toIso8601String(),
         ];
     }
@@ -652,6 +661,88 @@ class DoctorAppointmentController extends Controller
                     'doctor_name' => optional($row->doctor)->full_name ?? '',
                 ];
             })
+            ->values()
+            ->all();
+    }
+
+    protected function recentMilkHistory(DoctorAppointment $appointment): array
+    {
+        if (empty($appointment->animal_id)) {
+            return [];
+        }
+
+        return MilkProduction::query()
+            ->where('animal_id', $appointment->animal_id)
+            ->whereDate('date', '>=', now()->subDays(5)->toDateString())
+            ->orderByDesc('date')
+            ->limit(5)
+            ->get()
+            ->map(fn (MilkProduction $row) => [
+                'date' => optional($row->date)->toDateString(),
+                'morning_milk' => $row->morning_milk !== null ? (float) $row->morning_milk : null,
+                'afternoon_milk' => $row->afternoon_milk !== null ? (float) $row->afternoon_milk : null,
+                'evening_milk' => $row->evening_milk !== null ? (float) $row->evening_milk : null,
+                'total_milk' => $row->total_milk !== null ? (float) $row->total_milk : null,
+                'fat' => $row->fat !== null ? (float) $row->fat : null,
+                'snf' => $row->snf !== null ? (float) $row->snf : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    protected function recentFeedingHistory(DoctorAppointment $appointment): array
+    {
+        if (empty($appointment->animal_id)) {
+            return [];
+        }
+
+        return FeedingRecord::query()
+            ->with('feedType')
+            ->where('animal_id', $appointment->animal_id)
+            ->whereDate('date', '>=', now()->subDays(5)->toDateString())
+            ->orderByDesc('date')
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (FeedingRecord $row) => [
+                'date' => optional($row->date)->toDateString(),
+                'feeding_time' => (string) ($row->feeding_time ?? ''),
+                'feed_type' => optional($row->feedType)->name ?? '',
+                'quantity' => $row->quantity !== null ? (float) $row->quantity : null,
+                'unit' => (string) ($row->unit ?? ''),
+                'notes' => (string) ($row->notes ?? ''),
+            ])
+            ->values()
+            ->all();
+    }
+
+    protected function recentPregnancyHistory(DoctorAppointment $appointment): array
+    {
+        if (empty($appointment->animal_id)) {
+            return [];
+        }
+
+        $since = now()->subMonths(6)->toDateString();
+
+        return ReproductiveRecord::query()
+            ->where('animal_id', $appointment->animal_id)
+            ->where(function ($query) use ($since) {
+                $query->whereDate('ai_date', '>=', $since)
+                    ->orWhereDate('calving_date', '>=', $since)
+                    ->orWhere('pregnancy_confirmation', true);
+            })
+            ->latest('ai_date')
+            ->latest('calving_date')
+            ->limit(10)
+            ->get()
+            ->map(fn (ReproductiveRecord $row) => [
+                'ai_date' => optional($row->ai_date)->toDateString(),
+                'calving_date' => optional($row->calving_date)->toDateString(),
+                'breed_name' => (string) ($row->breed_name ?? ''),
+                'lactation_number' => $row->lactation_number !== null ? (int) $row->lactation_number : null,
+                'pregnancy_confirmation' => (bool) ($row->pregnancy_confirmation ?? false),
+                'notes' => (string) ($row->notes ?? ''),
+            ])
             ->values()
             ->all();
     }
