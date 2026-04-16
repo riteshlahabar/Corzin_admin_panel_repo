@@ -24,6 +24,7 @@ use App\Http\Controllers\Shop\AnimalBuySellController;
 use App\Http\Controllers\Reproductive\ReproductiveListController;
 use App\Http\Controllers\Setting\DiseaseController;
 use App\Http\Controllers\Setting\NotificationTemplateController;
+use App\Http\Controllers\AdminNotificationController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -32,6 +33,7 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/notifications/{source}/{id}/read', [AdminNotificationController::class, 'markRead'])->name('notifications.read');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

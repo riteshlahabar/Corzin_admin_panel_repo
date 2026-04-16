@@ -6,14 +6,6 @@
     @if(session('success'))
         <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
     @endif
-    @if(!empty($adminNotifications) && $adminNotifications->count() > 0)
-        <div class="alert alert-info border-0 shadow-sm">
-            <div class="fw-semibold mb-1">Latest Appointment Notifications</div>
-            @foreach($adminNotifications as $n)
-                <div class="small">• {{ $n->message }} <span class="text-muted">({{ optional($n->created_at)->format('d-m-Y h:i A') }})</span></div>
-            @endforeach
-        </div>
-    @endif
 
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h4 class="mb-0 text-dark">Appointment</h4>
@@ -58,24 +50,16 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <form method="GET" action="{{ route('doctor.appointments') }}" class="row g-2 mb-3">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <input
                         type="text"
                         name="search"
                         value="{{ request('search') }}"
                         class="form-control"
-                        placeholder="Search farmer, animal, concern, status..."
+                        placeholder="Search farmer, animal, disease, doctor..."
                     >
                 </div>
-                <div class="col-md-3">
-                    <select name="status" class="form-select">
-                        <option value="">All Status</option>
-                        @foreach(['pending', 'proposed', 'approved', 'scheduled', 'in_progress', 'cancelled'] as $status)
-                            <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>{{ ucwords(str_replace('_', ' ', $status)) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 d-grid">
+                <div class="col-md-12 d-grid">
                     <button type="submit" class="btn btn-success">Filter</button>
                 </div>
             </form>
@@ -88,11 +72,9 @@
                             <th>Appointment ID</th>
                             <th>Farmer</th>
                             <th>Animal</th>
-                            <th>Concern</th>
-                            <th>On-Site Treatment</th>
-                            <th>Requested</th>
+                            <th>Disease</th>
+                            <th>Created At</th>
                             <th>Doctor</th>
-                            <th>Scheduled</th>
                             <th>Charges</th>
                             <th>Status</th>
                         </tr>
@@ -118,10 +100,9 @@
                                     <small class="text-muted">{{ $appointment->farmer_phone ?: '-' }}</small>
                                 </td>
                                 <td>{{ $appointment->animal_name ?: '-' }}</td>
-                                <td style="min-width: 220px;">{{ $appointment->concern ?: '-' }}</td>
-                                <td style="min-width: 220px;">{{ $appointment->onsite_treatment ?: '-' }}</td>
+                                <td>{{ $appointment->concern ?: '-' }}</td>
                                 <td>{{ optional($appointment->requested_at ?: $appointment->created_at)->format('d-m-Y h:i A') ?: '-' }}</td>
-                                <td style="min-width: 240px;">
+                                <td>
                                     @if($allowAssign)
                                         <form method="POST" action="{{ route('doctor.appointments.assign', $appointment) }}" class="d-flex gap-2">
                                             @csrf
@@ -142,13 +123,12 @@
                                         {{ optional($appointment->doctor)->full_name ?: optional($appointment->doctor)->name ?: '-' }}
                                     @endif
                                 </td>
-                                <td>{{ optional($appointment->scheduled_at)->format('d-m-Y h:i A') ?: '-' }}</td>
-                                <td>{{ $appointment->charges !== null ? '₹ '.number_format((float) $appointment->charges, 2) : '-' }}</td>
+                                <td>{{ $appointment->charges !== null ? 'Rs '.number_format((float) $appointment->charges, 2) : '-' }}</td>
                                 <td><span class="badge {{ $badgeClass }}">{{ ucwords(str_replace('_', ' ', $status)) }}</span></td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center text-muted py-4">No appointments found</td>
+                                <td colspan="9" class="text-center text-muted py-4">No appointments found</td>
                             </tr>
                         @endforelse
                     </tbody>

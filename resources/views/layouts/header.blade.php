@@ -8,15 +8,17 @@
         if (\Illuminate\Support\Facades\Schema::hasTable('shop_admin_notifications')) {
             $shopRows = \App\Models\Shop\ShopAdminNotification::query()
                 ->latest()
-                ->limit(20)
+                ->limit(300)
                 ->get()
                 ->map(function ($row) {
                     return (object) [
+                        'id' => $row->id,
                         'title' => $row->title,
                         'message' => $row->message,
                         'is_read' => (bool) $row->is_read,
                         'created_at' => $row->created_at,
                         'source' => 'Shop',
+                        'source_key' => 'shop',
                     ];
                 });
         }
@@ -24,15 +26,17 @@
         if (\Illuminate\Support\Facades\Schema::hasTable('doctor_admin_notifications')) {
             $doctorRows = \App\Models\Doctor\DoctorAdminNotification::query()
                 ->latest()
-                ->limit(20)
+                ->limit(300)
                 ->get()
                 ->map(function ($row) {
                     return (object) [
+                        'id' => $row->id,
                         'title' => $row->title,
                         'message' => $row->message,
                         'is_read' => (bool) $row->is_read,
                         'created_at' => $row->created_at,
                         'source' => 'Appointment',
+                        'source_key' => 'doctor',
                     ];
                 });
         }
@@ -40,7 +44,7 @@
         $topNotifications = $shopRows
             ->concat($doctorRows)
             ->sortByDesc(fn ($item) => optional($item->created_at)->timestamp ?? 0)
-            ->take(12)
+            ->take(300)
             ->values();
 
         $topUnreadCount = $topNotifications->where('is_read', false)->count();
@@ -80,26 +84,29 @@
                             <span class="alert-badge"></span>
                         @endif
                     </a>
-                    <div class="dropdown-menu stop dropdown-menu-end dropdown-lg py-0">
+                    <div class="dropdown-menu stop dropdown-menu-end dropdown-lg py-0" style="min-width: 420px;">
                         <h5 class="dropdown-item-text m-0 py-3 d-flex justify-content-between align-items-center">
                             Notifications
                             <span class="badge text-bg-light">{{ $topNotifications->count() }}</span>
                         </h5>
-                        <div style="max-height: 280px; overflow-y: auto;">
+                        <div style="max-height: 420px; overflow-y: auto;">
                             @forelse($topNotifications as $n)
-                                <div class="dropdown-item py-2 border-top">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <small class="fw-semibold text-dark">{{ $n->title }}</small>
-                                        <small class="text-muted">{{ optional($n->created_at)->diffForHumans() }}</small>
-                                    </div>
-                                    <div class="small text-muted">{{ $n->message }}</div>
-                                    <div class="mt-1">
-                                        <span class="badge text-bg-secondary">{{ $n->source }}</span>
-                                        @if(!$n->is_read)
-                                            <span class="badge text-bg-warning">New</span>
-                                        @endif
-                                    </div>
-                                </div>
+                                <form method="POST" action="{{ route('notifications.read', ['source' => $n->source_key, 'id' => $n->id]) }}" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item py-2 border-top text-start w-100 bg-transparent border-0">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <small class="fw-semibold text-dark">{{ $n->title }}</small>
+                                            <small class="text-muted">{{ optional($n->created_at)->diffForHumans() }}</small>
+                                        </div>
+                                        <div class="small text-muted">{{ $n->message }}</div>
+                                        <div class="mt-1">
+                                            <span class="badge text-bg-secondary">{{ $n->source }}</span>
+                                            @if(!$n->is_read)
+                                                <span class="badge text-bg-warning">New</span>
+                                            @endif
+                                        </div>
+                                    </button>
+                                </form>
                             @empty
                                 <div class="dropdown-item py-3 text-center text-muted">No notifications yet</div>
                             @endforelse

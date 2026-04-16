@@ -34,19 +34,12 @@ class DoctorAppointmentController extends Controller
                 return str_contains(strtolower((string) $row->farmer_name), $search)
                     || str_contains(strtolower((string) $row->animal_name), $search)
                     || str_contains(strtolower((string) $row->concern), $search)
-                    || str_contains(strtolower((string) $row->status), $search)
                     || str_contains($doctorName, $search)
                     || str_contains($doctorAltName, $search);
             })->values();
         }
 
         $representative = $this->representativeAppointments($rows);
-        if ($request->filled('status')) {
-            $statusFilter = strtolower((string) $request->status);
-            $representative = $representative
-                ->filter(fn (DoctorAppointment $row) => strtolower((string) $row->status) === $statusFilter)
-                ->values();
-        }
 
         $perPage = 20;
         $currentPage = max(1, (int) $request->query('page', 1));
@@ -77,12 +70,7 @@ class DoctorAppointmentController extends Controller
             ->orderBy('last_name')
             ->get();
 
-        $adminNotifications = DoctorAdminNotification::query()
-            ->latest()
-            ->limit(8)
-            ->get();
-
-        return view('doctor.appointments', compact('appointments', 'summary', 'doctors', 'adminNotifications'));
+        return view('doctor.appointments', compact('appointments', 'summary', 'doctors'));
     }
 
     public function assignDoctor(Request $request, DoctorAppointment $appointment)
