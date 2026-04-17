@@ -3,6 +3,32 @@
 
 @section('content')
 <div class="container-fluid">
+    <style>
+        .doctor-table {
+            font-size: 0.85rem;
+        }
+        .doctor-table thead th {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            padding-top: 0.7rem;
+            padding-bottom: 0.7rem;
+        }
+        .doctor-table tbody td {
+            vertical-align: middle;
+            padding-top: 0.6rem;
+            padding-bottom: 0.6rem;
+        }
+        .doctor-table .fw-semibold {
+            font-size: 0.84rem;
+        }
+        .doctor-table small {
+            font-size: 0.74rem;
+        }
+    </style>
+
     @if(session('success'))
         <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
     @endif
@@ -62,7 +88,7 @@
             </form>
 
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table table-sm table-hover align-middle mb-0 doctor-table">
                     <thead>
                         <tr>
                             <th>Appointment ID</th>
