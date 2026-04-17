@@ -271,11 +271,16 @@ class DoctorAppointmentController extends Controller
             'action' => ['required', Rule::in(['approved', 'declined', 'rescheduled'])],
             'scheduled_at' => ['nullable', 'date'],
             'charges' => ['nullable', 'numeric', 'min:0'],
-            'send_otp' => ['nullable', 'boolean'],
+            'send_otp' => ['nullable'],
         ]);
 
         $action = $data['action'];
-        $sendOtp = (bool) ($data['send_otp'] ?? false);
+        $sendOtpRaw = $request->input('send_otp', $data['send_otp'] ?? '0');
+        $sendOtp = in_array(
+            strtolower(trim((string) $sendOtpRaw)),
+            ['1', 'true', 'yes', 'on'],
+            true
+        );
 
         if ($action === 'rescheduled') {
             if (empty($data['scheduled_at']) || ! isset($data['charges'])) {
@@ -992,6 +997,10 @@ class DoctorAppointmentController extends Controller
             'status' => (string) ($appointment->status ?? ''),
             'effective_status' => $effectiveStatus,
         ];
+        if (! blank($appointment->otp_code)) {
+            $base['otp'] = (string) $appointment->otp_code;
+            $base['visit_otp'] = (string) $appointment->otp_code;
+        }
 
         foreach ($extraData as $key => $value) {
             $base[$key] = is_scalar($value) ? (string) $value : json_encode($value);
