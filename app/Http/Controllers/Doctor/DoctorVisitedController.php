@@ -11,7 +11,7 @@ class DoctorVisitedController extends Controller
     public function index(Request $request)
     {
         $query = DoctorAppointment::query()
-            ->with('doctor')
+            ->with(['doctor', 'farmer'])
             ->where('status', 'completed')
             ->latest('completed_at')
             ->latest();
@@ -21,7 +21,8 @@ class DoctorVisitedController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder->whereRaw('LOWER(farmer_name) LIKE ?', ["%{$search}%"])
                     ->orWhereRaw('LOWER(animal_name) LIKE ?', ["%{$search}%"])
-                    ->orWhereRaw('LOWER(concern) LIKE ?', ["%{$search}%"]);
+                    ->orWhereRaw('LOWER(concern) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(COALESCE(appointment_group_id, "")) LIKE ?', ["%{$search}%"]);
             });
         }
 
@@ -30,4 +31,3 @@ class DoctorVisitedController extends Controller
         return view('doctor.visited', compact('visits'));
     }
 }
-

@@ -3,25 +3,22 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 mt-4 pt-2">
         <h4 class="mb-0 text-dark">Visited</h4>
-        <small class="text-muted">Completed doctor visits are listed here.</small>
     </div>
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <form method="GET" action="{{ route('doctor.visited') }}" class="row g-2 mb-3">
-                <div class="col-md-9">
+            <form id="visitedSearchForm" method="GET" action="{{ route('doctor.visited') }}" class="row g-2 mb-3">
+                <div class="col-md-4 col-lg-3">
                     <input
+                        id="visitedSearchInput"
                         type="text"
                         name="search"
                         value="{{ request('search') }}"
                         class="form-control"
                         placeholder="Search farmer, animal, concern..."
                     >
-                </div>
-                <div class="col-md-3 d-grid">
-                    <button type="submit" class="btn btn-success">Filter</button>
                 </div>
             </form>
 
@@ -35,6 +32,7 @@
                             <th>Farmer</th>
                             <th>Animal</th>
                             <th>Concern</th>
+                            <th>Medicine</th>
                             <th>On-Site Treatment</th>
                             <th>Completed Date</th>
                             <th>Charges</th>
@@ -43,16 +41,57 @@
                     </thead>
                     <tbody>
                         @forelse($visits as $visit)
+                            @php
+                                $farmerFullName = trim(implode(' ', array_filter([
+                                    optional($visit->farmer)->first_name,
+                                    optional($visit->farmer)->middle_name,
+                                    optional($visit->farmer)->last_name,
+                                ])));
+
+                                $medicineSummary = '-';
+                                $treatmentDetails = $visit->treatment_details;
+                                if (is_string($treatmentDetails)) {
+                                    $decoded = json_decode($treatmentDetails, true);
+                                    if (json_last_error() === JSON_ERROR_NONE) {
+                                        $treatmentDetails = $decoded;
+                                    }
+                                }
+
+                                if (is_array($treatmentDetails)) {
+                                    $medicineRows = [];
+                                    $medicineSource = $treatmentDetails['medicines'] ?? $treatmentDetails;
+                                    if (is_array($medicineSource)) {
+                                        foreach ($medicineSource as $item) {
+                                            if (is_array($item)) {
+                                                $name = trim((string) ($item['medicine'] ?? $item['name'] ?? ''));
+                                                $qty = trim((string) ($item['total'] ?? $item['tabs'] ?? $item['quantity'] ?? ''));
+                                                $line = trim($name.($qty !== '' ? ' ('.$qty.')' : ''));
+                                                if ($line !== '') {
+                                                    $medicineRows[] = $line;
+                                                }
+                                            } elseif (is_string($item) && trim($item) !== '') {
+                                                $medicineRows[] = trim($item);
+                                            }
+                                        }
+                                    }
+                                    if (! empty($medicineRows)) {
+                                        $medicineSummary = implode(', ', array_slice($medicineRows, 0, 4));
+                                    }
+                                } elseif (is_string($treatmentDetails) && trim($treatmentDetails) !== '') {
+                                    $medicineSummary = trim($treatmentDetails);
+                                }
+                            @endphp
                             <tr>
                                 <td>{{ $visits->firstItem() + $loop->index }}</td>
                                 <td><span class="fw-semibold">{{ $visit->appointment_code }}</span></td>
                                 <td>{{ $visit->doctor->full_name ?: $visit->doctor->name ?: '-' }}</td>
                                 <td>
-                                    <div class="fw-semibold">{{ $visit->farmer_name ?: '-' }}</div>
+                                    <div class="fw-semibold">{{ $farmerFullName !== '' ? $farmerFullName : ($visit->farmer_name ?: '-') }}</div>
                                     <small class="text-muted">{{ $visit->farmer_phone ?: '-' }}</small>
                                 </td>
                                 <td>{{ $visit->animal_name ?: '-' }}</td>
                                 <td style="min-width:220px;">{{ $visit->concern ?: '-' }}</td>
+                                <td style="min-width:220px;">{{ $medicineSummary }}</td>
                                 <td style="min-width:220px;">{{ $visit->onsite_treatment ?: '-' }}</td>
                                 <td>{{ optional($visit->completed_at ?: $visit->updated_at)->format('d-m-Y h:i A') ?: '-' }}</td>
                                 <td>{{ $visit->charges !== null ? '₹ '.number_format((float) $visit->charges, 2) : '-' }}</td>
@@ -60,7 +99,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">No visited records found</td>
+                                <td colspan="11" class="text-center text-muted py-4">No visited records found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -74,4 +113,19 @@
         @endif
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('visitedSearchInput');
+    const form = document.getElementById('visitedSearchForm');
+    if (!input || !form) return;
+
+    let timer = null;
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+            form.submit();
+        }, 350);
+    });
+});
+</script>
 @endsection

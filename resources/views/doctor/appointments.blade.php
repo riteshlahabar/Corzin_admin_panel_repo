@@ -71,7 +71,6 @@
                             <th>Disease</th>
                             <th>Created At</th>
                             <th>Doctor</th>
-                            <th>Charges</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -91,7 +90,14 @@
                             <tr>
                                 <td><span class="fw-semibold">{{ $appointment->appointment_code }}</span></td>
                                 <td>
-                                    <div class="fw-semibold">{{ $appointment->farmer_name ?: '-' }}</div>
+                                    @php
+                                        $farmerFullName = trim(implode(' ', array_filter([
+                                            optional($appointment->farmer)->first_name,
+                                            optional($appointment->farmer)->middle_name,
+                                            optional($appointment->farmer)->last_name,
+                                        ])));
+                                    @endphp
+                                    <div class="fw-semibold">{{ $farmerFullName !== '' ? $farmerFullName : ($appointment->farmer_name ?: '-') }}</div>
                                     <small class="text-muted">{{ $appointment->farmer_phone ?: '-' }}</small>
                                 </td>
                                 <td>{{ $appointment->animal_name ?: '-' }}</td>
@@ -118,12 +124,11 @@
                                         {{ optional($appointment->doctor)->full_name ?: optional($appointment->doctor)->name ?: '-' }}
                                     @endif
                                 </td>
-                                <td>{{ $appointment->charges !== null ? 'Rs '.number_format((float) $appointment->charges, 2) : '-' }}</td>
                                 <td><span class="badge {{ $badgeClass }}">{{ ucwords(str_replace('_', ' ', $status)) }}</span></td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">No appointments found</td>
+                                <td colspan="7" class="text-center text-muted py-4">No appointments found</td>
                             </tr>
                         @endforelse
                     </tbody>

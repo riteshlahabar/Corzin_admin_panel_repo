@@ -20,7 +20,7 @@ class DoctorAppointmentController extends Controller
     public function index(Request $request)
     {
         $rows = DoctorAppointment::query()
-            ->with('doctor')
+            ->with(['doctor', 'farmer'])
             ->latest('requested_at')
             ->latest()
             ->get();
@@ -30,12 +30,20 @@ class DoctorAppointmentController extends Controller
             $rows = $rows->filter(function (DoctorAppointment $row) use ($search) {
                 $doctorName = strtolower((string) optional($row->doctor)->full_name);
                 $doctorAltName = strtolower((string) optional($row->doctor)->name);
+                $farmerFullName = strtolower(trim(implode(' ', array_filter([
+                    optional($row->farmer)->first_name,
+                    optional($row->farmer)->middle_name,
+                    optional($row->farmer)->last_name,
+                ]))));
+                $appointmentCode = strtolower((string) $row->appointment_code);
 
                 return str_contains(strtolower((string) $row->farmer_name), $search)
+                    || str_contains($farmerFullName, $search)
                     || str_contains(strtolower((string) $row->animal_name), $search)
                     || str_contains(strtolower((string) $row->concern), $search)
                     || str_contains($doctorName, $search)
-                    || str_contains($doctorAltName, $search);
+                    || str_contains($doctorAltName, $search)
+                    || str_contains($appointmentCode, $search);
             })->values();
         }
 
