@@ -4,11 +4,8 @@
 @section('content')
 <div class="container-fluid">
     <style>
-        .doctor-table {
-            font-size: 0.85rem;
-        }
         .doctor-table thead th {
-            font-size: 0.78rem;
+            font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -20,12 +17,6 @@
             vertical-align: middle;
             padding-top: 0.6rem;
             padding-bottom: 0.6rem;
-        }
-        .doctor-table .fw-semibold {
-            font-size: 0.84rem;
-        }
-        .doctor-table small {
-            font-size: 0.74rem;
         }
     </style>
 
