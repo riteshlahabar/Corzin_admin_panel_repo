@@ -25,9 +25,11 @@ class DoctorAppointmentController extends Controller
             ->latest()
             ->get();
 
+        $representative = $this->representativeAppointments($rows);
+
         if ($request->filled('search')) {
             $search = strtolower(trim((string) $request->search));
-            $rows = $rows->filter(function (DoctorAppointment $row) use ($search) {
+            $representative = $representative->filter(function (DoctorAppointment $row) use ($search) {
                 $doctorName = strtolower((string) optional($row->doctor)->full_name);
                 $doctorAltName = strtolower((string) optional($row->doctor)->name);
                 $farmerFullName = strtolower(trim(implode(' ', array_filter([
@@ -36,6 +38,8 @@ class DoctorAppointmentController extends Controller
                     optional($row->farmer)->last_name,
                 ]))));
                 $appointmentCode = strtolower((string) $row->appointment_code);
+                $requestedAt = strtolower((string) optional($row->requested_at ?: $row->created_at)?->format('d-m-Y h:i A'));
+                $status = strtolower((string) $row->status);
 
                 return str_contains(strtolower((string) $row->farmer_name), $search)
                     || str_contains($farmerFullName, $search)
@@ -43,11 +47,11 @@ class DoctorAppointmentController extends Controller
                     || str_contains(strtolower((string) $row->concern), $search)
                     || str_contains($doctorName, $search)
                     || str_contains($doctorAltName, $search)
-                    || str_contains($appointmentCode, $search);
+                    || str_contains($appointmentCode, $search)
+                    || str_contains($requestedAt, $search)
+                    || str_contains($status, $search);
             })->values();
         }
-
-        $representative = $this->representativeAppointments($rows);
 
         $perPage = 20;
         $currentPage = max(1, (int) $request->query('page', 1));
