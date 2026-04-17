@@ -285,9 +285,9 @@ class DoctorAppointmentController extends Controller
         if ($action === 'approved') {
             $this->notifyFarmer(
                 $appointment,
-                'Appointment Approved',
-                'Doctor approved your visit. Share this OTP at visit time: '.($appointment->otp_code ?? ''),
-                ['event' => 'appointment_doctor_approved']
+                'Send OTP For Doctor Visit',
+                'Doctor sent visit OTP. Share this OTP at visit time: '.($appointment->otp_code ?? ''),
+                ['event' => 'appointment_visit_otp_sent']
             );
         } elseif ($action === 'rescheduled') {
             $this->notifyFarmer(
@@ -313,7 +313,9 @@ class DoctorAppointmentController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Appointment updated successfully.',
+            'message' => $action === 'approved'
+                ? 'OTP sent to farmer for doctor visit.'
+                : 'Appointment updated successfully.',
             'data' => $this->appointmentPayload($appointment, false),
         ]);
     }
