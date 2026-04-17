@@ -281,6 +281,16 @@ class DoctorAppointmentController extends Controller
             ['1', 'true', 'yes', 'on'],
             true
         );
+        $alreadyAcceptedStatuses = ['approved', 'farmer_approved', 'scheduled', 'in_progress'];
+        $wasAlreadyAccepted = in_array(
+            strtolower((string) ($appointment->status ?? '')),
+            $alreadyAcceptedStatuses,
+            true
+        );
+        if ($action === 'approved' && ! $sendOtp && $wasAlreadyAccepted) {
+            // Treat repeat "approved" on an already-accepted appointment as OTP send/resend.
+            $sendOtp = true;
+        }
 
         if ($action === 'rescheduled') {
             if (empty($data['scheduled_at']) || ! isset($data['charges'])) {
