@@ -103,7 +103,6 @@ class DoctorAppointmentController extends Controller
             'address' => ['nullable', 'string'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'notes' => ['nullable', 'string'],
             'animal_photo' => ['nullable', 'string', 'max:255'],
             'animal_photo_file' => ['nullable', 'image', 'max:5120'],
         ]);
@@ -143,7 +142,6 @@ class DoctorAppointmentController extends Controller
             'address' => $data['address'] ?? null,
             'latitude' => $data['latitude'] ?? null,
             'longitude' => $data['longitude'] ?? null,
-            'notes' => $data['notes'] ?? null,
         ]);
 
         $appointment->loadMissing(['doctor', 'farmer']);

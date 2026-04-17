@@ -5,7 +5,7 @@
 <div class="container-fluid">
     <style>
         .doctor-table thead th {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -14,7 +14,7 @@
             padding-bottom: 0.7rem;
         }
         .doctor-table tbody td {
-            font-size: 10px;
+            font-size: 11px;
             vertical-align: middle;
             padding-top: 0.6rem;
             padding-bottom: 0.6rem;
@@ -44,7 +44,6 @@
                 <table class="table table-sm table-hover align-middle mb-0 doctor-table">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Appointment ID</th>
                             <th>Doctor</th>
                             <th>Farmer</th>
@@ -100,7 +99,6 @@
                                 }
                             @endphp
                             <tr>
-                                <td>{{ $visits->firstItem() + $loop->index }}</td>
                                 <td><span class="fw-semibold">{{ $visit->appointment_code }}</span></td>
                                 <td>{{ $visit->doctor->full_name ?: $visit->doctor->name ?: '-' }}</td>
                                 <td>
@@ -117,7 +115,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center text-muted py-4">No visited records found</td>
+                                <td colspan="10" class="text-center text-muted py-4">No visited records found</td>
                             </tr>
                         @endforelse
                     </tbody>

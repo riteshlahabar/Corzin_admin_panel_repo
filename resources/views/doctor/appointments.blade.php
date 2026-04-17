@@ -5,7 +5,7 @@
 <div class="container-fluid">
     <style>
         .doctor-table thead th {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.02em;
             text-transform: uppercase;
@@ -14,7 +14,7 @@
             padding-bottom: 0.7rem;
         }
         .doctor-table tbody td {
-            font-size: 10px;
+            font-size: 11px;
             vertical-align: middle;
             padding-top: 0.6rem;
             padding-bottom: 0.6rem;
