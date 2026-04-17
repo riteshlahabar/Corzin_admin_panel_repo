@@ -28,6 +28,7 @@ class DoctorAppointmentController extends Controller
     {
         $appointments = DoctorAppointment::query()
             ->where('doctor_id', $doctor->id)
+            ->whereNotIn('status', ['cancelled', 'declined', 'rejected'])
             ->where(function ($query) {
                 $query->whereNotNull('notified_at')
                     ->orWhereNotIn('status', ['pending']);
@@ -67,14 +68,30 @@ class DoctorAppointmentController extends Controller
                     : (string) $appointment->appointment_group_id;
             })
             ->map(function ($items) {
+                // Safeguard for broadcast race conditions:
+                // if there is at least one active row in this group,
+                // ignore cancelled/declined/rejected rows.
+                $active = $items->filter(function (DoctorAppointment $row) {
+                    return ! in_array(
+                        strtolower((string) ($row->status ?? '')),
+                        ['cancelled', 'declined', 'rejected'],
+                        true
+                    );
+                });
+                if ($active->isNotEmpty()) {
+                    $items = $active;
+                }
+
                 $items = $items->sort(function (DoctorAppointment $a, DoctorAppointment $b) {
                     $rankDiff = $this->farmerStatusRank($b) <=> $this->farmerStatusRank($a);
                     if ($rankDiff !== 0) {
                         return $rankDiff;
                     }
 
-                    $aTime = optional($a->requested_at)->timestamp ?? optional($a->created_at)->timestamp ?? 0;
-                    $bTime = optional($b->requested_at)->timestamp ?? optional($b->created_at)->timestamp ?? 0;
+                    // Prefer most recently updated row when ranks are same
+                    // (important when one doctor just accepted and others got cancelled).
+                    $aTime = optional($a->updated_at ?: $a->requested_at ?: $a->created_at)->timestamp ?? 0;
+                    $bTime = optional($b->updated_at ?: $b->requested_at ?: $b->created_at)->timestamp ?? 0;
                     return $bTime <=> $aTime;
                 });
 
@@ -272,6 +289,22 @@ class DoctorAppointmentController extends Controller
                 'charges' => $data['charges'],
             ]);
         } elseif ($action === 'approved') {
+            $groupId = $appointment->appointment_group_id;
+            if (! blank($groupId)) {
+                $alreadyAccepted = DoctorAppointment::query()
+                    ->where('appointment_group_id', $groupId)
+                    ->where('id', '!=', $appointment->id)
+                    ->whereIn('status', ['approved', 'in_progress', 'completed'])
+                    ->exists();
+
+                if ($alreadyAccepted) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'This appointment is already accepted by another doctor.',
+                    ], 409);
+                }
+            }
+
             $otpCode = (string) random_int(100000, 999999);
             $appointment->update([
                 'status' => 'approved',
@@ -279,6 +312,32 @@ class DoctorAppointmentController extends Controller
                 'otp_code' => $otpCode,
                 'otp_verified_at' => null,
             ]);
+
+            // If one doctor accepts from a broadcast group, close the same request
+            // for all other doctors so it disappears from their appointment screen.
+            if (! blank($groupId)) {
+                $otherRows = DoctorAppointment::query()
+                    ->where('appointment_group_id', $groupId)
+                    ->where('id', '!=', $appointment->id)
+                    ->whereNotIn('status', ['cancelled', 'declined', 'rejected', 'completed'])
+                    ->get();
+
+                if ($otherRows->isNotEmpty()) {
+                    DoctorAppointment::query()
+                        ->whereIn('id', $otherRows->pluck('id'))
+                        ->update(['status' => 'cancelled']);
+
+                    foreach ($otherRows as $other) {
+                        $other->refresh()->loadMissing(['doctor', 'farmer']);
+                        $this->notifyDoctor(
+                            $other,
+                            'Appointment Closed',
+                            'This appointment was accepted by another nearby doctor.',
+                            ['event' => 'appointment_taken_by_other_doctor']
+                        );
+                    }
+                }
+            }
         } else {
             $appointment->update([
                 'status' => 'declined',
