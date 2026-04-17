@@ -6,6 +6,7 @@ use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -78,10 +79,19 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
         $groupId = (string) Str::uuid();
         $appointments = collect();
+        $requestTime = isset($data['requested_at']) ? Carbon::parse($data['requested_at']) : now();
+
         foreach ($targetDoctors as $doctor) {
+            $distance = (float) ($doctor->distance_km ?? 0);
+            $radiusFrom = $this->radiusBandFromDistance($distance);
+            $radiusTo = $radiusFrom + 5;
+            $sendNow = $radiusTo <= 5;
+
             $appointment = DoctorAppointment::create([
                 'doctor_id' => $doctor->id,
                 'appointment_group_id' => $groupId,
+                'notify_radius_from_km' => $radiusFrom,
+                'notify_radius_to_km' => $radiusTo,
                 'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
                 'animal_id' => $data['animal_id'] ?? null,
                 'farmer_name' => $data['farmer_name']
@@ -93,19 +103,26 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 'disease_ids' => $data['disease_ids'] ?? [],
                 'disease_details' => $data['disease_details'] ?? null,
                 'status' => 'pending',
-                'requested_at' => $data['requested_at'] ?? now(),
+                'requested_at' => $requestTime,
+                'notified_at' => $sendNow ? now() : null,
                 'address' => $data['address'] ?? null,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
             ]);
 
-            $appointment->loadMissing(['doctor', 'farmer']);
-            $this->notifyDoctor(
-                $appointment,
-                'New Appointment Request',
-                trim(($appointment->farmer_name ?? 'Farmer').' requested a visit for '.($appointment->animal_name ?? 'animal')),
-                ['event' => 'appointment_created']
-            );
+            if ($sendNow) {
+                $appointment->loadMissing(['doctor', 'farmer']);
+                $this->notifyDoctor(
+                    $appointment,
+                    'New Appointment Request',
+                    trim(($appointment->farmer_name ?? 'Farmer').' requested a visit for '.($appointment->animal_name ?? 'animal')),
+                    [
+                        'event' => 'appointment_created',
+                        'radius_from_km' => (string) $radiusFrom,
+                        'radius_to_km' => (string) $radiusTo,
+                    ]
+                );
+            }
 
             $appointments->push($appointment);
         }
@@ -123,7 +140,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         return response()->json([
             'status' => true,
             'message' => $broadcastCount > 1
-                ? "Appointment broadcast to {$broadcastCount} nearby doctors."
+                ? "Appointment created. First wave sent to 0-5 km doctors ({$broadcastCount} total queued up to 20 km)."
                 : 'Appointment request created successfully.',
             'data' => $this->appointmentPayload($primaryAppointment, true),
             'broadcast_count' => $broadcastCount,
@@ -139,7 +156,26 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ->whereKey((int) $data['doctor_id'])
                 ->get();
         }
+        $originLat = isset($data['latitude']) ? (float) $data['latitude'] : null;
+        $originLng = isset($data['longitude']) ? (float) $data['longitude'] : null;
 
+        if ($originLat !== null && $originLng !== null) {
+            $distanceExpression = $this->distanceExpression($originLat, $originLng);
+
+            return Doctor::query()
+                ->where('status', 'approved')
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->select('doctors.*')
+                ->selectRaw("{$distanceExpression} as distance_km")
+                ->having('distance_km', '<=', 20)
+                ->orderBy('distance_km')
+                ->limit(80)
+                ->get();
+        }
+
+        // Fallback when farmer coordinates are unavailable:
+        // keep previous location ranking and treat all as first wave.
         $approvedDoctors = Doctor::query()->where('status', 'approved');
         $ranked = collect();
 
@@ -149,54 +185,51 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         $state = trim((string) ($farmer->state ?? ''));
 
         if ($pincode !== '') {
-            $byPincode = (clone $approvedDoctors)
-                ->where('pincode', $pincode)
-                ->orderByDesc('approved_at')
-                ->limit(10)
-                ->get();
-            if ($byPincode->isNotEmpty()) {
-                $ranked = $ranked->concat($byPincode);
-            }
+            $ranked = $ranked->concat(
+                (clone $approvedDoctors)
+                    ->where('pincode', $pincode)
+                    ->orderByDesc('approved_at')
+                    ->limit(20)
+                    ->get()
+            );
         }
 
         if ($city !== '' || $district !== '') {
             $byCity = (clone $approvedDoctors);
-            if ($city !== '') {
-                $byCity->where('city', $city);
-            }
-            if ($district !== '') {
-                $byCity->where('district', $district);
-            }
-
-            $cityDoctors = $byCity->orderByDesc('approved_at')->limit(10)->get();
-            if ($cityDoctors->isNotEmpty()) {
-                $ranked = $ranked->concat($cityDoctors);
-            }
+            if ($city !== '') $byCity->where('city', $city);
+            if ($district !== '') $byCity->where('district', $district);
+            $ranked = $ranked->concat($byCity->orderByDesc('approved_at')->limit(20)->get());
         }
 
         if ($district !== '') {
             $byDistrict = (clone $approvedDoctors)->where('district', $district);
-            if ($state !== '') {
-                $byDistrict->where('state', $state);
-            }
-
-            $districtDoctors = $byDistrict->orderByDesc('approved_at')->limit(10)->get();
-            if ($districtDoctors->isNotEmpty()) {
-                $ranked = $ranked->concat($districtDoctors);
-            }
+            if ($state !== '') $byDistrict->where('state', $state);
+            $ranked = $ranked->concat($byDistrict->orderByDesc('approved_at')->limit(20)->get());
         }
 
-        // Always include all approved doctors as fallback broadcast pool,
-        // while keeping nearby doctors first in order.
-        $allApproved = (clone $approvedDoctors)
-            ->orderByDesc('approved_at')
-            ->limit(50)
-            ->get();
+        $allApproved = (clone $approvedDoctors)->orderByDesc('approved_at')->limit(80)->get();
 
         return $ranked
             ->concat($allApproved)
             ->unique('id')
             ->values()
-            ->take(50);
+            ->map(function (Doctor $doctor) {
+                $doctor->distance_km = 0;
+                return $doctor;
+            })
+            ->take(80);
+    }
+
+    protected function radiusBandFromDistance(float $distanceKm): int
+    {
+        if ($distanceKm <= 5) return 0;
+        if ($distanceKm <= 10) return 5;
+        if ($distanceKm <= 15) return 10;
+        return 15;
+    }
+
+    protected function distanceExpression(float $originLat, float $originLng): string
+    {
+        return "(6371 * acos(cos(radians({$originLat})) * cos(radians(doctors.latitude)) * cos(radians(doctors.longitude) - radians({$originLng})) + sin(radians({$originLat})) * sin(radians(doctors.latitude))))";
     }
 }

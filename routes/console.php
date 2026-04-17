@@ -66,3 +66,75 @@ Schedule::call(function (): void {
 
     Log::info('Follow-up reminders sent', ['count' => $count, 'date' => $today]);
 })->name('appointments:followup-reminders')->everyTenMinutes()->withoutOverlapping();
+
+Schedule::call(function (): void {
+    $now = now();
+    $firebase = app(FirebaseService::class);
+
+    $groupIds = DoctorAppointment::query()
+        ->whereNotNull('appointment_group_id')
+        ->where('status', 'pending')
+        ->whereNull('notified_at')
+        ->distinct()
+        ->pluck('appointment_group_id');
+
+    foreach ($groupIds as $groupId) {
+        $groupRows = DoctorAppointment::query()
+            ->with(['doctor', 'farmer'])
+            ->where('appointment_group_id', $groupId)
+            ->orderBy('id')
+            ->get();
+
+        if ($groupRows->isEmpty()) {
+            continue;
+        }
+
+        $hasAccepted = $groupRows->contains(function (DoctorAppointment $row) {
+            return in_array(strtolower((string) $row->status), ['approved', 'scheduled', 'in_progress', 'completed'], true);
+        });
+        if ($hasAccepted) {
+            continue;
+        }
+
+        $seed = $groupRows->first();
+        $requestedAt = $seed->requested_at ?: $seed->created_at;
+        if (! $requestedAt) {
+            continue;
+        }
+
+        $elapsedMinutes = max(0, (int) floor($requestedAt->diffInSeconds($now) / 60));
+        $allowedMaxRadius = min(20, 5 + ($elapsedMinutes * 5));
+        if ($allowedMaxRadius <= 5) {
+            continue;
+        }
+
+        $toNotify = $groupRows
+            ->where('status', 'pending')
+            ->whereNull('notified_at')
+            ->filter(function (DoctorAppointment $row) use ($allowedMaxRadius) {
+                return (int) ($row->notify_radius_to_km ?? 0) <= $allowedMaxRadius;
+            })
+            ->values();
+
+        foreach ($toNotify as $row) {
+            $row->notified_at = now();
+            $row->save();
+
+            $row->refresh()->loadMissing(['doctor', 'farmer']);
+            $firebase->sendToDevice(
+                optional($row->doctor)->fcm_token,
+                'New Appointment Request',
+                trim(($row->farmer_name ?? 'Farmer').' requested a visit for '.($row->animal_name ?? 'animal')),
+                [
+                    'type' => 'doctor_appointment',
+                    'event' => 'appointment_created',
+                    'appointment_id' => (string) $row->id,
+                    'doctor_id' => (string) ($row->doctor_id ?? ''),
+                    'status' => (string) ($row->status ?? ''),
+                    'radius_from_km' => (string) ($row->notify_radius_from_km ?? 0),
+                    'radius_to_km' => (string) ($row->notify_radius_to_km ?? 0),
+                ]
+            );
+        }
+    }
+})->name('appointments:radius-escalation')->everyMinute()->withoutOverlapping();

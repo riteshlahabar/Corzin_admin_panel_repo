@@ -28,6 +28,10 @@ class DoctorAppointmentController extends Controller
     {
         $appointments = DoctorAppointment::query()
             ->where('doctor_id', $doctor->id)
+            ->where(function ($query) {
+                $query->whereNotNull('notified_at')
+                    ->orWhereNotIn('status', ['pending']);
+            })
             ->with(['doctor', 'farmer'])
             ->latest('requested_at')
             ->latest()

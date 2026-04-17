@@ -25,6 +25,8 @@ class Doctor extends Model
         'district',
         'state',
         'pincode',
+        'latitude',
+        'longitude',
         'adhar_document',
         'adhar_document_back',
         'pan_document',
@@ -43,6 +45,8 @@ class Doctor extends Model
     protected $casts = [
         'terms_accepted' => 'boolean',
         'approved_at' => 'datetime',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
     ];
 
     protected $hidden = [
