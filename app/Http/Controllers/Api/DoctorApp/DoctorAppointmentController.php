@@ -271,9 +271,11 @@ class DoctorAppointmentController extends Controller
             'action' => ['required', Rule::in(['approved', 'declined', 'rescheduled'])],
             'scheduled_at' => ['nullable', 'date'],
             'charges' => ['nullable', 'numeric', 'min:0'],
+            'send_otp' => ['nullable', 'boolean'],
         ]);
 
         $action = $data['action'];
+        $sendOtp = (bool) ($data['send_otp'] ?? false);
 
         if ($action === 'rescheduled') {
             if (empty($data['scheduled_at']) || ! isset($data['charges'])) {
@@ -305,13 +307,15 @@ class DoctorAppointmentController extends Controller
                 }
             }
 
-            $otpCode = (string) random_int(100000, 999999);
-            $appointment->update([
+            $updateData = [
                 'status' => 'approved',
                 'farmer_approved_at' => now(),
-                'otp_code' => $otpCode,
-                'otp_verified_at' => null,
-            ]);
+            ];
+            if ($sendOtp) {
+                $updateData['otp_code'] = (string) random_int(100000, 999999);
+                $updateData['otp_verified_at'] = null;
+            }
+            $appointment->update($updateData);
 
             // If one doctor accepts from a broadcast group, close the same request
             // for all other doctors so it disappears from their appointment screen.
@@ -346,12 +350,21 @@ class DoctorAppointmentController extends Controller
 
         $appointment->refresh()->loadMissing(['doctor', 'farmer']);
         if ($action === 'approved') {
-            $this->notifyFarmer(
-                $appointment,
-                'Send OTP For Doctor Visit',
-                'Doctor sent visit OTP. Share this OTP at visit time: '.($appointment->otp_code ?? ''),
-                ['event' => 'appointment_visit_otp_sent']
-            );
+            if ($sendOtp) {
+                $this->notifyFarmer(
+                    $appointment,
+                    'Send OTP For Doctor Visit',
+                    'Doctor sent visit OTP. Share this OTP at visit time: '.($appointment->otp_code ?? ''),
+                    ['event' => 'appointment_visit_otp_sent']
+                );
+            } else {
+                $this->notifyFarmer(
+                    $appointment,
+                    'Appointment Accepted',
+                    'Doctor accepted your appointment request.',
+                    ['event' => 'appointment_accepted']
+                );
+            }
         } elseif ($action === 'rescheduled') {
             $this->notifyFarmer(
                 $appointment,
@@ -377,7 +390,7 @@ class DoctorAppointmentController extends Controller
         return response()->json([
             'status' => true,
             'message' => $action === 'approved'
-                ? 'OTP sent to farmer for doctor visit.'
+                ? ($sendOtp ? 'OTP sent to farmer for doctor visit.' : 'Appointment accepted successfully.')
                 : 'Appointment updated successfully.',
             'data' => $this->appointmentPayload($appointment, false),
         ]);
@@ -708,7 +721,6 @@ class DoctorAppointmentController extends Controller
     {
         $query = DoctorAppointment::query()
             ->with('doctor')
-            ->where('doctor_id', $appointment->doctor_id)
             ->where('status', 'completed')
             ->where('id', '<>', $appointment->id);
 
