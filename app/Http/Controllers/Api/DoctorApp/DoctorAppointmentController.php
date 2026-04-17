@@ -575,6 +575,22 @@ class DoctorAppointmentController extends Controller
             }
         }
 
+        $farmer = $appointment->farmer;
+        if (! $farmer && ! empty($appointment->farmer_phone)) {
+            $farmer = Farmer::query()
+                ->where('mobile', (string) $appointment->farmer_phone)
+                ->first();
+        }
+
+        $farmerFullName = trim(implode(' ', array_filter([
+            $farmer->first_name ?? null,
+            $farmer->middle_name ?? null,
+            $farmer->last_name ?? null,
+        ])));
+        if ($farmerFullName === '') {
+            $farmerFullName = (string) ($appointment->farmer_name ?? '');
+        }
+
         return [
             'id' => $appointment->id,
             'appointment_code' => $appointment->appointment_code,
@@ -583,7 +599,10 @@ class DoctorAppointmentController extends Controller
             'doctor_name' => optional($appointment->doctor)->full_name ?? '',
             'farmer_id' => $appointment->farmer_id,
             'animal_id' => $appointment->animal_id,
-            'farmer_name' => $appointment->farmer_name ?? '',
+            'farmer_name' => $farmerFullName,
+            'farmer_first_name' => (string) ($farmer->first_name ?? ''),
+            'farmer_middle_name' => (string) ($farmer->middle_name ?? ''),
+            'farmer_last_name' => (string) ($farmer->last_name ?? ''),
             'farmer_phone' => $appointment->farmer_phone ?? '',
             'animal_name' => $appointment->animal_name ?? '',
             'animal_photo_url' => $appointment->animal_photo_url,
