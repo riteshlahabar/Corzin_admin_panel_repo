@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Doctor\DoctorAppointmentController as FarmerDoctorA
 use App\Http\Controllers\Api\Doctor\DoctorSettingController as FarmerDoctorSettingController;
 use App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController as DoctorAppAppointmentController;
 use App\Http\Controllers\Api\DoctorApp\DoctorAppController;
+use App\Http\Controllers\Api\DoctorApp\LocationController as DoctorAppLocationController;
 use App\Http\Controllers\Api\DoctorApp\DoctorSettingController as DoctorAppSettingController;
 use App\Http\Controllers\Api\Shop\ShopController;
 use App\Http\Controllers\Api\WebPushTokenController;
@@ -86,6 +87,10 @@ Route::prefix('doctor')->group(function () {
     Route::get('/profile/{doctor}', [DoctorAppController::class, 'profile']);
     Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
     Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
+    Route::get('/locations/states', [DoctorAppLocationController::class, 'states']);
+    Route::get('/locations/districts', [DoctorAppLocationController::class, 'districts']);
+    Route::get('/locations/talukas', [DoctorAppLocationController::class, 'talukas']);
+    Route::get('/locations/cities', [DoctorAppLocationController::class, 'cities']);
 
     // dairycorzin doctor APIs use Api\Doctor folder controllers
     Route::post('/appointments', [FarmerDoctorAppointmentController::class, 'store']);
@@ -113,6 +118,10 @@ Route::prefix('doctor-app')->group(function () {
     Route::get('/profile/{doctor}', [DoctorAppController::class, 'profile']);
     Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
     Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
+    Route::get('/locations/states', [DoctorAppLocationController::class, 'states']);
+    Route::get('/locations/districts', [DoctorAppLocationController::class, 'districts']);
+    Route::get('/locations/talukas', [DoctorAppLocationController::class, 'talukas']);
+    Route::get('/locations/cities', [DoctorAppLocationController::class, 'cities']);
     Route::post('/appointments', [DoctorAppAppointmentController::class, 'store']);
     Route::get('/appointments/farmer/{farmer}', [DoctorAppAppointmentController::class, 'indexByFarmer']);
     Route::get('/appointments/{doctor}', [DoctorAppAppointmentController::class, 'indexByDoctor']);
