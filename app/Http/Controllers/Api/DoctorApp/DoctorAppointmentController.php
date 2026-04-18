@@ -227,17 +227,31 @@ class DoctorAppointmentController extends Controller
         $data = $request->validate([
             'notes' => ['nullable', 'string'],
             'charges' => ['nullable', 'numeric', 'min:0'],
+            'fees' => ['nullable', 'numeric', 'min:0'],
+            'on_site_medicine_charges' => ['nullable', 'numeric', 'min:0'],
             'treatment_details' => ['nullable', 'string'],
             'onsite_treatment' => ['nullable', 'string'],
             'followup_required' => ['nullable', 'boolean'],
             'next_followup_date' => ['nullable', 'date'],
         ]);
 
+        $fees = array_key_exists('fees', $data)
+            ? (float) ($data['fees'] ?? 0)
+            : (float) ($appointment->fees ?? 0);
+        $onSiteMedicineCharges = array_key_exists('on_site_medicine_charges', $data)
+            ? (float) ($data['on_site_medicine_charges'] ?? 0)
+            : (float) ($appointment->on_site_medicine_charges ?? 0);
+        $totalCharges = array_key_exists('charges', $data)
+            ? (float) ($data['charges'] ?? 0)
+            : ($fees + $onSiteMedicineCharges);
+
         $appointment->update([
             'status' => 'completed',
             'completed_at' => now(),
             'notes' => $data['notes'] ?? $appointment->notes,
-            'charges' => array_key_exists('charges', $data) ? $data['charges'] : $appointment->charges,
+            'charges' => $totalCharges,
+            'fees' => $fees,
+            'on_site_medicine_charges' => $onSiteMedicineCharges,
             'treatment_details' => $data['treatment_details'] ?? $appointment->treatment_details,
             'onsite_treatment' => $data['onsite_treatment']
                 ?? $this->extractOnsiteTreatment($data['treatment_details'] ?? $appointment->treatment_details)
@@ -717,6 +731,11 @@ class DoctorAppointmentController extends Controller
             'onsite_treatment' => $appointment->onsite_treatment ?? '',
             'followup_required' => (bool) ($appointment->followup_required ?? false),
             'next_followup_date' => optional($appointment->next_followup_date)->toDateString(),
+            'fees' => $appointment->fees !== null ? (float) $appointment->fees : null,
+            'on_site_medicine_charges' => $appointment->on_site_medicine_charges !== null
+                ? (float) $appointment->on_site_medicine_charges
+                : null,
+            'total_charges' => $appointment->charges !== null ? (float) $appointment->charges : null,
             'charges' => $appointment->charges !== null ? (float) $appointment->charges : null,
             'latitude' => $appointment->latitude !== null ? (float) $appointment->latitude : null,
             'longitude' => $appointment->longitude !== null ? (float) $appointment->longitude : null,
@@ -769,6 +788,11 @@ class DoctorAppointmentController extends Controller
                     'concern' => $row->concern ?? '',
                     'treatment_details' => $row->treatment_details ?? '',
                     'onsite_treatment' => $row->onsite_treatment ?? '',
+                    'fees' => $row->fees !== null ? (float) $row->fees : null,
+                    'on_site_medicine_charges' => $row->on_site_medicine_charges !== null
+                        ? (float) $row->on_site_medicine_charges
+                        : null,
+                    'total_charges' => $row->charges !== null ? (float) $row->charges : null,
                     'notes' => $row->notes ?? '',
                     'doctor_id' => $row->doctor_id,
                     'doctor_name' => optional($row->doctor)->full_name ?? '',
