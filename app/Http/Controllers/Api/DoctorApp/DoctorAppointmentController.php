@@ -226,6 +226,7 @@ class DoctorAppointmentController extends Controller
     {
         $data = $request->validate([
             'notes' => ['nullable', 'string'],
+            'charges' => ['nullable', 'numeric', 'min:0'],
             'treatment_details' => ['nullable', 'string'],
             'onsite_treatment' => ['nullable', 'string'],
             'followup_required' => ['nullable', 'boolean'],
@@ -236,6 +237,7 @@ class DoctorAppointmentController extends Controller
             'status' => 'completed',
             'completed_at' => now(),
             'notes' => $data['notes'] ?? $appointment->notes,
+            'charges' => array_key_exists('charges', $data) ? $data['charges'] : $appointment->charges,
             'treatment_details' => $data['treatment_details'] ?? $appointment->treatment_details,
             'onsite_treatment' => $data['onsite_treatment']
                 ?? $this->extractOnsiteTreatment($data['treatment_details'] ?? $appointment->treatment_details)
