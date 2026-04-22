@@ -47,26 +47,10 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('st_municipal', function (Blueprint $table) {
-            $table->id();
-            $table->string('serial_no', 30)->nullable();
-            $table->string('state_name', 150)->nullable();
-            $table->string('localbody_code', 30)->nullable();
-            $table->string('localbody_name', 255)->nullable();
-            $table->string('census_2001_code', 20)->nullable();
-            $table->string('district_code', 20)->nullable();
-            $table->string('district_name', 150)->nullable();
-            $table->string('subdistrict_code', 20)->nullable();
-            $table->string('subdistrict_name', 200)->nullable();
-            $table->string('village_code', 30)->nullable();
-            $table->string('village_name', 255)->nullable();
-            $table->timestamps();
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('st_municipal');
         Schema::dropIfExists('st_subdistricts');
         Schema::dropIfExists('st_districts');
         Schema::dropIfExists('st_states');

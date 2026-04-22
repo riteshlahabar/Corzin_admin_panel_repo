@@ -61,7 +61,7 @@ class DoctorAppController extends Controller
             'clinic_registration_number' => ['required', 'string', 'max:100'],
             'clinic_address' => ['required', 'string'],
             'village' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
             'taluka' => ['required', 'string', 'max:255'],
             'district' => ['required', 'string', 'max:255'],
             'state' => ['required', 'string', 'max:255'],
@@ -76,6 +76,11 @@ class DoctorAppController extends Controller
             'doctor_photo' => ['required', 'image', 'max:5120'],
         ]);
 
+        $resolvedCity = trim((string) ($request->city ?? ''));
+        if ($resolvedCity === '') {
+            $resolvedCity = trim((string) $request->taluka);
+        }
+
         $doctor = Doctor::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
@@ -89,7 +94,7 @@ class DoctorAppController extends Controller
             'clinic_registration_number' => $request->clinic_registration_number,
             'clinic_address' => $request->clinic_address,
             'village' => $request->village,
-            'city' => $request->city,
+            'city' => $resolvedCity,
             'taluka' => $request->taluka,
             'district' => $request->district,
             'state' => $request->state,
@@ -216,7 +221,7 @@ class DoctorAppController extends Controller
             'clinic_registration_number' => ['required', 'string', 'max:100'],
             'clinic_address' => ['required', 'string'],
             'village' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
             'taluka' => ['required', 'string', 'max:255'],
             'district' => ['required', 'string', 'max:255'],
             'state' => ['required', 'string', 'max:255'],
@@ -227,6 +232,11 @@ class DoctorAppController extends Controller
             'mmc_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'clinic_registration_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
+
+        $resolvedCity = trim((string) ($data['city'] ?? ''));
+        if ($resolvedCity === '') {
+            $resolvedCity = trim((string) $data['taluka']);
+        }
 
         $doctor->update([
             'first_name' => $data['first_name'],
@@ -241,7 +251,7 @@ class DoctorAppController extends Controller
             'clinic_registration_number' => $data['clinic_registration_number'],
             'clinic_address' => $data['clinic_address'],
             'village' => $data['village'],
-            'city' => $data['city'],
+            'city' => $resolvedCity,
             'taluka' => $data['taluka'],
             'district' => $data['district'],
             'state' => $data['state'],
