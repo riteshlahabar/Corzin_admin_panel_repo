@@ -31,6 +31,13 @@ class DoctorAppointmentController extends Controller
             ->whereNotIn('status', ['cancelled', 'declined', 'rejected'])
             ->where(function ($query) {
                 $query->whereNotNull('notified_at')
+                    ->orWhere(function ($pendingQuery) {
+                        $pendingQuery->where('status', 'pending')
+                            ->where(function ($firstWaveQuery) {
+                                $firstWaveQuery->where('notify_radius_from_km', 0)
+                                    ->orWhereNull('notify_radius_from_km');
+                            });
+                    })
                     ->orWhereNotIn('status', ['pending']);
             })
             ->with(['doctor', 'farmer'])
