@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -14,13 +15,6 @@ class DoctorListController extends Controller
     public function index()
     {
         $doctors = Doctor::latest()->get();
-        $liveLocations = Doctor::query()
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->orderByDesc('last_live_location_at')
-            ->orderByDesc('updated_at')
-            ->get();
-
         $summary = [
             'total' => $doctors->count(),
             'available' => $doctors->where('status', 'approved')->count(),
@@ -28,7 +22,7 @@ class DoctorListController extends Controller
             'locations' => $doctors->pluck('city')->filter()->unique()->count(),
         ];
 
-        return view('doctor.index', compact('doctors', 'summary', 'liveLocations'));
+        return view('doctor.index', compact('doctors', 'summary'));
     }
 
     public function create()
@@ -44,6 +38,22 @@ class DoctorListController extends Controller
             ->orderByDesc('last_live_location_at')
             ->orderByDesc('updated_at')
             ->get();
+
+        $liveLocations->each(function (Doctor $doctor): void {
+            if (! blank($doctor->live_location_address)) {
+                return;
+            }
+
+            if ($doctor->latitude === null || $doctor->longitude === null) {
+                return;
+            }
+
+            $doctor->live_location_address = $this->resolveLiveLocationAddress(
+                (float) $doctor->latitude,
+                (float) $doctor->longitude
+            );
+            $doctor->save();
+        });
 
         return view('doctor.live_location', compact('liveLocations'));
     }
@@ -172,5 +182,33 @@ class DoctorListController extends Controller
         $file->move($directory, $filename);
 
         return 'assets/doctor_registration_images/'.$filename;
+    }
+
+    protected function resolveLiveLocationAddress(float $latitude, float $longitude): string
+    {
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'CorzinDoctorAdmin/1.0',
+                ])
+                ->get('https://nominatim.openstreetmap.org/reverse', [
+                    'format' => 'jsonv2',
+                    'lat' => $latitude,
+                    'lon' => $longitude,
+                    'zoom' => 18,
+                    'addressdetails' => 1,
+                ]);
+
+            if ($response->successful()) {
+                $displayName = trim((string) data_get($response->json(), 'display_name', ''));
+                if ($displayName !== '') {
+                    return $displayName;
+                }
+            }
+        } catch (\Throwable $exception) {
+        }
+
+        return 'Lat: '.number_format($latitude, 6).', Lng: '.number_format($longitude, 6);
     }
 }

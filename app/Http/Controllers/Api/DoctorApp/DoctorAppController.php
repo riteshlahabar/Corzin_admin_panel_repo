@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 
 class DoctorAppController extends Controller
@@ -323,6 +324,10 @@ class DoctorAppController extends Controller
         $doctor->latitude = $data['latitude'];
         $doctor->longitude = $data['longitude'];
         $doctor->last_live_location_at = now();
+        $doctor->live_location_address = $this->resolveLiveLocationAddress(
+            (float) $data['latitude'],
+            (float) $data['longitude']
+        );
         $doctor->save();
 
         return response()->json([
@@ -358,10 +363,39 @@ class DoctorAppController extends Controller
             'latitude' => $doctor->latitude !== null ? (float) $doctor->latitude : null,
             'longitude' => $doctor->longitude !== null ? (float) $doctor->longitude : null,
             'last_live_location_at' => optional($doctor->last_live_location_at)->toIso8601String(),
+            'live_location_address' => $doctor->live_location_address,
             'terms_text' => $doctor->terms_text,
             'doctor_photo_url' => $doctor->doctorPhotoUrl(),
             'documents' => array_filter($doctor->documents()),
         ];
+    }
+
+    protected function resolveLiveLocationAddress(float $latitude, float $longitude): string
+    {
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'CorzinDoctorAdmin/1.0',
+                ])
+                ->get('https://nominatim.openstreetmap.org/reverse', [
+                    'format' => 'jsonv2',
+                    'lat' => $latitude,
+                    'lon' => $longitude,
+                    'zoom' => 18,
+                    'addressdetails' => 1,
+                ]);
+
+            if ($response->successful()) {
+                $displayName = trim((string) data_get($response->json(), 'display_name', ''));
+                if ($displayName !== '') {
+                    return $displayName;
+                }
+            }
+        } catch (\Throwable $exception) {
+        }
+
+        return 'Lat: '.number_format($latitude, 6).', Lng: '.number_format($longitude, 6);
     }
 
     protected function storeDocument($file, string $field, int $doctorId): string

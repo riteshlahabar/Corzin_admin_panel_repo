@@ -42,6 +42,7 @@ class Doctor extends Model
         'fcm_token',
         'approved_at',
         'last_live_location_at',
+        'live_location_address',
     ];
 
     protected $casts = [

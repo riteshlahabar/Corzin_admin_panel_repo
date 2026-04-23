@@ -16,14 +16,8 @@
                             <th>Name</th>
                             <th>Contact</th>
                             <th>Availability</th>
-                            <th>State</th>
-                            <th>District</th>
-                            <th>Taluka</th>
-                            <th>City</th>
-                            <th>Village</th>
-                            <th>Latitude</th>
-                            <th>Longitude</th>
-                            <th>Updated At</th>
+                            <th>Address</th>
+                            <th>Last Location</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -37,18 +31,14 @@
                                         {{ ($doctor->is_active_for_appointments ?? false) ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
-                                <td>{{ $doctor->state ?: '-' }}</td>
-                                <td>{{ $doctor->district ?: '-' }}</td>
-                                <td>{{ $doctor->taluka ?: '-' }}</td>
-                                <td>{{ $doctor->city ?: '-' }}</td>
-                                <td>{{ $doctor->village ?: '-' }}</td>
-                                <td>{{ $doctor->latitude !== null ? number_format((float) $doctor->latitude, 6) : '-' }}</td>
-                                <td>{{ $doctor->longitude !== null ? number_format((float) $doctor->longitude, 6) : '-' }}</td>
+                                <td style="min-width: 320px;">
+                                    {{ $doctor->live_location_address ?: '-' }}
+                                </td>
                                 <td>{{ optional($doctor->last_live_location_at ?: $doctor->updated_at)->format('d-m-Y h:i A') ?: '-' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center text-muted">No live location data yet</td>
+                                <td colspan="6" class="text-center text-muted">No live location data yet</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -58,4 +48,3 @@
     </div>
 </div>
 @endsection
-
