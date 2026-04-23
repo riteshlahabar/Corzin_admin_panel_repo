@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController
@@ -34,6 +35,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             'animal_photo' => ['nullable', 'string', 'max:255'],
             'animal_photo_file' => ['nullable', 'image', 'max:5120'],
         ]);
+        $debugTrace = (string) Str::uuid();
 
         $farmer = null;
         if (!empty($data['farmer_id'])) {
@@ -70,8 +72,23 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             $animalPhoto = $animal->image;
         }
 
-        $targetDoctors = $this->resolveTargetDoctors($data, $farmer);
+        Log::info('Appointment routing started', [
+            'trace' => $debugTrace,
+            'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
+            'farmer_phone' => $data['farmer_phone'] ?? ($farmer->mobile ?? null),
+            'animal_id' => $data['animal_id'] ?? null,
+            'doctor_id' => $data['doctor_id'] ?? null,
+            'manual_address' => $data['address'] ?? null,
+            'requested_at' => $data['requested_at'] ?? null,
+        ]);
+
+        $targetDoctors = $this->resolveTargetDoctors($data, $farmer, $debugTrace);
         if ($targetDoctors->isEmpty()) {
+            Log::warning('Appointment routing found no doctors', [
+                'trace' => $debugTrace,
+                'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
+                'manual_address' => $data['address'] ?? null,
+            ]);
             return response()->json([
                 'status' => false,
                 'message' => 'No nearby active doctor found from the farmer address for this appointment.',
@@ -111,6 +128,20 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 'longitude' => $data['longitude'] ?? null,
             ]);
 
+            Log::info('Appointment routing doctor candidate', [
+                'trace' => $debugTrace,
+                'appointment_id' => $appointment->id,
+                'doctor_id' => $doctor->id,
+                'doctor_name' => trim((string) (($doctor->full_name ?? '') ?: (($doctor->first_name ?? '').' '.($doctor->last_name ?? '')))),
+                'doctor_latitude' => $doctor->latitude,
+                'doctor_longitude' => $doctor->longitude,
+                'doctor_last_live_location_at' => $doctor->last_live_location_at,
+                'distance_km' => round($distance, 4),
+                'radius_from_km' => $radiusFrom,
+                'radius_to_km' => $radiusTo,
+                'send_now' => $sendNow,
+            ]);
+
             if ($sendNow) {
                 $appointment->loadMissing(['doctor', 'farmer']);
                 $sent = $this->notifyDoctor(
@@ -123,6 +154,12 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                         'radius_to_km' => (string) $radiusTo,
                     ]
                 );
+                Log::info('Appointment routing first-wave notification result', [
+                    'trace' => $debugTrace,
+                    'appointment_id' => $appointment->id,
+                    'doctor_id' => $doctor->id,
+                    'sent' => $sent,
+                ]);
                 if ($sent) {
                     $appointment->notified_at = now();
                     $appointment->save();
@@ -153,12 +190,17 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         ], 201);
     }
 
-    protected function resolveTargetDoctors(array $data, ?Farmer $farmer): Collection
+    protected function resolveTargetDoctors(array $data, ?Farmer $farmer, ?string $debugTrace = null): Collection
     {
-        $origin = $this->resolveFarmerCoordinatesFromAddress($data, $farmer);
+        $origin = $this->resolveFarmerCoordinatesFromAddress($data, $farmer, $debugTrace);
+        Log::info('Appointment routing farmer origin resolved', [
+            'trace' => $debugTrace,
+            'origin_latitude' => $origin['latitude'] ?? null,
+            'origin_longitude' => $origin['longitude'] ?? null,
+        ]);
 
         if (!empty($data['doctor_id'])) {
-            return Doctor::query()
+            $doctors = Doctor::query()
                 ->where('status', 'approved')
                 ->where('is_active_for_appointments', true)
                 ->whereNotNull('last_live_location_at')
@@ -166,12 +208,20 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ->whereNotNull('longitude')
                 ->whereKey((int) $data['doctor_id'])
                 ->get();
+
+            Log::info('Appointment routing direct doctor match', [
+                'trace' => $debugTrace,
+                'requested_doctor_id' => (int) $data['doctor_id'],
+                'matched_count' => $doctors->count(),
+            ]);
+
+            return $doctors;
         }
 
         if ($origin !== null) {
             $distanceExpression = $this->distanceExpression($origin['latitude'], $origin['longitude']);
 
-            return Doctor::query()
+            $doctors = Doctor::query()
                 ->where('status', 'approved')
                 ->where('is_active_for_appointments', true)
                 ->whereNotNull('last_live_location_at')
@@ -183,7 +233,27 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ->orderBy('distance_km')
                 ->limit(80)
                 ->get();
+
+            Log::info('Appointment routing nearby doctor results', [
+                'trace' => $debugTrace,
+                'matched_count' => $doctors->count(),
+                'doctors' => $doctors->map(fn (Doctor $doctor) => [
+                    'doctor_id' => $doctor->id,
+                    'doctor_name' => trim((string) (($doctor->full_name ?? '') ?: (($doctor->first_name ?? '').' '.($doctor->last_name ?? '')))),
+                    'latitude' => $doctor->latitude,
+                    'longitude' => $doctor->longitude,
+                    'distance_km' => isset($doctor->distance_km) ? round((float) $doctor->distance_km, 4) : null,
+                    'last_live_location_at' => $doctor->last_live_location_at,
+                ])->values()->all(),
+            ]);
+
+            return $doctors;
         }
+
+        Log::warning('Appointment routing missing farmer origin', [
+            'trace' => $debugTrace,
+            'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
+        ]);
 
         return collect();
     }
@@ -201,7 +271,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         return "(6371 * acos(cos(radians({$originLat})) * cos(radians(doctors.latitude)) * cos(radians(doctors.longitude) - radians({$originLng})) + sin(radians({$originLat})) * sin(radians(doctors.latitude))))";
     }
 
-    protected function resolveFarmerCoordinatesFromAddress(array $data, ?Farmer $farmer): ?array
+    protected function resolveFarmerCoordinatesFromAddress(array $data, ?Farmer $farmer, ?string $debugTrace = null): ?array
     {
         $address = trim((string) ($data['address'] ?? ''));
 
@@ -217,10 +287,19 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         }
 
         if ($address === '') {
+            Log::warning('Appointment routing address empty', [
+                'trace' => $debugTrace,
+                'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
+            ]);
             return null;
         }
 
         try {
+            Log::info('Appointment routing geocoding address', [
+                'trace' => $debugTrace,
+                'address' => $address,
+            ]);
+
             $response = Http::timeout(10)
                 ->withHeaders([
                     'Accept' => 'application/json',
@@ -233,11 +312,21 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ]);
 
             if (! $response->successful()) {
+                Log::warning('Appointment routing geocode request failed', [
+                    'trace' => $debugTrace,
+                    'address' => $address,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
                 return null;
             }
 
             $rows = $response->json();
             if (! is_array($rows) || empty($rows[0])) {
+                Log::warning('Appointment routing geocode returned no rows', [
+                    'trace' => $debugTrace,
+                    'address' => $address,
+                ]);
                 return null;
             }
 
@@ -246,14 +335,32 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             $longitude = isset($row['lon']) ? (float) $row['lon'] : null;
 
             if ($latitude === null || $longitude === null) {
+                Log::warning('Appointment routing geocode missing coordinates', [
+                    'trace' => $debugTrace,
+                    'address' => $address,
+                    'row' => $row,
+                ]);
                 return null;
             }
+
+            Log::info('Appointment routing geocode success', [
+                'trace' => $debugTrace,
+                'address' => $address,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'display_name' => $row['display_name'] ?? null,
+            ]);
 
             return [
                 'latitude' => $latitude,
                 'longitude' => $longitude,
             ];
         } catch (\Throwable $exception) {
+            Log::warning('Appointment routing geocode exception', [
+                'trace' => $debugTrace,
+                'address' => $address,
+                'error' => $exception->getMessage(),
+            ]);
             return null;
         }
     }
