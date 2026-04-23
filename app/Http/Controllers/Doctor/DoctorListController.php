@@ -36,6 +36,18 @@ class DoctorListController extends Controller
         return view('doctor.create');
     }
 
+    public function liveLocation()
+    {
+        $liveLocations = Doctor::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderByDesc('last_live_location_at')
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return view('doctor.live_location', compact('liveLocations'));
+    }
+
     public function store(Request $request)
     {
         $request->validate([

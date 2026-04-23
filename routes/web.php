@@ -88,6 +88,7 @@ Route::prefix('doctor')->group(function () {
     Route::get('/', [DoctorListController::class, 'index'])->name('doctor.index');
     Route::get('/register', [DoctorListController::class, 'create'])->name('doctor.create');
     Route::post('/register', [DoctorListController::class, 'store'])->name('doctor.store');
+    Route::get('/live-location', [DoctorListController::class, 'liveLocation'])->name('doctor.live_location');
     Route::get('/appointments', [DoctorAppointmentController::class, 'index'])->name('doctor.appointments');
     Route::post('/appointments/{appointment}/assign-doctor', [DoctorAppointmentController::class, 'assignDoctor'])->name('doctor.appointments.assign');
     Route::get('/visited', [DoctorVisitedController::class, 'index'])->name('doctor.visited');

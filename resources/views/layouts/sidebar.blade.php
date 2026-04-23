@@ -96,6 +96,11 @@
                     </a>
                 </li>
                 <li class="menu-item">
+                    <a href="{{ route('doctor.live_location') }}" class="nav-link {{ request()->routeIs('doctor.live_location') ? 'active' : '' }}">
+                        <i class="iconoir-map-pin me-2"></i> Live Location
+                    </a>
+                </li>
+                <li class="menu-item">
                     <a href="{{ route('doctor.appointments') }}" class="nav-link {{ request()->routeIs('doctor.appointments') ? 'active' : '' }}">
                         <i class="iconoir-calendar me-2"></i> Appointment
                     </a>
