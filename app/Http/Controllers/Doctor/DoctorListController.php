@@ -14,13 +14,21 @@ class DoctorListController extends Controller
     public function index()
     {
         $doctors = Doctor::latest()->get();
+        $liveLocations = Doctor::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderByDesc('last_live_location_at')
+            ->orderByDesc('updated_at')
+            ->get();
+
         $summary = [
             'total' => $doctors->count(),
             'available' => $doctors->where('status', 'approved')->count(),
+            'active' => $doctors->where('is_active_for_appointments', true)->count(),
             'locations' => $doctors->pluck('city')->filter()->unique()->count(),
         ];
 
-        return view('doctor.index', compact('doctors', 'summary'));
+        return view('doctor.index', compact('doctors', 'summary', 'liveLocations'));
     }
 
     public function create()

@@ -112,6 +112,14 @@ Schedule::call(function (): void {
             ->where('status', 'pending')
             ->whereNull('notified_at')
             ->filter(function (DoctorAppointment $row) use ($allowedMaxRadius) {
+                $doctor = $row->doctor;
+                if (! $doctor || (string) ($doctor->status ?? '') !== 'approved') {
+                    return false;
+                }
+                if (! (bool) ($doctor->is_active_for_appointments ?? false)) {
+                    return false;
+                }
+
                 return (int) ($row->notify_radius_to_km ?? 0) <= $allowedMaxRadius;
             })
             ->values();

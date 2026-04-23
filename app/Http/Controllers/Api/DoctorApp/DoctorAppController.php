@@ -35,7 +35,7 @@ class DoctorAppController extends Controller
                 'location' => $doctor->city,
                 'phone' => $doctor->contact_number,
                 'experience' => null,
-                'available_today' => $doctor->status === 'approved',
+                'available_today' => (bool) ($doctor->status === 'approved' && $doctor->is_active_for_appointments),
             ];
         });
 
@@ -288,6 +288,50 @@ class DoctorAppController extends Controller
         ]);
     }
 
+    public function updateAvailability(Request $request, Doctor $doctor)
+    {
+        $data = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $doctor->is_active_for_appointments = (bool) $data['is_active'];
+        $doctor->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => $doctor->is_active_for_appointments
+                ? 'Doctor marked active for appointments.'
+                : 'Doctor marked inactive for appointments.',
+            'data' => $this->doctorPayload($doctor->fresh()),
+        ]);
+    }
+
+    public function updateLiveLocation(Request $request, Doctor $doctor)
+    {
+        $data = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        if (! $doctor->is_active_for_appointments) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Doctor is inactive. Enable Active mode to update live location.',
+            ], 422);
+        }
+
+        $doctor->latitude = $data['latitude'];
+        $doctor->longitude = $data['longitude'];
+        $doctor->last_live_location_at = now();
+        $doctor->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Doctor live location updated successfully.',
+            'data' => $this->doctorPayload($doctor->fresh()),
+        ]);
+    }
+
     protected function doctorPayload(Doctor $doctor): array
     {
         return [
@@ -310,6 +354,10 @@ class DoctorAppController extends Controller
             'state' => $doctor->state,
             'pincode' => $doctor->pincode,
             'status' => $doctor->status,
+            'is_active_for_appointments' => (bool) $doctor->is_active_for_appointments,
+            'latitude' => $doctor->latitude !== null ? (float) $doctor->latitude : null,
+            'longitude' => $doctor->longitude !== null ? (float) $doctor->longitude : null,
+            'last_live_location_at' => optional($doctor->last_live_location_at)->toIso8601String(),
             'terms_text' => $doctor->terms_text,
             'doctor_photo_url' => $doctor->doctorPhotoUrl(),
             'documents' => array_filter($doctor->documents()),

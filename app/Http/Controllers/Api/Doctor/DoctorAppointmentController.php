@@ -153,6 +153,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         if (!empty($data['doctor_id'])) {
             return Doctor::query()
                 ->where('status', 'approved')
+                ->where('is_active_for_appointments', true)
                 ->whereKey((int) $data['doctor_id'])
                 ->get();
         }
@@ -164,6 +165,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
             return Doctor::query()
                 ->where('status', 'approved')
+                ->where('is_active_for_appointments', true)
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
                 ->select('doctors.*')
@@ -176,7 +178,9 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
         // Fallback when farmer coordinates are unavailable:
         // keep previous location ranking and treat all as first wave.
-        $approvedDoctors = Doctor::query()->where('status', 'approved');
+        $approvedDoctors = Doctor::query()
+            ->where('status', 'approved')
+            ->where('is_active_for_appointments', true);
         $ranked = collect();
 
         $pincode = trim((string) ($farmer->pincode ?? ''));

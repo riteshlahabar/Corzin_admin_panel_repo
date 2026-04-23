@@ -34,17 +34,21 @@ class Doctor extends Model
         'clinic_registration_document',
         'doctor_photo',
         'status',
+        'is_active_for_appointments',
         'status_message',
         'password',
         'terms_accepted',
         'terms_text',
         'fcm_token',
         'approved_at',
+        'last_live_location_at',
     ];
 
     protected $casts = [
         'terms_accepted' => 'boolean',
+        'is_active_for_appointments' => 'boolean',
         'approved_at' => 'datetime',
+        'last_live_location_at' => 'datetime',
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
     ];

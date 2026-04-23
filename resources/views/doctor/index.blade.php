@@ -118,6 +118,7 @@
                             <th>Register Date</th>
                             <th>Status</th>
                             <th>Status Button</th>
+                            <th>Active / Inactive</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -161,12 +162,71 @@
                                     </form>
                                 </td>
                                 <td>
+                                    <span class="badge {{ ($doctor->is_active_for_appointments ?? false) ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">
+                                        {{ ($doctor->is_active_for_appointments ?? false) ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td>
                                     <a href="{{ route('doctor.show', $doctor) }}" class="btn btn-sm btn-primary">View</a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center text-muted">No doctors found</td>
+                                <td colspan="12" class="text-center text-muted">No doctors found</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+            <h5 class="mb-3">Live Location</h5>
+        </div>
+        <div class="card-body pt-1">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Availability</th>
+                            <th>State</th>
+                            <th>District</th>
+                            <th>Taluka</th>
+                            <th>City</th>
+                            <th>Village</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                            <th>Updated At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($liveLocations as $idx => $doctor)
+                            <tr>
+                                <td>{{ $idx + 1 }}</td>
+                                <td class="fw-semibold">Dr. {{ $doctor->full_name ?: $doctor->name }}</td>
+                                <td>{{ $doctor->contact_number ?: $doctor->phone ?: '-' }}</td>
+                                <td>
+                                    <span class="badge {{ ($doctor->is_active_for_appointments ?? false) ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">
+                                        {{ ($doctor->is_active_for_appointments ?? false) ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td>{{ $doctor->state ?: '-' }}</td>
+                                <td>{{ $doctor->district ?: '-' }}</td>
+                                <td>{{ $doctor->taluka ?: '-' }}</td>
+                                <td>{{ $doctor->city ?: '-' }}</td>
+                                <td>{{ $doctor->village ?: '-' }}</td>
+                                <td>{{ $doctor->latitude !== null ? number_format((float) $doctor->latitude, 6) : '-' }}</td>
+                                <td>{{ $doctor->longitude !== null ? number_format((float) $doctor->longitude, 6) : '-' }}</td>
+                                <td>{{ optional($doctor->last_live_location_at ?: $doctor->updated_at)->format('d-m-Y h:i A') ?: '-' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="12" class="text-center text-muted">No live location data yet</td>
                             </tr>
                         @endforelse
                     </tbody>
