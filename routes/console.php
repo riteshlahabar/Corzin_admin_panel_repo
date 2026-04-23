@@ -125,11 +125,8 @@ Schedule::call(function (): void {
             ->values();
 
         foreach ($toNotify as $row) {
-            $row->notified_at = now();
-            $row->save();
-
             $row->refresh()->loadMissing(['doctor', 'farmer']);
-            $firebase->sendToDevice(
+            $sent = $firebase->sendToDevice(
                 optional($row->doctor)->fcm_token,
                 'New Appointment Request',
                 trim(($row->farmer_name ?? 'Farmer').' requested a visit for '.($row->animal_name ?? 'animal')),
@@ -143,6 +140,11 @@ Schedule::call(function (): void {
                     'radius_to_km' => (string) ($row->notify_radius_to_km ?? 0),
                 ]
             );
+
+            if ($sent) {
+                $row->notified_at = now();
+                $row->save();
+            }
         }
     }
 })->name('appointments:radius-escalation')->everyMinute()->withoutOverlapping();

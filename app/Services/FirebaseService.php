@@ -47,10 +47,10 @@ class FirebaseService
         return $this->auth->verifyIdToken($idToken);
     }
 
-    public function sendToDevice(?string $token, string $title, string $body, array $data = []): void
+    public function sendToDevice(?string $token, string $title, string $body, array $data = []): bool
     {
         if (! $this->configured || ! $this->messaging || blank($token)) {
-            return;
+            return false;
         }
 
         $normalizedData = [];
@@ -71,12 +71,14 @@ class FirebaseService
 
         try {
             $this->messaging->send($message);
+            return true;
         } catch (Throwable $exception) {
             Log::warning('FCM device send failed', [
                 'token' => substr((string) $token, 0, 24).'...',
                 'title' => $title,
                 'error' => $exception->getMessage(),
             ]);
+            return false;
         }
     }
 

@@ -903,7 +903,7 @@ class DoctorAppointmentController extends Controller
         };
     }
 
-    protected function notifyDoctor(DoctorAppointment $appointment, string $title, string $body, array $extraData = []): void
+    protected function notifyDoctor(DoctorAppointment $appointment, string $title, string $body, array $extraData = []): bool
     {
         $appointment->loadMissing(['doctor', 'farmer']);
         $token = optional($appointment->doctor)->fcm_token;
@@ -920,7 +920,7 @@ class DoctorAppointmentController extends Controller
             $extraData
         );
 
-        $this->firebaseService->sendToDevice(
+        return $this->firebaseService->sendToDevice(
             $token,
             $finalTitle,
             $finalBody,

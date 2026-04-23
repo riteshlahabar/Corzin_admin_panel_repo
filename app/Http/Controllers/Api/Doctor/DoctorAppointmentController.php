@@ -86,7 +86,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             $distance = (float) ($doctor->distance_km ?? 0);
             $radiusFrom = $this->radiusBandFromDistance($distance);
             $radiusTo = $radiusFrom + 5;
-            $sendNow = $radiusTo <= 5;
+            $sendNow = $distance <= 5.0 || $radiusFrom === 0;
 
             $appointment = DoctorAppointment::create([
                 'doctor_id' => $doctor->id,
@@ -105,7 +105,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 'disease_details' => $data['disease_details'] ?? null,
                 'status' => 'pending',
                 'requested_at' => $requestTime,
-                'notified_at' => $sendNow ? now() : null,
+                'notified_at' => null,
                 'address' => $data['address'] ?? null,
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
@@ -113,7 +113,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
             if ($sendNow) {
                 $appointment->loadMissing(['doctor', 'farmer']);
-                $this->notifyDoctor(
+                $sent = $this->notifyDoctor(
                     $appointment,
                     'New Appointment Request',
                     trim(($appointment->farmer_name ?? 'Farmer').' requested a visit for '.($appointment->animal_name ?? 'animal')),
@@ -123,6 +123,10 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                         'radius_to_km' => (string) $radiusTo,
                     ]
                 );
+                if ($sent) {
+                    $appointment->notified_at = now();
+                    $appointment->save();
+                }
             }
 
             $appointments->push($appointment);
