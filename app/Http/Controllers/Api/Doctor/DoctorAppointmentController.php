@@ -9,6 +9,7 @@ use App\Models\Farmer\Farmer;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController
@@ -73,7 +74,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         if ($targetDoctors->isEmpty()) {
             return response()->json([
                 'status' => false,
-                'message' => 'No nearby approved doctor found for this appointment.',
+                'message' => 'No nearby active doctor found from the farmer address for this appointment.',
             ], 422);
         }
 
@@ -150,22 +151,26 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
     protected function resolveTargetDoctors(array $data, ?Farmer $farmer): Collection
     {
+        $origin = $this->resolveFarmerCoordinatesFromAddress($data, $farmer);
+
         if (!empty($data['doctor_id'])) {
             return Doctor::query()
                 ->where('status', 'approved')
                 ->where('is_active_for_appointments', true)
+                ->whereNotNull('last_live_location_at')
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
                 ->whereKey((int) $data['doctor_id'])
                 ->get();
         }
-        $originLat = isset($data['latitude']) ? (float) $data['latitude'] : null;
-        $originLng = isset($data['longitude']) ? (float) $data['longitude'] : null;
 
-        if ($originLat !== null && $originLng !== null) {
-            $distanceExpression = $this->distanceExpression($originLat, $originLng);
+        if ($origin !== null) {
+            $distanceExpression = $this->distanceExpression($origin['latitude'], $origin['longitude']);
 
             return Doctor::query()
                 ->where('status', 'approved')
                 ->where('is_active_for_appointments', true)
+                ->whereNotNull('last_live_location_at')
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
                 ->select('doctors.*')
@@ -176,52 +181,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ->get();
         }
 
-        // Fallback when farmer coordinates are unavailable:
-        // keep previous location ranking and treat all as first wave.
-        $approvedDoctors = Doctor::query()
-            ->where('status', 'approved')
-            ->where('is_active_for_appointments', true);
-        $ranked = collect();
-
-        $pincode = trim((string) ($farmer->pincode ?? ''));
-        $city = trim((string) ($farmer->city ?? ''));
-        $district = trim((string) ($farmer->district ?? ''));
-        $state = trim((string) ($farmer->state ?? ''));
-
-        if ($pincode !== '') {
-            $ranked = $ranked->concat(
-                (clone $approvedDoctors)
-                    ->where('pincode', $pincode)
-                    ->orderByDesc('approved_at')
-                    ->limit(20)
-                    ->get()
-            );
-        }
-
-        if ($city !== '' || $district !== '') {
-            $byCity = (clone $approvedDoctors);
-            if ($city !== '') $byCity->where('city', $city);
-            if ($district !== '') $byCity->where('district', $district);
-            $ranked = $ranked->concat($byCity->orderByDesc('approved_at')->limit(20)->get());
-        }
-
-        if ($district !== '') {
-            $byDistrict = (clone $approvedDoctors)->where('district', $district);
-            if ($state !== '') $byDistrict->where('state', $state);
-            $ranked = $ranked->concat($byDistrict->orderByDesc('approved_at')->limit(20)->get());
-        }
-
-        $allApproved = (clone $approvedDoctors)->orderByDesc('approved_at')->limit(80)->get();
-
-        return $ranked
-            ->concat($allApproved)
-            ->unique('id')
-            ->values()
-            ->map(function (Doctor $doctor) {
-                $doctor->distance_km = 0;
-                return $doctor;
-            })
-            ->take(80);
+        return collect();
     }
 
     protected function radiusBandFromDistance(float $distanceKm): int
@@ -235,5 +195,62 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
     protected function distanceExpression(float $originLat, float $originLng): string
     {
         return "(6371 * acos(cos(radians({$originLat})) * cos(radians(doctors.latitude)) * cos(radians(doctors.longitude) - radians({$originLng})) + sin(radians({$originLat})) * sin(radians(doctors.latitude))))";
+    }
+
+    protected function resolveFarmerCoordinatesFromAddress(array $data, ?Farmer $farmer): ?array
+    {
+        $address = trim((string) ($data['address'] ?? ''));
+
+        if ($address === '' && $farmer) {
+            $address = collect([
+                $farmer->village ?? '',
+                $farmer->city ?? '',
+                $farmer->district ?? '',
+                $farmer->state ?? '',
+                $farmer->pincode ?? '',
+            ])->filter(fn ($value) => trim((string) $value) !== '')
+                ->implode(', ');
+        }
+
+        if ($address === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'CorzinDoctorRouting/1.0',
+                ])
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $address,
+                    'format' => 'jsonv2',
+                    'limit' => 1,
+                ]);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $rows = $response->json();
+            if (! is_array($rows) || empty($rows[0])) {
+                return null;
+            }
+
+            $row = $rows[0];
+            $latitude = isset($row['lat']) ? (float) $row['lat'] : null;
+            $longitude = isset($row['lon']) ? (float) $row['lon'] : null;
+
+            if ($latitude === null || $longitude === null) {
+                return null;
+            }
+
+            return [
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+            ];
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 }
