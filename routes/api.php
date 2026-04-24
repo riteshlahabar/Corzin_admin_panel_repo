@@ -110,6 +110,8 @@ Route::prefix('doctor')->group(function () {
     Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
     Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
     Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);
+    Route::get('/appointments/{appointment}/continuation-animals', [DoctorAppAppointmentController::class, 'continuationAnimals']);
+    Route::post('/appointments/{appointment}/continue', [DoctorAppAppointmentController::class, 'continueWithAnimal']);
     Route::post('/appointments/{appointment}/cancel-followup', [FarmerDoctorAppointmentController::class, 'cancelFollowup']);
     Route::post('/appointments/{appointment}/live-location', [DoctorAppAppointmentController::class, 'updateLiveLocation']);
 });
@@ -138,6 +140,8 @@ Route::prefix('doctor-app')->group(function () {
     Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
     Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
     Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);
+    Route::get('/appointments/{appointment}/continuation-animals', [DoctorAppAppointmentController::class, 'continuationAnimals']);
+    Route::post('/appointments/{appointment}/continue', [DoctorAppAppointmentController::class, 'continueWithAnimal']);
     Route::post('/appointments/{appointment}/cancel-followup', [DoctorAppAppointmentController::class, 'cancelFollowup']);
     Route::post('/appointments/{appointment}/live-location', [DoctorAppAppointmentController::class, 'updateLiveLocation']);
     Route::get('/settings', [DoctorAppSettingController::class, 'show']);

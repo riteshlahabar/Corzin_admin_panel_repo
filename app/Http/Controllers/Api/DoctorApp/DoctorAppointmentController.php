@@ -640,6 +640,142 @@ class DoctorAppointmentController extends Controller
         ]);
     }
 
+    public function continuationAnimals(DoctorAppointment $appointment)
+    {
+        $farmer = $appointment->farmer;
+        if (! $farmer && ! empty($appointment->farmer_phone)) {
+            $farmer = Farmer::query()
+                ->where('mobile', (string) $appointment->farmer_phone)
+                ->first();
+        }
+
+        if (! $farmer) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Farmer profile not found for this appointment.',
+            ], 422);
+        }
+
+        $animals = Animal::query()
+            ->where('farmer_id', $farmer->id)
+            ->when(! empty($appointment->animal_id), function ($query) use ($appointment) {
+                $query->where('id', '!=', (int) $appointment->animal_id);
+            })
+            ->orderBy('animal_name')
+            ->orderBy('id')
+            ->get()
+            ->map(function (Animal $animal) {
+                $image = trim((string) ($animal->image ?? ''));
+                $isAbsolute = Str::startsWith($image, ['http://', 'https://']);
+
+                return [
+                    'id' => $animal->id,
+                    'animal_name' => (string) ($animal->animal_name ?? ''),
+                    'tag_number' => (string) ($animal->tag_number ?? ''),
+                    'image_url' => $isAbsolute || $image === ''
+                        ? $image
+                        : asset($image),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Farmer animals fetched successfully.',
+            'data' => $animals,
+        ]);
+    }
+
+    public function continueWithAnimal(Request $request, DoctorAppointment $appointment)
+    {
+        $data = $request->validate([
+            'animal_id' => ['required', 'exists:animals,id'],
+        ]);
+
+        if ((string) ($appointment->status ?? '') !== 'completed') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Current appointment must be completed before continuing.',
+            ], 422);
+        }
+
+        $animal = Animal::query()->find((int) $data['animal_id']);
+        if (! $animal) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Selected animal not found.',
+            ], 422);
+        }
+
+        $farmerId = (int) ($appointment->farmer_id ?? 0);
+        if ($farmerId > 0 && (int) $animal->farmer_id !== $farmerId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Selected animal does not belong to this farmer.',
+            ], 422);
+        }
+
+        $activeStatuses = ['approved', 'farmer_approved', 'scheduled', 'in_progress', 'pending'];
+        $existing = DoctorAppointment::query()
+            ->where('doctor_id', $appointment->doctor_id)
+            ->where('animal_id', $animal->id)
+            ->whereIn('status', $activeStatuses)
+            ->latest('requested_at')
+            ->first();
+
+        if ($existing) {
+            $existing->loadMissing(['doctor', 'farmer']);
+            return response()->json([
+                'status' => true,
+                'message' => 'Active appointment already exists for this animal.',
+                'data' => $this->appointmentPayload($existing, false),
+            ]);
+        }
+
+        $nextAppointment = DoctorAppointment::create([
+            'doctor_id' => $appointment->doctor_id,
+            'appointment_group_id' => (string) Str::uuid(),
+            'notify_radius_from_km' => 0,
+            'notify_radius_to_km' => 5,
+            'farmer_id' => $appointment->farmer_id,
+            'animal_id' => $animal->id,
+            'farmer_name' => $appointment->farmer_name,
+            'farmer_phone' => $appointment->farmer_phone,
+            'animal_name' => $animal->animal_name ?? $appointment->animal_name,
+            'animal_photo' => $animal->image ?? $appointment->animal_photo,
+            'concern' => $appointment->concern,
+            'disease_ids' => $appointment->disease_ids ?? [],
+            'disease_details' => $appointment->disease_details,
+            'status' => 'approved',
+            'requested_at' => now(),
+            'notified_at' => now(),
+            'address' => $appointment->address,
+            'latitude' => $appointment->latitude,
+            'longitude' => $appointment->longitude,
+            'farmer_approved_at' => now(),
+            'otp_code' => null,
+            'otp_verified_at' => now(),
+            'treatment_started_at' => null,
+            'treatment_details' => null,
+            'onsite_treatment' => null,
+            'followup_required' => false,
+            'next_followup_date' => null,
+            'followup_notified_on' => null,
+            'fees' => null,
+            'on_site_medicine_charges' => null,
+            'charges' => null,
+            'notes' => null,
+        ]);
+
+        $nextAppointment->loadMissing(['doctor', 'farmer']);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Next animal appointment is ready.',
+            'data' => $this->appointmentPayload($nextAppointment, false),
+        ]);
+    }
+
     public function updateLiveLocation(Request $request, DoctorAppointment $appointment)
     {
         $data = $request->validate([
