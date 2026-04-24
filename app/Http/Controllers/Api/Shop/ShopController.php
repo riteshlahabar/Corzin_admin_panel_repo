@@ -153,10 +153,10 @@ class ShopController extends Controller
             /** @var ShopProduct $product */
             $product = $products[$productId];
             $price = (float) $product->price;
-            $isMedicine = strtolower((string) $product->category) === 'medicine';
             $packSize = max(0, (int) ($product->pack_size ?? 0));
             $allowPartial = (bool) ($product->allow_partial_units ?? false);
-            $canUseUnitMode = $isMedicine && $packSize > 0 && $allowPartial;
+            $hasPackPricing = $packSize > 0;
+            $canUseUnitMode = $hasPackPricing && $allowPartial;
             $isPackMode = ! $canUseUnitMode || $requestedQuantityUnit !== 'unit';
 
             if (! $isPackMode && ! $allowPartial) {
@@ -167,12 +167,12 @@ class ShopController extends Controller
             }
 
             $lineUnitLabel = trim((string) $product->unit);
-            if ($isMedicine && $packSize > 0) {
+            if ($hasPackPricing) {
                 $lineUnitLabel = $isPackMode ? 'strip' : ($lineUnitLabel !== '' ? $lineUnitLabel : 'tablet');
             }
 
             $linePrice = $price;
-            if (! $isPackMode && $isMedicine && $packSize > 0) {
+            if (! $isPackMode && $hasPackPricing) {
                 $linePrice = round($price / $packSize, 2);
             }
 
@@ -320,10 +320,14 @@ class ShopController extends Controller
             $gallery = array_values(array_unique(array_filter($gallery)));
         }
 
+        $normalizedCategory = strtolower(trim((string) $product->category));
+        $packSize = max(0, (int) ($product->pack_size ?? 0));
+        $isMedicine = $normalizedCategory === 'medicine' || $packSize > 0;
+
         return [
             'id' => $product->id,
             'category' => $product->category,
-            'is_medicine' => strtolower((string) $product->category) === 'medicine',
+            'is_medicine' => $isMedicine,
             'name' => $product->name,
             'subtitle' => $product->subtitle,
             'price' => (float) $product->price,
@@ -340,7 +344,7 @@ class ShopController extends Controller
                 ->filter()
                 ->values()
                 ->all(),
-            'pack_size' => $product->pack_size !== null ? (int) $product->pack_size : null,
+            'pack_size' => $packSize > 0 ? $packSize : null,
             'allow_partial_units' => (bool) $product->allow_partial_units,
             'image_url' => $product->image_url,
             'gallery_image_urls' => $gallery,

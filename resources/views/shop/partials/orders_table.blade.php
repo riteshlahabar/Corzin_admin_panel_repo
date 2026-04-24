@@ -33,7 +33,11 @@
                     </td>
                     <td>
                         @foreach($order->items as $item)
-                            <div class="small">{{ $item->product_name }} x {{ $item->quantity }}</div>
+                            <div class="small">
+                                {{ $item->product_name }}
+                                x {{ $item->quantity }}{{ !empty($item->unit) ? ' '.$item->unit : '' }}
+                                - Rs {{ number_format((float) $item->line_total, 2) }}
+                            </div>
                         @endforeach
                     </td>
                     <td>Rs {{ number_format((float) $order->total, 2) }}</td>
