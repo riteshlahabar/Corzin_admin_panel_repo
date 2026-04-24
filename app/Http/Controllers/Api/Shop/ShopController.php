@@ -121,6 +121,7 @@ class ShopController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:shop_products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
+            'items.*.quantity_unit' => ['nullable', 'in:unit,pack'],
         ]);
 
         $farmer = Farmer::findOrFail((int) $data['farmer_id']);
@@ -145,19 +146,46 @@ class ShopController extends Controller
         foreach ($requestedItems as $row) {
             $productId = (int) ($row['product_id'] ?? 0);
             $qty = (int) ($row['quantity'] ?? 1);
+            $requestedQuantityUnit = strtolower((string) ($row['quantity_unit'] ?? ''));
+            if (! in_array($requestedQuantityUnit, ['unit', 'pack'], true)) {
+                $requestedQuantityUnit = 'pack';
+            }
             /** @var ShopProduct $product */
             $product = $products[$productId];
             $price = (float) $product->price;
-            $lineTotal = $price * $qty;
+            $isMedicine = strtolower((string) $product->category) === 'medicine';
+            $packSize = max(0, (int) ($product->pack_size ?? 0));
+            $allowPartial = (bool) ($product->allow_partial_units ?? false);
+            $canUseUnitMode = $isMedicine && $packSize > 0 && $allowPartial;
+            $isPackMode = ! $canUseUnitMode || $requestedQuantityUnit !== 'unit';
+
+            if (! $isPackMode && ! $allowPartial) {
+                return response()->json([
+                    'status' => false,
+                    'message' => "{$product->name} only allows strip/pack quantity.",
+                ], 422);
+            }
+
+            $lineUnitLabel = trim((string) $product->unit);
+            if ($isMedicine && $packSize > 0) {
+                $lineUnitLabel = $isPackMode ? 'strip' : ($lineUnitLabel !== '' ? $lineUnitLabel : 'tablet');
+            }
+
+            $linePrice = $price;
+            if (! $isPackMode && $isMedicine && $packSize > 0) {
+                $linePrice = round($price / $packSize, 2);
+            }
+
+            $lineTotal = round($linePrice * $qty, 2);
             $subtotal += $lineTotal;
 
             $lineItems[] = [
                 'shop_product_id' => $product->id,
                 'product_name' => $product->name,
-                'price' => $price,
+                'price' => $linePrice,
                 'quantity' => $qty,
                 'line_total' => $lineTotal,
-                'unit' => $product->unit,
+                'unit' => $lineUnitLabel,
             ];
         }
 
