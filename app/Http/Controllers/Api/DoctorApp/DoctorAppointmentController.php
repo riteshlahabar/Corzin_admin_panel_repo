@@ -238,8 +238,6 @@ class DoctorAppointmentController extends Controller
             'on_site_medicine_charges' => ['nullable', 'numeric', 'min:0'],
             'treatment_details' => ['nullable', 'string'],
             'onsite_treatment' => ['nullable', 'string'],
-            'followup_required' => ['nullable', 'boolean'],
-            'next_followup_date' => ['nullable', 'date'],
         ]);
 
         $fees = array_key_exists('fees', $data)
@@ -263,8 +261,9 @@ class DoctorAppointmentController extends Controller
             'onsite_treatment' => $data['onsite_treatment']
                 ?? $this->extractOnsiteTreatment($data['treatment_details'] ?? $appointment->treatment_details)
                 ?? $appointment->onsite_treatment,
-            'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
-            'next_followup_date' => $data['next_followup_date'] ?? $appointment->next_followup_date,
+            'followup_required' => true,
+            'next_followup_date' => now()->addDays(5)->toDateString(),
+            'followup_notified_on' => null,
         ]);
 
         $appointment->refresh()->loadMissing(['doctor', 'farmer']);
@@ -585,25 +584,14 @@ class DoctorAppointmentController extends Controller
         $data = $request->validate([
             'treatment_details' => ['required', 'string'],
             'onsite_treatment' => ['nullable', 'string'],
-            'followup_required' => ['nullable', 'boolean'],
-            'next_followup_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
-
-        if (! empty($data['followup_required']) && empty($data['next_followup_date'])) {
-            return response()->json([
-                'status' => false,
-                'message' => 'next_followup_date is required when follow-up is selected.',
-            ], 422);
-        }
 
         $appointment->update([
             'treatment_details' => $data['treatment_details'],
             'onsite_treatment' => $data['onsite_treatment']
                 ?? $this->extractOnsiteTreatment($data['treatment_details'])
                 ?? $appointment->onsite_treatment,
-            'followup_required' => $data['followup_required'] ?? $appointment->followup_required,
-            'next_followup_date' => $data['next_followup_date'] ?? $appointment->next_followup_date,
             'notes' => $data['notes'] ?? $appointment->notes,
         ]);
 
@@ -615,15 +603,6 @@ class DoctorAppointmentController extends Controller
             $summary !== '' ? $summary : 'Doctor saved treatment notes for your animal.',
             ['event' => 'appointment_treatment_updated']
         );
-
-        if (! empty($data['followup_required'])) {
-            $this->notifyFarmer(
-                $appointment,
-                'Follow-up visit suggested',
-                'Your doctor indicated a follow-up appointment may be needed.',
-                ['event' => 'appointment_followup_suggested']
-            );
-        }
         $this->notifyWebAdmin(
             $appointment,
             'appointment_treatment_updated',
@@ -635,6 +614,29 @@ class DoctorAppointmentController extends Controller
             'status' => true,
             'message' => 'Treatment details saved.',
             'data' => $this->appointmentPayload($appointment->fresh()->loadMissing(['doctor', 'farmer']), true),
+        ]);
+    }
+
+    public function cancelFollowup(Request $request, DoctorAppointment $appointment)
+    {
+        $appointment->update([
+            'followup_required' => false,
+            'next_followup_date' => null,
+            'followup_notified_on' => null,
+        ]);
+
+        $appointment->refresh()->loadMissing(['doctor', 'farmer']);
+        $this->notifyWebAdmin(
+            $appointment,
+            'appointment_followup_cancelled',
+            'Follow-up cancelled by farmer',
+            'Farmer cancelled follow-up for appointment #'.$appointment->id.'.'
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Follow-up cancelled successfully.',
+            'data' => $this->appointmentPayload($appointment, true),
         ]);
     }
 
@@ -1109,6 +1111,6 @@ class DoctorAppointmentController extends Controller
         return (bool) ($appointment->followup_required ?? false)
             && ($appointment->status ?? '') === 'completed'
             && ! empty($appointment->next_followup_date)
-            && optional($appointment->next_followup_date)->toDateString() === now()->toDateString();
+            && optional($appointment->next_followup_date)->toDateString() <= now()->toDateString();
     }
 }

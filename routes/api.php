@@ -110,6 +110,7 @@ Route::prefix('doctor')->group(function () {
     Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
     Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
     Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);
+    Route::post('/appointments/{appointment}/cancel-followup', [FarmerDoctorAppointmentController::class, 'cancelFollowup']);
     Route::post('/appointments/{appointment}/live-location', [DoctorAppAppointmentController::class, 'updateLiveLocation']);
 });
 
@@ -137,6 +138,7 @@ Route::prefix('doctor-app')->group(function () {
     Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
     Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
     Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);
+    Route::post('/appointments/{appointment}/cancel-followup', [DoctorAppAppointmentController::class, 'cancelFollowup']);
     Route::post('/appointments/{appointment}/live-location', [DoctorAppAppointmentController::class, 'updateLiveLocation']);
     Route::get('/settings', [DoctorAppSettingController::class, 'show']);
     Route::get('/diseases', [DoctorAppSettingController::class, 'diseases']);

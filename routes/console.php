@@ -18,11 +18,8 @@ Schedule::call(function (): void {
         ->with(['doctor', 'farmer'])
         ->where('status', 'completed')
         ->where('followup_required', true)
-        ->whereDate('next_followup_date', $today)
-        ->where(function ($query) use ($today) {
-            $query->whereNull('followup_notified_on')
-                ->orWhereDate('followup_notified_on', '!=', $today);
-        })
+        ->whereDate('next_followup_date', '<=', $today)
+        ->whereNull('followup_notified_on')
         ->get();
 
     if ($appointments->isEmpty()) {
@@ -37,7 +34,7 @@ Schedule::call(function (): void {
 
         $payload = [
             'type' => 'doctor_appointment',
-            'event' => 'appointment_followup_due_today',
+            'event' => 'appointment_followup_due',
             'appointment_id' => (string) $appointment->id,
             'doctor_id' => (string) ($appointment->doctor_id ?? ''),
             'farmer_id' => (string) ($appointment->farmer_id ?? ''),
@@ -46,16 +43,9 @@ Schedule::call(function (): void {
         ];
 
         $firebase->sendToDevice(
-            optional($appointment->doctor)->fcm_token,
-            'Follow-up Due Today',
-            "Follow-up visit is due today for {$animalName}.",
-            $payload
-        );
-
-        $firebase->sendToDevice(
             optional($appointment->farmer)->fcm_token,
-            'Follow-up Due Today',
-            "Dr. {$doctorName} follow-up is due today for {$animalName}.",
+            'Follow-up Reminder',
+            "It has been 5 days since treatment by Dr. {$doctorName} for {$animalName}.",
             $payload
         );
 
