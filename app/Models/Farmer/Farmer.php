@@ -18,12 +18,17 @@ class Farmer extends Model
         'district',
         'state',
         'pincode',
+        'latitude',
+        'longitude',
+        'current_location_address',
         'is_active',
         'fcm_token',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function animals()

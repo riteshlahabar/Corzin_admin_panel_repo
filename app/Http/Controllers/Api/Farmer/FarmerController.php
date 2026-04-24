@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 
 class FarmerController extends Controller
 {
@@ -218,6 +219,42 @@ class FarmerController extends Controller
             'message' => 'FCM token updated successfully.',
         ]);
     }
+
+    public function updateCurrentLocation(Request $request, $id)
+    {
+        $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        $farmer = DB::table('farmers')->where('id', $id)->first();
+        if (! $farmer) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Farmer not found',
+            ], 404);
+        }
+
+        $latitude = (float) $request->latitude;
+        $longitude = (float) $request->longitude;
+        $currentLocationAddress = $this->resolveAddressFromCoordinates($latitude, $longitude);
+
+        DB::table('farmers')->where('id', $id)->update([
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'current_location_address' => $currentLocationAddress,
+            'updated_at' => now(),
+        ]);
+
+        $updatedFarmer = DB::table('farmers')->where('id', $id)->first();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Current location updated successfully.',
+            'data' => $this->transformFarmer($updatedFarmer),
+        ], 200);
+    }
+
     private function storeFarmerPhoto($file, int $farmerId, ?string $oldPhoto = null): string
     {
         $directory = public_path('assets/farmer_photo');
@@ -252,11 +289,46 @@ class FarmerController extends Controller
             'district' => $farmer->district ?? '',
             'state' => $farmer->state ?? '',
             'pincode' => $farmer->pincode ?? '',
+            'latitude' => isset($farmer->latitude) ? (string) $farmer->latitude : '',
+            'longitude' => isset($farmer->longitude) ? (string) $farmer->longitude : '',
+            'current_location_address' => $farmer->current_location_address ?? '',
             'farmer_photo' => $farmer->farmer_photo ?? '',
             'farmer_photo_url' => ! empty($farmer->farmer_photo) ? asset($farmer->farmer_photo) : '',
             'created_at' => $farmer->created_at ?? null,
             'updated_at' => $farmer->updated_at ?? null,
         ];
+    }
+
+    private function resolveAddressFromCoordinates(float $latitude, float $longitude): string
+    {
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'CorzinFarmerLocation/1.0',
+                ])
+                ->get('https://nominatim.openstreetmap.org/reverse', [
+                    'format' => 'jsonv2',
+                    'lat' => $latitude,
+                    'lon' => $longitude,
+                    'zoom' => 18,
+                    'addressdetails' => 1,
+                ]);
+
+            if (! $response->successful()) {
+                return 'Lat: '.$latitude.', Lng: '.$longitude;
+            }
+
+            $row = $response->json();
+            if (! is_array($row)) {
+                return 'Lat: '.$latitude.', Lng: '.$longitude;
+            }
+
+            $displayName = trim((string) ($row['display_name'] ?? ''));
+            return $displayName !== '' ? $displayName : 'Lat: '.$latitude.', Lng: '.$longitude;
+        } catch (\Throwable $exception) {
+            return 'Lat: '.$latitude.', Lng: '.$longitude;
+        }
     }
 }
 

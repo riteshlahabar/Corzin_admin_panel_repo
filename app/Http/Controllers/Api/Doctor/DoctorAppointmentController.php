@@ -9,7 +9,6 @@ use App\Models\Farmer\Farmer;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -82,7 +81,15 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             'requested_at' => $data['requested_at'] ?? null,
         ]);
 
-        $targetDoctors = $this->resolveTargetDoctors($data, $farmer, $debugTrace);
+        $farmerOrigin = $this->resolveFarmerCoordinatesFromFarmer($farmer, $debugTrace);
+        if ($farmerOrigin === null) {
+            return response()->json([
+                'status' => false,
+                'message' => 'First fetch the current location to create appointment.',
+            ], 422);
+        }
+
+        $targetDoctors = $this->resolveTargetDoctors($data, $farmer, $debugTrace, $farmerOrigin);
         if ($targetDoctors->isEmpty()) {
             Log::warning('Appointment routing found no doctors', [
                 'trace' => $debugTrace,
@@ -124,8 +131,8 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 'requested_at' => $requestTime,
                 'notified_at' => null,
                 'address' => $data['address'] ?? null,
-                'latitude' => $data['latitude'] ?? null,
-                'longitude' => $data['longitude'] ?? null,
+                'latitude' => $farmerOrigin['latitude'] ?? null,
+                'longitude' => $farmerOrigin['longitude'] ?? null,
             ]);
 
             Log::info('Appointment routing doctor candidate', [
@@ -190,13 +197,17 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         ], 201);
     }
 
-    protected function resolveTargetDoctors(array $data, ?Farmer $farmer, ?string $debugTrace = null): Collection
+    protected function resolveTargetDoctors(
+        array $data,
+        ?Farmer $farmer,
+        ?string $debugTrace = null,
+        ?array $farmerOrigin = null
+    ): Collection
     {
-        $origin = $this->resolveFarmerCoordinatesFromAddress($data, $farmer, $debugTrace);
         Log::info('Appointment routing farmer origin resolved', [
             'trace' => $debugTrace,
-            'origin_latitude' => $origin['latitude'] ?? null,
-            'origin_longitude' => $origin['longitude'] ?? null,
+            'origin_latitude' => $farmerOrigin['latitude'] ?? null,
+            'origin_longitude' => $farmerOrigin['longitude'] ?? null,
         ]);
 
         if (!empty($data['doctor_id'])) {
@@ -218,8 +229,8 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             return $doctors;
         }
 
-        if ($origin !== null) {
-            $distanceExpression = $this->distanceExpression($origin['latitude'], $origin['longitude']);
+        if ($farmerOrigin !== null) {
+            $distanceExpression = $this->distanceExpression($farmerOrigin['latitude'], $farmerOrigin['longitude']);
 
             $doctors = Doctor::query()
                 ->where('status', 'approved')
@@ -271,97 +282,30 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         return "(6371 * acos(cos(radians({$originLat})) * cos(radians(doctors.latitude)) * cos(radians(doctors.longitude) - radians({$originLng})) + sin(radians({$originLat})) * sin(radians(doctors.latitude))))";
     }
 
-    protected function resolveFarmerCoordinatesFromAddress(array $data, ?Farmer $farmer, ?string $debugTrace = null): ?array
+    protected function resolveFarmerCoordinatesFromFarmer(?Farmer $farmer, ?string $debugTrace = null): ?array
     {
-        $address = trim((string) ($data['address'] ?? ''));
-
-        if ($address === '' && $farmer) {
-            $address = collect([
-                $farmer->village ?? '',
-                $farmer->city ?? '',
-                $farmer->district ?? '',
-                $farmer->state ?? '',
-                $farmer->pincode ?? '',
-            ])->filter(fn ($value) => trim((string) $value) !== '')
-                ->implode(', ');
-        }
-
-        if ($address === '') {
-            Log::warning('Appointment routing address empty', [
+        if (! $farmer) {
+            Log::warning('Appointment routing farmer not found for stored coordinates', [
                 'trace' => $debugTrace,
-                'farmer_id' => $data['farmer_id'] ?? ($farmer->id ?? null),
             ]);
             return null;
         }
 
-        try {
-            Log::info('Appointment routing geocoding address', [
+        $latitude = isset($farmer->latitude) ? (float) $farmer->latitude : null;
+        $longitude = isset($farmer->longitude) ? (float) $farmer->longitude : null;
+        if ($latitude === null || $longitude === null) {
+            Log::warning('Appointment routing farmer coordinates missing', [
                 'trace' => $debugTrace,
-                'address' => $address,
-            ]);
-
-            $response = Http::timeout(10)
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                    'User-Agent' => 'CorzinDoctorRouting/1.0',
-                ])
-                ->get('https://nominatim.openstreetmap.org/search', [
-                    'q' => $address,
-                    'format' => 'jsonv2',
-                    'limit' => 1,
-                ]);
-
-            if (! $response->successful()) {
-                Log::warning('Appointment routing geocode request failed', [
-                    'trace' => $debugTrace,
-                    'address' => $address,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-                return null;
-            }
-
-            $rows = $response->json();
-            if (! is_array($rows) || empty($rows[0])) {
-                Log::warning('Appointment routing geocode returned no rows', [
-                    'trace' => $debugTrace,
-                    'address' => $address,
-                ]);
-                return null;
-            }
-
-            $row = $rows[0];
-            $latitude = isset($row['lat']) ? (float) $row['lat'] : null;
-            $longitude = isset($row['lon']) ? (float) $row['lon'] : null;
-
-            if ($latitude === null || $longitude === null) {
-                Log::warning('Appointment routing geocode missing coordinates', [
-                    'trace' => $debugTrace,
-                    'address' => $address,
-                    'row' => $row,
-                ]);
-                return null;
-            }
-
-            Log::info('Appointment routing geocode success', [
-                'trace' => $debugTrace,
-                'address' => $address,
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-                'display_name' => $row['display_name'] ?? null,
-            ]);
-
-            return [
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-            ];
-        } catch (\Throwable $exception) {
-            Log::warning('Appointment routing geocode exception', [
-                'trace' => $debugTrace,
-                'address' => $address,
-                'error' => $exception->getMessage(),
+                'farmer_id' => $farmer->id,
+                'latitude' => $farmer->latitude,
+                'longitude' => $farmer->longitude,
             ]);
             return null;
         }
+
+        return [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ];
     }
 }

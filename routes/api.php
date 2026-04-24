@@ -32,6 +32,7 @@ Route::prefix('farmer')->group(function () {
     Route::get('/profile/{mobile}', [FarmerController::class, 'getProfileByMobile']);
     Route::post('/update/{id}', [FarmerController::class, 'update']);
     Route::post('/fcm-token/{id}', [FarmerController::class, 'updateFcmToken']);
+    Route::post('/location/{id}', [FarmerController::class, 'updateCurrentLocation']);
 });
 
 Route::prefix('animal')->group(function () {
