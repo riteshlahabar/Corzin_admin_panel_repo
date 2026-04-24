@@ -14,6 +14,9 @@ class ShopProduct extends Model
         'unit',
         'description',
         'features',
+        'medicine_aliases',
+        'pack_size',
+        'allow_partial_units',
         'image',
         'gallery_images',
         'is_active',
@@ -22,6 +25,7 @@ class ShopProduct extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'gallery_images' => 'array',
+        'allow_partial_units' => 'boolean',
         'is_active' => 'boolean',
     ];
 

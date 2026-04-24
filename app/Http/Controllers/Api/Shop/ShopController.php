@@ -295,6 +295,7 @@ class ShopController extends Controller
         return [
             'id' => $product->id,
             'category' => $product->category,
+            'is_medicine' => strtolower((string) $product->category) === 'medicine',
             'name' => $product->name,
             'subtitle' => $product->subtitle,
             'price' => (float) $product->price,
@@ -306,6 +307,13 @@ class ShopController extends Controller
                 ->filter()
                 ->values()
                 ->all(),
+            'medicine_aliases' => collect(preg_split('/[\r\n,]+/', (string) ($product->medicine_aliases ?? '')))
+                ->map(fn ($line) => trim((string) $line))
+                ->filter()
+                ->values()
+                ->all(),
+            'pack_size' => $product->pack_size !== null ? (int) $product->pack_size : null,
+            'allow_partial_units' => (bool) $product->allow_partial_units,
             'image_url' => $product->image_url,
             'gallery_image_urls' => $gallery,
         ];
@@ -338,7 +346,8 @@ class ShopController extends Controller
 
             return $this->containsMatch($needle, (string) $product->name)
                 || $this->containsMatch($needle, (string) $product->subtitle)
-                || $this->containsMatch($needle, (string) $product->description);
+                || $this->containsMatch($needle, (string) $product->description)
+                || $this->containsMatch($needle, (string) $product->medicine_aliases);
         });
         if ($containsMedicine instanceof ShopProduct) {
             return $containsMedicine;
@@ -347,7 +356,8 @@ class ShopController extends Controller
         $containsAny = $products->first(function (ShopProduct $product) use ($needle) {
             return $this->containsMatch($needle, (string) $product->name)
                 || $this->containsMatch($needle, (string) $product->subtitle)
-                || $this->containsMatch($needle, (string) $product->description);
+                || $this->containsMatch($needle, (string) $product->description)
+                || $this->containsMatch($needle, (string) $product->medicine_aliases);
         });
 
         return $containsAny instanceof ShopProduct ? $containsAny : null;

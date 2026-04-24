@@ -84,12 +84,13 @@
                                 <th style="min-width: 260px;">Description</th>
                                 <th>Price</th>
                                 <th>Unit</th>
+                                <th>Medicine Setup</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($products as $key => $product)
-                                <tr class="shop-row" data-search="{{ strtolower($product->category.' '.$product->name.' '.($product->subtitle ?? '').' '.($product->description ?? '')) }}">
+                                <tr class="shop-row" data-search="{{ strtolower($product->category.' '.$product->name.' '.($product->subtitle ?? '').' '.($product->description ?? '').' '.($product->medicine_aliases ?? '')) }}">
                                     <td>{{ $key + 1 }}</td>
                                     <td>@if(!empty($product->image))<img src="{{ asset($product->image) }}" alt="{{ $product->name }}" style="height:46px;width:46px;object-fit:cover;border-radius:10px;">@else <span class="text-muted">-</span>@endif</td>
                                     <td><span class="badge bg-light text-dark text-capitalize">{{ $product->category }}</span></td>
@@ -110,10 +111,23 @@
                                     </td>
                                     <td>Rs {{ number_format((float) $product->price, 2) }}</td>
                                     <td>{{ $product->unit ?: '-' }}</td>
+                                    <td>
+                                        @if(strtolower((string) $product->category) === 'medicine')
+                                            <div class="small">Pack: {{ $product->pack_size ?: '-' }}</div>
+                                            <div class="small">Partial: {{ !empty($product->allow_partial_units) ? 'Yes' : 'No' }}</div>
+                                            @if(!empty($product->medicine_aliases))
+                                                <div class="small text-muted text-truncate" style="max-width:180px;" title="{{ $product->medicine_aliases }}">
+                                                    Aliases: {{ \Illuminate\Support\Str::limit($product->medicine_aliases, 35) }}
+                                                </div>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                     <td><span class="badge {{ $product->is_active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">{{ $product->is_active ? 'Active' : 'Inactive' }}</span></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="text-center text-muted">No products found</td></tr>
+                                <tr><td colspan="9" class="text-center text-muted">No products found</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -149,6 +163,9 @@
                         <div class="col-md-3"><label class="form-label">Unit</label><input type="text" name="unit" class="form-control" placeholder="bag / bottle / kg"></div>
                         <div class="col-12"><label class="form-label">Description</label><textarea name="description" rows="3" class="form-control"></textarea></div>
                         <div class="col-12"><label class="form-label">Features (one per line)</label><textarea name="features" rows="3" class="form-control" placeholder="High protein&#10;Fast delivery&#10;Best for milking cows"></textarea></div>
+                        <div class="col-12"><label class="form-label">Medicine Aliases (for prescription match)</label><textarea name="medicine_aliases" rows="2" class="form-control" placeholder="Paracetamol&#10;PCM&#10;Acetaminophen"></textarea><small class="text-muted">Optional. Use line break or comma separated values.</small></div>
+                        <div class="col-md-6"><label class="form-label">Pack Size (units per strip/pack)</label><input type="number" min="1" name="pack_size" class="form-control" placeholder="15"></div>
+                        <div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="allow_partial_units" value="1" id="allowPartialUnits"><label class="form-check-label" for="allowPartialUnits">Allow partial quantity (e.g., 7 tablets)</label></div></div>
                         <div class="col-md-6"><label class="form-label">Main Image</label><input type="file" name="image" class="form-control" accept="image/*"></div>
                         <div class="col-md-6"><label class="form-label">Gallery Images</label><input type="file" name="gallery_images[]" class="form-control" accept="image/*" multiple></div>
                         <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="shopActive" checked><label class="form-check-label" for="shopActive">Active</label></div></div>
