@@ -11,6 +11,7 @@ use App\Models\Shop\ShopProduct;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ShopController extends Controller
 {
@@ -55,51 +56,59 @@ class ShopController extends Controller
             });
         }
 
-        $products = $query->get()->map(function (ShopProduct $product) {
-            $gallery = collect($product->gallery_images ?? [])
-                ->filter()
-                ->map(function ($path) {
-                    if (! is_string($path)) {
-                        return null;
-                    }
-                    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                        return $path;
-                    }
-
-                    return asset($path);
-                })
-                ->filter()
-                ->values()
-                ->all();
-
-            if ($product->image_url) {
-                array_unshift($gallery, $product->image_url);
-                $gallery = array_values(array_unique(array_filter($gallery)));
-            }
-
-            return [
-                'id' => $product->id,
-                'category' => $product->category,
-                'name' => $product->name,
-                'subtitle' => $product->subtitle,
-                'price' => (float) $product->price,
-                'price_label' => 'Rs '.number_format((float) $product->price, 2),
-                'unit' => $product->unit,
-                'description' => $product->description,
-                'features' => collect(preg_split("/\r\n|\n|\r/", (string) ($product->features ?? '')))
-                    ->map(fn ($line) => trim((string) $line))
-                    ->filter()
-                    ->values()
-                    ->all(),
-                'image_url' => $product->image_url,
-                'gallery_image_urls' => $gallery,
-            ];
-        });
+        $products = $query->get()->map(fn (ShopProduct $product) => $this->productPayload($product));
 
         return response()->json([
             'status' => true,
             'message' => 'Shop products fetched successfully',
             'data' => $products,
+        ]);
+    }
+
+    public function prescriptionProducts(Request $request)
+    {
+        $data = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.name' => ['required', 'string', 'max:255'],
+            'items.*.quantity' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $products = ShopProduct::query()
+            ->where('is_active', true)
+            ->get();
+
+        $matched = [];
+        $unmatched = [];
+        foreach ($data['items'] as $item) {
+            $requestedName = trim((string) ($item['name'] ?? ''));
+            if ($requestedName === '') {
+                continue;
+            }
+
+            $quantity = (int) ($item['quantity'] ?? 1);
+            if ($quantity <= 0) {
+                $quantity = 1;
+            }
+
+            $product = $this->matchPrescriptionProduct($products, $requestedName);
+            if ($product instanceof ShopProduct) {
+                $matched[] = [
+                    'requested_name' => $requestedName,
+                    'quantity' => $quantity,
+                    'product' => $this->productPayload($product),
+                ];
+            } else {
+                $unmatched[] = $requestedName;
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Prescription products matched successfully.',
+            'data' => [
+                'matched' => $matched,
+                'unmatched' => array_values(array_unique($unmatched)),
+            ],
         ]);
     }
 
@@ -258,5 +267,119 @@ class ShopController extends Controller
             'message' => 'Shop orders fetched successfully',
             'data' => $orders,
         ]);
+    }
+
+    protected function productPayload(ShopProduct $product): array
+    {
+        $gallery = collect($product->gallery_images ?? [])
+            ->filter()
+            ->map(function ($path) {
+                if (! is_string($path)) {
+                    return null;
+                }
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    return $path;
+                }
+
+                return asset($path);
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($product->image_url) {
+            array_unshift($gallery, $product->image_url);
+            $gallery = array_values(array_unique(array_filter($gallery)));
+        }
+
+        return [
+            'id' => $product->id,
+            'category' => $product->category,
+            'name' => $product->name,
+            'subtitle' => $product->subtitle,
+            'price' => (float) $product->price,
+            'price_label' => 'Rs '.number_format((float) $product->price, 2),
+            'unit' => $product->unit,
+            'description' => $product->description,
+            'features' => collect(preg_split("/\r\n|\n|\r/", (string) ($product->features ?? '')))
+                ->map(fn ($line) => trim((string) $line))
+                ->filter()
+                ->values()
+                ->all(),
+            'image_url' => $product->image_url,
+            'gallery_image_urls' => $gallery,
+        ];
+    }
+
+    protected function matchPrescriptionProduct($products, string $requestedName): ?ShopProduct
+    {
+        $needle = $this->normalizeForMatching($requestedName);
+        if ($needle === '') {
+            return null;
+        }
+
+        $exactMedicine = $products->first(function (ShopProduct $product) use ($needle) {
+            return strtolower((string) $product->category) === 'medicine'
+                && $this->normalizeForMatching((string) $product->name) === $needle;
+        });
+        if ($exactMedicine instanceof ShopProduct) {
+            return $exactMedicine;
+        }
+
+        $exactAny = $products->first(fn (ShopProduct $product) => $this->normalizeForMatching((string) $product->name) === $needle);
+        if ($exactAny instanceof ShopProduct) {
+            return $exactAny;
+        }
+
+        $containsMedicine = $products->first(function (ShopProduct $product) use ($needle) {
+            if (strtolower((string) $product->category) !== 'medicine') {
+                return false;
+            }
+
+            return $this->containsMatch($needle, (string) $product->name)
+                || $this->containsMatch($needle, (string) $product->subtitle)
+                || $this->containsMatch($needle, (string) $product->description);
+        });
+        if ($containsMedicine instanceof ShopProduct) {
+            return $containsMedicine;
+        }
+
+        $containsAny = $products->first(function (ShopProduct $product) use ($needle) {
+            return $this->containsMatch($needle, (string) $product->name)
+                || $this->containsMatch($needle, (string) $product->subtitle)
+                || $this->containsMatch($needle, (string) $product->description);
+        });
+
+        return $containsAny instanceof ShopProduct ? $containsAny : null;
+    }
+
+    protected function containsMatch(string $needle, string $haystack): bool
+    {
+        $normalizedHaystack = $this->normalizeForMatching($haystack);
+        if ($normalizedHaystack === '') {
+            return false;
+        }
+
+        if ($needle === $normalizedHaystack) {
+            return true;
+        }
+
+        if (Str::length($needle) < 3) {
+            return false;
+        }
+
+        return Str::contains($normalizedHaystack, $needle)
+            || Str::contains($needle, $normalizedHaystack);
+    }
+
+    protected function normalizeForMatching(string $value): string
+    {
+        $normalized = Str::of($value)
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/i', ' ')
+            ->squish()
+            ->toString();
+
+        return trim($normalized);
     }
 }
