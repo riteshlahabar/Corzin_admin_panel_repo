@@ -1,22 +1,19 @@
 function filterMilkRows() {
     const selectedShifts = [];
     document.querySelectorAll('.shift-filter:checked').forEach((item) => selectedShifts.push(item.value));
-    const farmer = document.getElementById('farmerSearch')?.value.toLowerCase().trim() || '';
-    const dairy = document.getElementById('dairySearch')?.value.toLowerCase().trim() || '';
+    const search = document.getElementById('milkSearch')?.value.toLowerCase().trim() || '';
     const start = document.getElementById('startDate')?.value || '';
     const end = document.getElementById('endDate')?.value || '';
 
     document.querySelectorAll('.milk-row').forEach((row) => {
-        const farmerValue = row.dataset.farmer || '';
-        const dairyValue = row.dataset.dairy || '';
+        const haystack = row.dataset.search || '';
         const date = row.dataset.date || '';
         let shiftMatch = selectedShifts.length === 0;
         selectedShifts.forEach((shift) => {
             if (row.dataset[shift] === '1') shiftMatch = true;
         });
         let show = shiftMatch;
-        if (farmer && !farmerValue.includes(farmer)) show = false;
-        if (dairy && !dairyValue.includes(dairy)) show = false;
+        if (search && !haystack.includes(search)) show = false;
         if (start && date && date < start) show = false;
         if (end && date && date > end) show = false;
         row.style.display = show ? '' : 'none';
@@ -82,7 +79,6 @@ document.querySelectorAll('.shift-filter').forEach((checkbox) => {
     });
 });
 
-document.getElementById('farmerSearch')?.addEventListener('input', filterMilkRows);
-document.getElementById('dairySearch')?.addEventListener('input', filterMilkRows);
+document.getElementById('milkSearch')?.addEventListener('input', filterMilkRows);
 document.getElementById('startDate')?.addEventListener('change', filterMilkRows);
 document.getElementById('endDate')?.addEventListener('change', filterMilkRows);

@@ -40,7 +40,7 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Milk Production</h4>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2 flex-nowrap overflow-auto">
                 <div class="btn-group" role="group">
                     <input type="checkbox" class="btn-check shift-filter" id="morningCheck" value="morning" checked>
                     <label class="btn btn-outline-primary active" for="morningCheck">Morning</label>
@@ -49,8 +49,7 @@
                     <input type="checkbox" class="btn-check shift-filter" id="eveningCheck" value="evening" checked>
                     <label class="btn btn-outline-primary active" for="eveningCheck">Evening</label>
                 </div>
-                <input type="text" id="farmerSearch" class="form-control" placeholder="Search farmer..." style="width:200px;">
-                <input type="text" id="dairySearch" class="form-control" placeholder="Search dairy..." style="width:200px;">
+                <input type="text" id="milkSearch" class="form-control" placeholder="Search farmer, animal, dairy..." style="width:300px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -92,6 +91,7 @@
                         <tr class="milk-row"
                             data-farmer="{{ strtolower(trim(($milk->animal->farmer->first_name ?? '').' '.($milk->animal->farmer->last_name ?? ''))) }}"
                             data-dairy="{{ strtolower($milk->dairy->dairy_name ?? '') }}"
+                            data-search="{{ strtolower(trim(($milk->animal->farmer->first_name ?? '').' '.($milk->animal->farmer->last_name ?? '').' '.($milk->dairy->dairy_name ?? '').' '.($milk->animal->animal_name ?? ''))) }}"
                             data-date="{{ $milk->date }}"
                             data-morning="{{ $milk->morning_milk > 0 ? 1 : 0 }}"
                             data-afternoon="{{ ($milk->afternoon_milk ?? 0) > 0 ? 1 : 0 }}"
