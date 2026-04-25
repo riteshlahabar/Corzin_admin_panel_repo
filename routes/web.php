@@ -46,6 +46,7 @@ Route::prefix('farmer')->group(function () {
     Route::post('/list/{farmer}/toggle', [FarmerListController::class, 'toggle'])->name('farmer.toggle');
 
     Route::get('/animals', [AnimalListController::class, 'index'])->name('farmer.animals');
+    Route::get('/pans', [AnimalListController::class, 'panList'])->name('farmer.pans');
     Route::get('/animals/create', [AnimalListController::class, 'create'])->name('animal.create');
     Route::post('/animals', [AnimalListController::class, 'store'])->name('animal.store');
     Route::get('/animals/{animal}/edit', [AnimalListController::class, 'edit'])->name('animal.edit');

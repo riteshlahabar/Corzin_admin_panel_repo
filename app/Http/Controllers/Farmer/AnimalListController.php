@@ -18,10 +18,6 @@ class AnimalListController extends Controller
         $animals = Animal::with(['farmer', 'animalType', 'pan'])->latest()->get();
         $history = AnimalLifecycleHistory::with(['animal.farmer', 'fromAnimalType', 'toAnimalType', 'fromPan', 'toPan'])->latest('changed_at')->get();
         $animalTypes = AnimalType::all();
-        $pans = FarmerPan::query()
-            ->with(['farmer', 'animals'])
-            ->latest()
-            ->get();
 
         $counts = [
             'calf' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Calf'))->count(),
@@ -30,7 +26,17 @@ class AnimalListController extends Controller
             'milking' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Milking Cow'))->count(),
         ];
 
-        return view('animal.index', compact('animals', 'counts', 'animalTypes', 'history', 'pans'));
+        return view('animal.index', compact('animals', 'counts', 'animalTypes', 'history'));
+    }
+
+    public function panList()
+    {
+        $pans = FarmerPan::query()
+            ->with(['farmer', 'animals'])
+            ->latest()
+            ->get();
+
+        return view('animal.pan_list', compact('pans'));
     }
 
     public function create()

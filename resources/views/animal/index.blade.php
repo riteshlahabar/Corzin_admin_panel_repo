@@ -116,44 +116,6 @@
         </div>
     </div>
 
-    <div class="card mt-4" id="panListSection">
-        <div class="card-header bg-light"><h5 class="mb-0">PAN List</h5></div>
-        <div class="card-body pt-2">
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Farmer</th>
-                            <th>PAN Name</th>
-                            <th>Animals Count</th>
-                            <th>Animals</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($pans as $key => $pan)
-                        <tr>
-                            <td>{{ $key + 1 }}</td>
-                            <td>{{ trim(($pan->farmer->first_name ?? '').' '.($pan->farmer->last_name ?? '')) ?: '-' }}</td>
-                            <td>{{ $pan->name ?: '-' }}</td>
-                            <td>{{ $pan->animals->count() }}</td>
-                            <td>
-                                @if($pan->animals->isEmpty())
-                                    <span class="text-muted">-</span>
-                                @else
-                                    {{ $pan->animals->pluck('animal_name')->filter()->implode(', ') }}
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="5" class="text-center text-muted">No PAN groups found</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <div class="card mt-4">
         <div class="card-header bg-light"><h5 class="mb-0">Animal Lifecycle History</h5></div>
         <div class="card-body pt-2">
