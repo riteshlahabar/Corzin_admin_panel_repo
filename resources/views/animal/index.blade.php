@@ -61,7 +61,7 @@
                             <th>Weight</th>
                             <th>Image</th>
                             <th>Status</th>
-                            <th class="text-end">Action</th>
+                            <th class="text-end text-nowrap">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -95,16 +95,18 @@
                                     {{ $animal->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
-                            <td class="text-end">
-                                <a href="{{ route('animal.edit', $animal) }}" class="btn btn-sm btn-light border me-1" title="Edit Animal">
-                                    <i class="las la-pen text-primary fs-18"></i>
-                                </a>
-                                <form method="POST" action="{{ route('animal.toggle', $animal) }}" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm {{ $animal->is_active ? 'btn-success' : 'btn-danger' }}" title="{{ $animal->is_active ? 'Set Inactive' : 'Set Active' }}">
-                                        <i class="las {{ $animal->is_active ? 'la-check-circle' : 'la-times-circle' }} fs-18"></i>
-                                    </button>
-                                </form>
+                            <td class="text-end text-nowrap">
+                                <div class="d-inline-flex align-items-center gap-1 flex-nowrap">
+                                    <a href="{{ route('animal.edit', $animal) }}" class="btn btn-sm btn-light border" title="Edit Animal">
+                                        <i class="las la-pen text-primary fs-18"></i>
+                                    </a>
+                                    <form method="POST" action="{{ route('animal.toggle', $animal) }}" class="d-inline m-0">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm {{ $animal->is_active ? 'btn-success' : 'btn-danger' }}" title="{{ $animal->is_active ? 'Set Inactive' : 'Set Active' }}">
+                                            <i class="las {{ $animal->is_active ? 'la-check-circle' : 'la-times-circle' }} fs-18"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
