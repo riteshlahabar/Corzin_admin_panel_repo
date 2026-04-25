@@ -70,7 +70,7 @@
         </a>
         <div class="collapse" id="healthMenu">
             <ul class="nav flex-column ms-4">
-                <li><a href="{{ route('health.medical') }}" class="nav-link"><i class="iconoir-stethoscope me-2"></i> Medical</a></li>
+                <li><a href="{{ route('health.medical') }}" class="nav-link"><i class="iconoir-hospital me-2"></i> Medical</a></li>
                 <li><a href="{{ route('health.mastitis') }}" class="nav-link"><i class="iconoir-warning-triangle me-2"></i> Mastitis</a></li>
                 <li><a href="{{ route('health.dmi') }}" class="nav-link"><i class="iconoir-calculator me-2"></i> DMI Calculator</a></li>
             </ul>

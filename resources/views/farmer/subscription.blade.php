@@ -13,34 +13,46 @@
 
     <div class="row g-3 mb-3">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Total Subscriptions</p>
-                    <h4 class="mb-0">{{ $summary['total'] }}</h4>
+            <div class="card border-0 shadow-sm h-100 bg-primary-subtle">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-primary mb-1 fw-semibold">Total Subscriptions</p>
+                        <h4 class="mb-0 text-primary">{{ $summary['total'] }}</h4>
+                    </div>
+                    <i class="iconoir-wallet fs-2 text-primary"></i>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Active</p>
-                    <h4 class="mb-0 text-success">{{ $summary['active'] }}</h4>
+            <div class="card border-0 shadow-sm h-100 bg-success-subtle">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-success mb-1 fw-semibold">Active</p>
+                        <h4 class="mb-0 text-success">{{ $summary['active'] }}</h4>
+                    </div>
+                    <i class="iconoir-check-circle fs-2 text-success"></i>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Expiring (7 Days)</p>
-                    <h4 class="mb-0 text-warning">{{ $summary['expiring_soon'] }}</h4>
+            <div class="card border-0 shadow-sm h-100 bg-warning-subtle">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-warning mb-1 fw-semibold">Expiring (7 Days)</p>
+                        <h4 class="mb-0 text-warning">{{ $summary['expiring_soon'] }}</h4>
+                    </div>
+                    <i class="iconoir-timer fs-2 text-warning"></i>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Expired</p>
-                    <h4 class="mb-0 text-danger">{{ $summary['expired'] }}</h4>
+            <div class="card border-0 shadow-sm h-100 bg-danger-subtle">
+                <div class="card-body d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-danger mb-1 fw-semibold">Expired</p>
+                        <h4 class="mb-0 text-danger">{{ $summary['expired'] }}</h4>
+                    </div>
+                    <i class="iconoir-warning-triangle fs-2 text-danger"></i>
                 </div>
             </div>
         </div>

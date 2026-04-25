@@ -7,9 +7,8 @@
         <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
     @endif
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="mt-4 mb-3">
         <h4 class="mb-0 text-dark">Edit Templates</h4>
-        <small class="text-muted">Manage notification title/body templates for appointment and shop flow.</small>
     </div>
 
     <div class="card border-0 shadow-sm">
