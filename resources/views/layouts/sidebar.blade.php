@@ -30,6 +30,7 @@
             <ul class="nav flex-column ms-4">
                 <li class="menu-item"><a href="{{ route('farmer.list') }}" class="nav-link"><i class="iconoir-group me-2"></i> Farmer List</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.animals') }}" class="nav-link"><i class="fas fa-cow me-2"></i> Animal List</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.animals') }}#panListSection" class="nav-link"><i class="iconoir-list me-2"></i> PAN List</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.milk') }}" class="nav-link"><i class="iconoir-droplet me-2"></i> Milk Production</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.feeding') }}" class="nav-link"><i class="iconoir-leaf me-2"></i> Feeding</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.dairy') }}" class="nav-link"><i class="iconoir-building me-2"></i> Dairy</a></li>

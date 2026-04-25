@@ -116,7 +116,7 @@
         </div>
     </div>
 
-    <div class="card mt-4">
+    <div class="card mt-4" id="panListSection">
         <div class="card-header bg-light"><h5 class="mb-0">PAN List</h5></div>
         <div class="card-body pt-2">
             <div class="table-responsive">
