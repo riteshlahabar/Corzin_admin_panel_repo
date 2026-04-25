@@ -221,69 +221,6 @@ function toggleSidebarLogo() {
 
 document.addEventListener('DOMContentLoaded', function () {
     toggleSidebarLogo();
-
-    const startbar = document.querySelector('.startbar');
-    if (!startbar || !window.bootstrap || !window.bootstrap.Collapse) {
-        return;
-    }
-
-    const triggerLinks = Array.from(
-        startbar.querySelectorAll('.nav-link[data-bs-toggle="collapse"][href^="#"]')
-    );
-
-    const getTarget = (trigger) => {
-        const selector = trigger.getAttribute('href');
-        if (!selector || selector === '#') {
-            return null;
-        }
-        return startbar.querySelector(selector);
-    };
-
-    const getCollapse = (element) => window.bootstrap.Collapse.getOrCreateInstance(element, { toggle: false });
-
-    triggerLinks.forEach((trigger) => {
-        const target = getTarget(trigger);
-        if (!target) {
-            return;
-        }
-
-        trigger.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const isOpen = target.classList.contains('show');
-
-            triggerLinks.forEach((otherTrigger) => {
-                if (otherTrigger === trigger) {
-                    return;
-                }
-
-                const otherTarget = getTarget(otherTrigger);
-                if (!otherTarget || !otherTarget.classList.contains('show')) {
-                    return;
-                }
-
-                getCollapse(otherTarget).hide();
-                otherTrigger.setAttribute('aria-expanded', 'false');
-            });
-
-            if (isOpen) {
-                getCollapse(target).hide();
-                trigger.setAttribute('aria-expanded', 'false');
-            } else {
-                getCollapse(target).show();
-                trigger.setAttribute('aria-expanded', 'true');
-            }
-        });
-
-        target.addEventListener('shown.bs.collapse', function () {
-            trigger.setAttribute('aria-expanded', 'true');
-        });
-
-        target.addEventListener('hidden.bs.collapse', function () {
-            trigger.setAttribute('aria-expanded', 'false');
-        });
-    });
 });
 document.addEventListener('click', function(e) {
     if (e.target.closest('#togglemenu')) {
