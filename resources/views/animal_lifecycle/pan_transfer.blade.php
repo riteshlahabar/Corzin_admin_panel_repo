@@ -41,14 +41,14 @@
                     <tbody>
                         @forelse($rows as $key => $item)
                         <tr class="lifecycle-row"
-                            data-search="{{ strtolower(trim(($item->animal->farmer->first_name ?? '').' '.($item->animal->farmer->last_name ?? '').' '.($item->animal->animal_name ?? '').' '.($item->animal->tag_number ?? '').' '.($item->fromAnimalType->name ?? '').' '.($item->toAnimalType->name ?? ''))) }}"
+                            data-search="{{ strtolower(trim(($item->animal->farmer->first_name ?? '').' '.($item->animal->farmer->last_name ?? '').' '.($item->animal->animal_name ?? '').' '.($item->animal->tag_number ?? '').' '.($item->fromPan->name ?? $item->fromAnimalType->name ?? '').' '.($item->toPan->name ?? $item->toAnimalType->name ?? ''))) }}"
                             data-date="{{ optional($item->changed_at)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ trim(($item->animal->farmer->first_name ?? '').' '.($item->animal->farmer->last_name ?? '')) ?: '-' }}</td>
                             <td>{{ $item->animal->animal_name ?? '-' }}</td>
                             <td>{{ $item->animal->tag_number ?? '-' }}</td>
-                            <td>{{ $item->fromAnimalType->name ?? '-' }}</td>
-                            <td>{{ $item->toAnimalType->name ?? '-' }}</td>
+                            <td>{{ $item->fromPan->name ?? $item->fromAnimalType->name ?? '-' }}</td>
+                            <td>{{ $item->toPan->name ?? $item->toAnimalType->name ?? '-' }}</td>
                             <td>{{ $item->notes ?: '-' }}</td>
                             <td>{{ optional($item->changed_at)->format('d-m-Y H:i') ?: '-' }}</td>
                         </tr>

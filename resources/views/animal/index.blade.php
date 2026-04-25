@@ -54,6 +54,7 @@
                             <th>Animal Name</th>
                             <th>Tag Number</th>
                             <th>Type</th>
+                            <th>PAN</th>
                             <th>Gender</th>
                             <th>Birth Date</th>
                             <th>Age</th>
@@ -75,6 +76,7 @@
                             <td>{{ $animal->animal_name }}</td>
                             <td>{{ $animal->tag_number }}</td>
                             <td>{{ $animal->animalType->name ?? '-' }}</td>
+                            <td>{{ $animal->pan->name ?? '-' }}</td>
                             <td>{{ $animal->gender }}</td>
                             <td>{{ $animal->birth_date ? \Carbon\Carbon::parse($animal->birth_date)->format('d-m-Y') : '-' }}</td>
                             <td>{{ $animal->calculated_age ?? '-' }}</td>
@@ -106,7 +108,45 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="13" class="text-center text-muted">No Animals Found</td></tr>
+                        <tr><td colspan="14" class="text-center text-muted">No Animals Found</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header bg-light"><h5 class="mb-0">PAN List</h5></div>
+        <div class="card-body pt-2">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Farmer</th>
+                            <th>PAN Name</th>
+                            <th>Animals Count</th>
+                            <th>Animals</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($pans as $key => $pan)
+                        <tr>
+                            <td>{{ $key + 1 }}</td>
+                            <td>{{ trim(($pan->farmer->first_name ?? '').' '.($pan->farmer->last_name ?? '')) ?: '-' }}</td>
+                            <td>{{ $pan->name ?: '-' }}</td>
+                            <td>{{ $pan->animals->count() }}</td>
+                            <td>
+                                @if($pan->animals->isEmpty())
+                                    <span class="text-muted">-</span>
+                                @else
+                                    {{ $pan->animals->pluck('animal_name')->filter()->implode(', ') }}
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="5" class="text-center text-muted">No PAN groups found</td></tr>
                         @endforelse
                     </tbody>
                 </table>

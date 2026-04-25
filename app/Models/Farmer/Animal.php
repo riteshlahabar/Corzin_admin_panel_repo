@@ -13,6 +13,7 @@ class Animal extends Model
         'animal_name',
         'tag_number',
         'animal_type_id',
+        'pan_id',
         'mother_animal_id',
         'age',
         'birth_date',
@@ -48,6 +49,11 @@ class Animal extends Model
     public function animalType()
     {
         return $this->belongsTo(AnimalType::class, 'animal_type_id');
+    }
+
+    public function pan()
+    {
+        return $this->belongsTo(FarmerPan::class, 'pan_id');
     }
 
     public function motherAnimal()

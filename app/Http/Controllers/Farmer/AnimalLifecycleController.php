@@ -56,7 +56,7 @@ class AnimalLifecycleController extends Controller
 
     public function panTransfer()
     {
-        $rows = AnimalLifecycleHistory::with(['animal.farmer', 'animal.animalType', 'fromAnimalType', 'toAnimalType'])
+        $rows = AnimalLifecycleHistory::with(['animal.farmer', 'animal.animalType', 'fromAnimalType', 'toAnimalType', 'fromPan', 'toPan'])
             ->whereIn('action_type', ['move_type', 'move_pan'])
             ->latest('changed_at')
             ->get();

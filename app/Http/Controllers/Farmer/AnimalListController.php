@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Farmer;
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\AnimalLifecycleHistory;
+use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\AnimalType;
 use App\Models\Farmer\Farmer;
 use Carbon\Carbon;
@@ -14,9 +15,13 @@ class AnimalListController extends Controller
 {
     public function index()
     {
-        $animals = Animal::with(['farmer', 'animalType'])->latest()->get();
-        $history = AnimalLifecycleHistory::with(['animal.farmer', 'fromAnimalType', 'toAnimalType'])->latest('changed_at')->get();
+        $animals = Animal::with(['farmer', 'animalType', 'pan'])->latest()->get();
+        $history = AnimalLifecycleHistory::with(['animal.farmer', 'fromAnimalType', 'toAnimalType', 'fromPan', 'toPan'])->latest('changed_at')->get();
         $animalTypes = AnimalType::all();
+        $pans = FarmerPan::query()
+            ->with(['farmer', 'animals'])
+            ->latest()
+            ->get();
 
         $counts = [
             'calf' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Calf'))->count(),
@@ -25,7 +30,7 @@ class AnimalListController extends Controller
             'milking' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Milking Cow'))->count(),
         ];
 
-        return view('animal.index', compact('animals', 'counts', 'animalTypes', 'history'));
+        return view('animal.index', compact('animals', 'counts', 'animalTypes', 'history', 'pans'));
     }
 
     public function create()

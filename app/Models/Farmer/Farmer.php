@@ -36,6 +36,11 @@ class Farmer extends Model
         return $this->hasMany(Animal::class);
     }
 
+    public function pans()
+    {
+        return $this->hasMany(FarmerPan::class);
+    }
+
     public function dairies()
     {
         return $this->hasMany(Dairy::class);

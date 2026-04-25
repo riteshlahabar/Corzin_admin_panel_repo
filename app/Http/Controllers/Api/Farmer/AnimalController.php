@@ -7,10 +7,12 @@ use Illuminate\Http\Request;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\AnimalType;
 use App\Models\Farmer\AnimalLifecycleHistory;
+use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\Farmer;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AnimalController extends Controller
 {
@@ -102,7 +104,7 @@ class AnimalController extends Controller
     public function listByFarmer(Request $request, $farmer_id)
     {
         try {
-            $query = Animal::with(['animalType', 'motherAnimal'])->where('farmer_id', $farmer_id);
+            $query = Animal::with(['animalType', 'motherAnimal', 'pan'])->where('farmer_id', $farmer_id);
 
             if (! $request->boolean('include_inactive')) {
                 $query->where('is_active', true);
@@ -123,6 +125,286 @@ class AnimalController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to fetch animals',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function panList($farmerId)
+    {
+        if (! Farmer::query()->whereKey($farmerId)->exists()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Farmer not found.',
+            ], 404);
+        }
+
+        $pans = FarmerPan::query()
+            ->with([
+                'animals' => function ($query) {
+                    $query->with(['animalType', 'motherAnimal', 'pan'])->latest();
+                },
+            ])
+            ->where('farmer_id', (int) $farmerId)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Farmer PAN list fetched successfully.',
+            'data' => $pans->map(function (FarmerPan $pan) {
+                return [
+                    'id' => $pan->id,
+                    'name' => $pan->name,
+                    'animals_count' => $pan->animals->count(),
+                    'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
+                    'created_at' => optional($pan->created_at)->toDateTimeString(),
+                ];
+            })->values(),
+        ]);
+    }
+
+    public function createPan(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'name' => 'required|string|max:255',
+            'animal_ids' => 'required|array|min:1',
+            'animal_ids.*' => 'integer|exists:animals,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $farmerId = (int) $request->farmer_id;
+        $animalIds = collect($request->input('animal_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        try {
+            $pan = DB::transaction(function () use ($request, $farmerId, $animalIds) {
+                $pan = FarmerPan::create([
+                    'farmer_id' => $farmerId,
+                    'name' => trim((string) $request->name),
+                ]);
+
+                $animals = Animal::query()
+                    ->where('farmer_id', $farmerId)
+                    ->whereIn('id', $animalIds)
+                    ->get();
+
+                foreach ($animals as $animal) {
+                    $fromPanId = $animal->pan_id;
+                    if ($fromPanId !== $pan->id) {
+                        $this->logPanTransferForAnimal(
+                            $animal,
+                            $fromPanId,
+                            $pan->id,
+                            'Assigned in PAN creation.'
+                        );
+                    }
+
+                    $animal->update([
+                        'pan_id' => $pan->id,
+                    ]);
+                }
+
+                return $pan;
+            });
+
+            $pan->load(['animals' => fn ($query) => $query->with(['animalType', 'motherAnimal', 'pan'])->latest()]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'PAN created successfully.',
+                'data' => [
+                    'id' => $pan->id,
+                    'name' => $pan->name,
+                    'animals_count' => $pan->animals->count(),
+                    'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create PAN.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updatePan(Request $request, $panId)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'name' => 'required|string|max:255',
+            'animal_ids' => 'nullable|array',
+            'animal_ids.*' => 'integer|exists:animals,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $farmerId = (int) $request->farmer_id;
+        $pan = FarmerPan::query()
+            ->where('id', (int) $panId)
+            ->where('farmer_id', $farmerId)
+            ->first();
+
+        if (! $pan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'PAN not found.',
+            ], 404);
+        }
+
+        $targetIds = collect($request->input('animal_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        try {
+            DB::transaction(function () use ($request, $pan, $farmerId, $targetIds) {
+                $pan->update([
+                    'name' => trim((string) $request->name),
+                ]);
+
+                if (! $request->has('animal_ids')) {
+                    return;
+                }
+
+                Animal::query()
+                    ->where('farmer_id', $farmerId)
+                    ->where('pan_id', $pan->id)
+                    ->whereNotIn('id', $targetIds)
+                    ->update(['pan_id' => null]);
+
+                $animals = Animal::query()
+                    ->where('farmer_id', $farmerId)
+                    ->whereIn('id', $targetIds)
+                    ->get();
+
+                foreach ($animals as $animal) {
+                    $fromPanId = $animal->pan_id;
+                    if ($fromPanId !== $pan->id) {
+                        $this->logPanTransferForAnimal(
+                            $animal,
+                            $fromPanId,
+                            $pan->id,
+                            'Moved while updating PAN members.'
+                        );
+                    }
+
+                    $animal->update([
+                        'pan_id' => $pan->id,
+                    ]);
+                }
+            });
+
+            $pan->refresh()->load(['animals' => fn ($query) => $query->with(['animalType', 'motherAnimal', 'pan'])->latest()]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'PAN updated successfully.',
+                'data' => [
+                    'id' => $pan->id,
+                    'name' => $pan->name,
+                    'animals_count' => $pan->animals->count(),
+                    'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to update PAN.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function transferPanAnimal(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'animal_id' => 'required|integer|exists:animals,id',
+            'to_pan_id' => 'required|integer|exists:farmer_pans,id',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $farmerId = (int) $request->farmer_id;
+        $animal = Animal::query()
+            ->with(['animalType', 'motherAnimal', 'pan'])
+            ->where('id', (int) $request->animal_id)
+            ->where('farmer_id', $farmerId)
+            ->first();
+
+        if (! $animal) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Animal not found.',
+            ], 404);
+        }
+
+        $toPan = FarmerPan::query()
+            ->where('id', (int) $request->to_pan_id)
+            ->where('farmer_id', $farmerId)
+            ->first();
+
+        if (! $toPan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Destination PAN not found.',
+            ], 404);
+        }
+
+        $fromPanId = $animal->pan_id;
+        if ($fromPanId === $toPan->id) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Animal is already in selected PAN.',
+                'data' => $this->transformAnimal($animal),
+            ]);
+        }
+
+        try {
+            DB::transaction(function () use ($animal, $fromPanId, $toPan, $request) {
+                $animal->update([
+                    'pan_id' => $toPan->id,
+                ]);
+
+                $this->logPanTransferForAnimal(
+                    $animal->fresh(),
+                    $fromPanId,
+                    $toPan->id,
+                    $request->notes
+                );
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Animal PAN transferred successfully.',
+                'data' => $this->transformAnimal($animal->fresh()->load(['animalType', 'motherAnimal', 'pan'])),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to transfer PAN.',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -341,7 +623,7 @@ class AnimalController extends Controller
 
     public function history($farmer_id)
     {
-        $history = AnimalLifecycleHistory::with(['animal.farmer', 'animal.animalType', 'fromAnimalType', 'toAnimalType'])
+        $history = AnimalLifecycleHistory::with(['animal.farmer', 'animal.animalType', 'fromAnimalType', 'toAnimalType', 'fromPan', 'toPan'])
             ->whereHas('animal', fn ($query) => $query->where('farmer_id', $farmer_id))
             ->latest('changed_at')
             ->get()
@@ -356,6 +638,8 @@ class AnimalController extends Controller
                     'to_status' => $item->to_status,
                     'from_animal_type' => $item->fromAnimalType->name ?? null,
                     'to_animal_type' => $item->toAnimalType->name ?? null,
+                    'from_pan' => $item->fromPan->name ?? null,
+                    'to_pan' => $item->toPan->name ?? null,
                     'notes' => $item->notes,
                     'changed_at' => optional($item->changed_at)->format('d-m-Y H:i'),
                 ];
@@ -368,6 +652,26 @@ class AnimalController extends Controller
         ]);
     }
 
+    private function logPanTransferForAnimal(Animal $animal, ?int $fromPanId, ?int $toPanId, ?string $notes = null): void
+    {
+        if ($fromPanId === $toPanId) {
+            return;
+        }
+
+        AnimalLifecycleHistory::create([
+            'animal_id' => $animal->id,
+            'action_type' => 'move_pan',
+            'from_status' => $animal->lifecycle_status ?? 'active',
+            'to_status' => $animal->lifecycle_status ?? 'active',
+            'from_animal_type_id' => $animal->animal_type_id,
+            'to_animal_type_id' => $animal->animal_type_id,
+            'from_pan_id' => $fromPanId,
+            'to_pan_id' => $toPanId,
+            'notes' => blank($notes) ? 'PAN transfer recorded.' : $notes,
+            'changed_at' => now(),
+        ]);
+    }
+
     private function transformAnimal($animal): array
     {
         return [
@@ -377,6 +681,8 @@ class AnimalController extends Controller
             'tag_number' => $animal->tag_number,
             'animal_type_id' => $animal->animal_type_id,
             'animal_type_name' => optional($animal->animalType)->name,
+            'pan_id' => $animal->pan_id,
+            'pan_name' => optional($animal->pan)->name,
             'mother_animal_id' => $animal->mother_animal_id,
             'mother_animal_name' => optional($animal->motherAnimal)->animal_name,
             'mother_tag_number' => optional($animal->motherAnimal)->tag_number,
