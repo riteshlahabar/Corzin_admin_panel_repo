@@ -219,7 +219,46 @@ function toggleSidebarLogo() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', toggleSidebarLogo);
+document.addEventListener('DOMContentLoaded', function () {
+    toggleSidebarLogo();
+
+    document.querySelectorAll(".navbar-nav a[data-bs-toggle='collapse']").forEach(function (trigger) {
+        const selector = trigger.getAttribute('href');
+        if (!selector || !selector.startsWith('#')) return;
+
+        const target = document.querySelector(selector);
+        if (!target) return;
+
+        trigger.addEventListener(
+            'click',
+            function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const isOpen = target.classList.contains('show');
+
+                document.querySelectorAll('.navbar-nav .collapse.show').forEach(function (openCollapse) {
+                    if (openCollapse === target) return;
+                    bootstrap.Collapse.getOrCreateInstance(openCollapse, { toggle: false }).hide();
+                    const openTrigger = document.querySelector(".navbar-nav a[data-bs-toggle='collapse'][href='#" + openCollapse.id + "']");
+                    if (openTrigger) {
+                        openTrigger.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                const instance = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+                if (isOpen) {
+                    instance.hide();
+                    trigger.setAttribute('aria-expanded', 'false');
+                } else {
+                    instance.show();
+                    trigger.setAttribute('aria-expanded', 'true');
+                }
+            },
+            true
+        );
+    });
+});
 document.addEventListener('click', function(e) {
     if (e.target.closest('#togglemenu')) {
         setTimeout(toggleSidebarLogo, 300);
