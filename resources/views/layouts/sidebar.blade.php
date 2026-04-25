@@ -222,7 +222,33 @@ function toggleSidebarLogo() {
 document.addEventListener('DOMContentLoaded', function () {
     toggleSidebarLogo();
 
-    document.querySelectorAll(".navbar-nav a[data-bs-toggle='collapse']").forEach(function (trigger) {
+    const triggers = Array.from(document.querySelectorAll(".navbar-nav a[data-bs-toggle='collapse']"));
+
+    function closeTrigger(trigger) {
+        const selector = trigger.getAttribute('href');
+        if (selector && selector.startsWith('#')) {
+            const target = document.querySelector(selector);
+            if (target) {
+                target.classList.remove('show');
+            }
+        }
+        trigger.classList.remove('active');
+        trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function openTrigger(trigger) {
+        const selector = trigger.getAttribute('href');
+        if (selector && selector.startsWith('#')) {
+            const target = document.querySelector(selector);
+            if (target) {
+                target.classList.add('show');
+            }
+        }
+        trigger.classList.add('active');
+        trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    triggers.forEach(function (trigger) {
         const selector = trigger.getAttribute('href');
         if (!selector || !selector.startsWith('#')) return;
 
@@ -235,24 +261,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 event.preventDefault();
                 event.stopPropagation();
 
-                const isOpen = target.classList.contains('show');
+                const willOpen = !target.classList.contains('show');
 
-                document.querySelectorAll('.navbar-nav .collapse.show').forEach(function (openCollapse) {
-                    if (openCollapse === target) return;
-                    bootstrap.Collapse.getOrCreateInstance(openCollapse, { toggle: false }).hide();
-                    const openTrigger = document.querySelector(".navbar-nav a[data-bs-toggle='collapse'][href='#" + openCollapse.id + "']");
-                    if (openTrigger) {
-                        openTrigger.setAttribute('aria-expanded', 'false');
-                    }
+                triggers.forEach(function (otherTrigger) {
+                    if (otherTrigger === trigger) return;
+                    closeTrigger(otherTrigger);
                 });
 
-                const instance = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
-                if (isOpen) {
-                    instance.hide();
-                    trigger.setAttribute('aria-expanded', 'false');
+                if (willOpen) {
+                    openTrigger(trigger);
                 } else {
-                    instance.show();
-                    trigger.setAttribute('aria-expanded', 'true');
+                    closeTrigger(trigger);
                 }
             },
             true
