@@ -259,8 +259,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const target = document.querySelector(selector);
         if (!target) return;
 
-        trigger.removeAttribute('data-bs-toggle');
-
         if (target.classList.contains('show')) {
             target.style.display = 'block';
         } else {
