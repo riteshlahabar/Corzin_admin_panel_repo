@@ -221,6 +221,39 @@ function toggleSidebarLogo() {
 
 document.addEventListener('DOMContentLoaded', function () {
     toggleSidebarLogo();
+
+    document.querySelectorAll(".navbar-nav a[data-bs-toggle='collapse']").forEach(function (trigger) {
+        const selector = trigger.getAttribute('href');
+        if (!selector || !selector.startsWith('#')) return;
+
+        const target = document.querySelector(selector);
+        if (!target) return;
+
+        trigger.addEventListener(
+            'click',
+            function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                const isOpen = target.classList.contains('show');
+                const instance = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+
+                if (isOpen) {
+                    instance.hide();
+                    return;
+                }
+
+                document.querySelectorAll('.navbar-nav .collapse.show').forEach(function (openCollapse) {
+                    if (openCollapse === target) return;
+                    bootstrap.Collapse.getOrCreateInstance(openCollapse, { toggle: false }).hide();
+                });
+
+                instance.show();
+            },
+            true
+        );
+    });
 });
 document.addEventListener('click', function(e) {
     if (e.target.closest('#togglemenu')) {
