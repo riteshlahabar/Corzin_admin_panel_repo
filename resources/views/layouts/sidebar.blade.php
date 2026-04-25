@@ -230,9 +230,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const target = document.querySelector(selector);
             if (target) {
                 target.classList.remove('show');
+                target.style.display = 'none';
             }
         }
         trigger.classList.remove('active');
+        trigger.parentElement?.classList.remove('active');
         trigger.setAttribute('aria-expanded', 'false');
     }
 
@@ -242,9 +244,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const target = document.querySelector(selector);
             if (target) {
                 target.classList.add('show');
+                target.style.display = 'block';
             }
         }
         trigger.classList.add('active');
+        trigger.parentElement?.classList.add('active');
         trigger.setAttribute('aria-expanded', 'true');
     }
 
@@ -255,11 +259,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const target = document.querySelector(selector);
         if (!target) return;
 
+        trigger.removeAttribute('data-bs-toggle');
+
+        if (target.classList.contains('show')) {
+            target.style.display = 'block';
+        } else {
+            target.style.display = 'none';
+        }
+
         trigger.addEventListener(
             'click',
             function (event) {
                 event.preventDefault();
                 event.stopPropagation();
+                event.stopImmediatePropagation();
 
                 const willOpen = !target.classList.contains('show');
 
