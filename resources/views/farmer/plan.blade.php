@@ -7,9 +7,8 @@
         <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
     @endif
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="mt-4 mb-3">
         <h4 class="mb-0 text-dark">Farmer Plan</h4>
-        <small class="text-muted">Create and manage subscription plans for farmers.</small>
     </div>
 
     <div class="row g-3">
@@ -145,4 +144,3 @@
     @endforeach
 </div>
 @endsection
-
