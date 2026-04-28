@@ -59,8 +59,8 @@ class DoctorAppController extends Controller
             'adhar_number' => ['required', 'string', 'max:50'],
             'pan_number' => ['required', 'string', 'max:50'],
             'mmc_registration_number' => ['required', 'string', 'max:100'],
-            'clinic_registration_number' => ['required', 'string', 'max:100'],
-            'clinic_address' => ['required', 'string'],
+            'clinic_registration_number' => ['nullable', 'string', 'max:100'],
+            'clinic_address' => ['nullable', 'string'],
             'village' => ['required', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
             'taluka' => ['required', 'string', 'max:255'],
@@ -73,7 +73,7 @@ class DoctorAppController extends Controller
             'adhar_document_back' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'pan_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'mmc_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'clinic_registration_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'clinic_registration_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'doctor_photo' => ['required', 'image', 'max:5120'],
         ]);
 
@@ -92,8 +92,8 @@ class DoctorAppController extends Controller
             'adhar_number' => $request->adhar_number,
             'pan_number' => $request->pan_number,
             'mmc_registration_number' => $request->mmc_registration_number,
-            'clinic_registration_number' => $request->clinic_registration_number,
-            'clinic_address' => $request->clinic_address,
+            'clinic_registration_number' => trim((string) $request->clinic_registration_number),
+            'clinic_address' => trim((string) $request->clinic_address),
             'village' => $request->village,
             'city' => $resolvedCity,
             'taluka' => $request->taluka,
@@ -123,8 +123,16 @@ class DoctorAppController extends Controller
             'adhar_document_back',
             $doctor->id
         );
-        foreach (['pan_document', 'mmc_document', 'clinic_registration_document', 'doctor_photo'] as $field) {
+        foreach (['pan_document', 'mmc_document', 'doctor_photo'] as $field) {
             $doctor->{$field} = $this->storeDocument($request->file($field), $field, $doctor->id);
+        }
+
+        if ($request->hasFile('clinic_registration_document')) {
+            $doctor->clinic_registration_document = $this->storeDocument(
+                $request->file('clinic_registration_document'),
+                'clinic_registration_document',
+                $doctor->id
+            );
         }
 
         $doctor->save();
