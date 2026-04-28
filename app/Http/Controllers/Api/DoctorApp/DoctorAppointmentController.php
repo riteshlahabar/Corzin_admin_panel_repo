@@ -955,9 +955,9 @@ class DoctorAppointmentController extends Controller
 
         return MilkProduction::query()
             ->where('animal_id', $appointment->animal_id)
-            ->whereDate('date', '>=', now()->subDays(5)->toDateString())
+            ->whereDate('date', '>=', now()->subDays(10)->toDateString())
             ->orderByDesc('date')
-            ->limit(5)
+            ->limit(10)
             ->get()
             ->map(fn (MilkProduction $row) => [
                 'date' => optional($row->date)->toDateString(),
@@ -981,7 +981,7 @@ class DoctorAppointmentController extends Controller
         return FeedingRecord::query()
             ->with('feedType')
             ->where('animal_id', $appointment->animal_id)
-            ->whereDate('date', '>=', now()->subDays(5)->toDateString())
+            ->whereDate('date', '>=', now()->subDays(10)->toDateString())
             ->orderByDesc('date')
             ->latest()
             ->limit(20)
