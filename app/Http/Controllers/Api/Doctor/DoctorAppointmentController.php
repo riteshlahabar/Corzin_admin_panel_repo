@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
 
 class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\DoctorAppointmentController
 {
+    protected const int MAX_ROUTING_RADIUS_KM = 30;
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -176,6 +178,8 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             $appointments->push($appointment);
         }
 
+        $this->sendImmediateNextWaveIfNoFirstWave($appointments, $debugTrace);
+
         /** @var DoctorAppointment $primaryAppointment */
         $primaryAppointment = $appointments->first();
         $broadcastCount = $appointments->count();
@@ -189,7 +193,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         return response()->json([
             'status' => true,
             'message' => $broadcastCount > 1
-                ? "Appointment created. First wave sent to 0-5 km doctors ({$broadcastCount} total queued up to 20 km)."
+                ? "Appointment created. First wave sent to 0-5 km doctors ({$broadcastCount} total queued up to 30 km)."
                 : 'Appointment request created successfully.',
             'data' => $this->appointmentPayload($primaryAppointment, true),
             'broadcast_count' => $broadcastCount,
@@ -240,7 +244,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ->whereNotNull('longitude')
                 ->select('doctors.*')
                 ->selectRaw("{$distanceExpression} as distance_km")
-                ->having('distance_km', '<=', 20)
+                ->having('distance_km', '<=', self::MAX_ROUTING_RADIUS_KM)
                 ->orderBy('distance_km')
                 ->limit(80)
                 ->get();
@@ -274,7 +278,9 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
         if ($distanceKm <= 5) return 0;
         if ($distanceKm <= 10) return 5;
         if ($distanceKm <= 15) return 10;
-        return 15;
+        if ($distanceKm <= 20) return 15;
+        if ($distanceKm <= 25) return 20;
+        return 25;
     }
 
     protected function distanceExpression(float $originLat, float $originLng): string
@@ -307,5 +313,67 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
             'latitude' => $latitude,
             'longitude' => $longitude,
         ];
+    }
+
+    protected function sendImmediateNextWaveIfNoFirstWave(Collection $appointments, ?string $debugTrace = null): void
+    {
+        if ($appointments->isEmpty()) {
+            return;
+        }
+
+        $hasFirstWave = $appointments->contains(function (DoctorAppointment $appointment) {
+            return (int) ($appointment->notify_radius_from_km ?? 0) === 0;
+        });
+
+        // If there are no 0-5km doctors at all, send to the nearest available next band immediately.
+        if ($hasFirstWave) {
+            return;
+        }
+
+        $nextRadiusTo = $appointments
+            ->filter(fn (DoctorAppointment $appointment) => (string) ($appointment->status ?? '') === 'pending')
+            ->filter(fn (DoctorAppointment $appointment) => $appointment->notified_at === null)
+            ->map(fn (DoctorAppointment $appointment) => (int) ($appointment->notify_radius_to_km ?? 0))
+            ->filter(fn (int $radiusTo) => $radiusTo > 0 && $radiusTo <= self::MAX_ROUTING_RADIUS_KM)
+            ->sort()
+            ->first();
+
+        if (! $nextRadiusTo) {
+            return;
+        }
+
+        $rows = $appointments
+            ->filter(fn (DoctorAppointment $appointment) => (string) ($appointment->status ?? '') === 'pending')
+            ->filter(fn (DoctorAppointment $appointment) => $appointment->notified_at === null)
+            ->filter(fn (DoctorAppointment $appointment) => (int) ($appointment->notify_radius_to_km ?? 0) === (int) $nextRadiusTo)
+            ->values();
+
+        foreach ($rows as $appointment) {
+            $appointment->refresh()->loadMissing(['doctor', 'farmer']);
+
+            $sent = $this->notifyDoctor(
+                $appointment,
+                'New Appointment Request',
+                trim(($appointment->farmer_name ?? 'Farmer').' requested a visit for '.($appointment->animal_name ?? 'animal')),
+                [
+                    'event' => 'appointment_created',
+                    'radius_from_km' => (string) ($appointment->notify_radius_from_km ?? max(0, $nextRadiusTo - 5)),
+                    'radius_to_km' => (string) ($appointment->notify_radius_to_km ?? $nextRadiusTo),
+                ]
+            );
+
+            Log::info('Appointment routing immediate next-wave notification result', [
+                'trace' => $debugTrace,
+                'appointment_id' => $appointment->id,
+                'doctor_id' => $appointment->doctor_id,
+                'radius_to_km' => (int) ($appointment->notify_radius_to_km ?? $nextRadiusTo),
+                'sent' => $sent,
+            ]);
+
+            if ($sent) {
+                $appointment->notified_at = now();
+                $appointment->save();
+            }
+        }
     }
 }

@@ -60,6 +60,7 @@ Schedule::call(function (): void {
 Schedule::call(function (): void {
     $now = now();
     $firebase = app(FirebaseService::class);
+    $maxRoutingRadiusKm = 30;
 
     $groupIds = DoctorAppointment::query()
         ->whereNotNull('appointment_group_id')
@@ -86,22 +87,67 @@ Schedule::call(function (): void {
             continue;
         }
 
-        $seed = $groupRows->first();
-        $requestedAt = $seed->requested_at ?: $seed->created_at;
-        if (! $requestedAt) {
+        $pendingRows = $groupRows
+            ->filter(fn (DoctorAppointment $row) => strtolower((string) $row->status) === 'pending')
+            ->filter(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0) > 0)
+            ->filter(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0) <= $maxRoutingRadiusKm)
+            ->values();
+
+        if ($pendingRows->isEmpty()) {
             continue;
         }
 
-        $elapsedMinutes = max(0, (int) floor($requestedAt->diffInSeconds($now) / 60));
-        $allowedMaxRadius = min(20, 5 + ($elapsedMinutes * 5));
-        if ($allowedMaxRadius <= 5) {
+        $notifiedPendingRows = $pendingRows
+            ->filter(fn (DoctorAppointment $row) => $row->notified_at !== null)
+            ->values();
+
+        $nextRadiusToNotify = null;
+        if ($notifiedPendingRows->isEmpty()) {
+            // No wave reached any doctor yet:
+            // notify the nearest available band immediately.
+            $nextRadiusToNotify = $pendingRows
+                ->filter(fn (DoctorAppointment $row) => $row->notified_at === null)
+                ->map(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0))
+                ->sort()
+                ->first();
+        } else {
+            $lastReachedRadius = (int) $notifiedPendingRows
+                ->map(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0))
+                ->max();
+
+            $lastReachedTimestamp = (int) $notifiedPendingRows
+                ->filter(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0) === $lastReachedRadius)
+                ->map(fn (DoctorAppointment $row) => optional($row->notified_at)->timestamp ?? 0)
+                ->max();
+
+            if ($lastReachedTimestamp <= 0) {
+                continue;
+            }
+
+            $readyAt = \Illuminate\Support\Carbon::createFromTimestamp($lastReachedTimestamp)->addMinute();
+            if ($now->lt($readyAt)) {
+                continue;
+            }
+
+            // Wait only after a wave has actually reached doctors.
+            // If intermediate bands are empty, jump to the next existing one.
+            $nextRadiusToNotify = $pendingRows
+                ->filter(fn (DoctorAppointment $row) => $row->notified_at === null)
+                ->map(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0))
+                ->filter(fn (int $radiusTo) => $radiusTo > $lastReachedRadius)
+                ->sort()
+                ->first();
+        }
+
+        if (! $nextRadiusToNotify) {
             continue;
         }
 
-        $toNotify = $groupRows
+        $toNotify = $pendingRows
             ->where('status', 'pending')
             ->whereNull('notified_at')
-            ->filter(function (DoctorAppointment $row) use ($allowedMaxRadius) {
+            ->filter(fn (DoctorAppointment $row) => (int) ($row->notify_radius_to_km ?? 0) === (int) $nextRadiusToNotify)
+            ->filter(function (DoctorAppointment $row) {
                 $doctor = $row->doctor;
                 if (! $doctor || (string) ($doctor->status ?? '') !== 'approved') {
                     return false;
@@ -109,8 +155,11 @@ Schedule::call(function (): void {
                 if (! (bool) ($doctor->is_active_for_appointments ?? false)) {
                     return false;
                 }
+                if (blank($doctor->fcm_token ?? null)) {
+                    return false;
+                }
 
-                return (int) ($row->notify_radius_to_km ?? 0) <= $allowedMaxRadius;
+                return true;
             })
             ->values();
 
@@ -127,7 +176,7 @@ Schedule::call(function (): void {
                     'doctor_id' => (string) ($row->doctor_id ?? ''),
                     'status' => (string) ($row->status ?? ''),
                     'radius_from_km' => (string) ($row->notify_radius_from_km ?? 0),
-                    'radius_to_km' => (string) ($row->notify_radius_to_km ?? 0),
+                    'radius_to_km' => (string) ($row->notify_radius_to_km ?? $nextRadiusToNotify),
                 ]
             );
 

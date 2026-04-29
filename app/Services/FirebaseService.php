@@ -67,7 +67,8 @@ class FirebaseService
         $message = CloudMessage::new()
             ->withToken((string) $token)
             ->withNotification(Notification::create($title, $body))
-            ->withData($normalizedData);
+            ->withData($normalizedData)
+            ->withHighestPossiblePriority();
 
         try {
             $this->messaging->send($message);
