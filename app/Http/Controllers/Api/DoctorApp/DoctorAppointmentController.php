@@ -16,6 +16,7 @@ use App\Models\Reproductive\ReproductiveRecord;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class DoctorAppointmentController extends Controller
@@ -314,6 +315,8 @@ class DoctorAppointmentController extends Controller
             $sendOtp = true;
         }
 
+        $otherRowsToNotify = collect();
+
         if ($action === 'rescheduled') {
             if (empty($data['scheduled_at']) || ! isset($data['charges'])) {
                 return response()->json([
@@ -328,57 +331,101 @@ class DoctorAppointmentController extends Controller
                 'charges' => $data['charges'],
             ]);
         } elseif ($action === 'approved') {
-            $groupId = $appointment->appointment_group_id;
-            if (! blank($groupId)) {
-                $alreadyAccepted = DoctorAppointment::query()
-                    ->where('appointment_group_id', $groupId)
-                    ->where('id', '!=', $appointment->id)
-                    ->whereIn('status', ['approved', 'in_progress', 'completed'])
-                    ->exists();
+            $decision = DB::transaction(function () use ($appointment, $sendOtp) {
+                $lockedAppointment = DoctorAppointment::query()
+                    ->whereKey($appointment->id)
+                    ->lockForUpdate()
+                    ->first();
 
-                if ($alreadyAccepted) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'This appointment is already accepted by another doctor.',
-                    ], 409);
+                if (! $lockedAppointment) {
+                    return [
+                        'conflict' => true,
+                        'message' => 'Appointment not found.',
+                        'appointment' => null,
+                        'other_rows' => collect(),
+                    ];
                 }
-            }
 
-            $updateData = [
-                'status' => 'approved',
-                'farmer_approved_at' => now(),
-            ];
-            if ($sendOtp) {
-                $updateData['otp_code'] = (string) random_int(100000, 999999);
-                $updateData['otp_verified_at'] = null;
-            }
-            $appointment->update($updateData);
+                $groupId = $lockedAppointment->appointment_group_id;
+                $otherRows = collect();
 
-            // If one doctor accepts from a broadcast group, close the same request
-            // for all other doctors so it disappears from their appointment screen.
-            if (! blank($groupId)) {
-                $otherRows = DoctorAppointment::query()
-                    ->where('appointment_group_id', $groupId)
-                    ->where('id', '!=', $appointment->id)
-                    ->whereNotIn('status', ['cancelled', 'declined', 'rejected', 'completed'])
-                    ->get();
+                if (! blank($groupId)) {
+                    $groupRows = DoctorAppointment::query()
+                        ->where('appointment_group_id', $groupId)
+                        ->lockForUpdate()
+                        ->get();
+
+                    $alreadyAcceptedByAnother = $groupRows
+                        ->where('id', '!=', $lockedAppointment->id)
+                        ->contains(function (DoctorAppointment $row) {
+                            return in_array(
+                                strtolower((string) ($row->status ?? '')),
+                                ['approved', 'in_progress', 'completed'],
+                                true
+                            );
+                        });
+
+                    if ($alreadyAcceptedByAnother) {
+                        return [
+                            'conflict' => true,
+                            'message' => 'This appointment is already accepted by another doctor.',
+                            'appointment' => null,
+                            'other_rows' => collect(),
+                        ];
+                    }
+
+                    // If one doctor accepts from a broadcast group, close the same request
+                    // for all other doctors so it disappears from their appointment screen.
+                    $otherRows = $groupRows
+                        ->where('id', '!=', $lockedAppointment->id)
+                        ->filter(function (DoctorAppointment $row) {
+                            return ! in_array(
+                                strtolower((string) ($row->status ?? '')),
+                                ['cancelled', 'declined', 'rejected', 'completed'],
+                                true
+                            );
+                        })
+                        ->values();
+                }
+
+                $updateData = [
+                    'status' => 'approved',
+                    'farmer_approved_at' => now(),
+                ];
+                if ($sendOtp) {
+                    $updateData['otp_code'] = (string) random_int(100000, 999999);
+                    $updateData['otp_verified_at'] = null;
+                }
+                $lockedAppointment->update($updateData);
 
                 if ($otherRows->isNotEmpty()) {
                     DoctorAppointment::query()
                         ->whereIn('id', $otherRows->pluck('id'))
                         ->update(['status' => 'cancelled']);
-
-                    foreach ($otherRows as $other) {
-                        $other->refresh()->loadMissing(['doctor', 'farmer']);
-                        $this->notifyDoctor(
-                            $other,
-                            'Appointment Closed',
-                            'This appointment was accepted by another nearby doctor.',
-                            ['event' => 'appointment_taken_by_other_doctor']
-                        );
-                    }
                 }
+
+                return [
+                    'conflict' => false,
+                    'message' => null,
+                    'appointment' => $lockedAppointment->fresh(),
+                    'other_rows' => $otherRows,
+                ];
+            });
+
+            if (($decision['conflict'] ?? false) === true) {
+                return response()->json([
+                    'status' => false,
+                    'message' => (string) ($decision['message'] ?? 'This appointment is already accepted by another doctor.'),
+                ], 409);
             }
+
+            /** @var DoctorAppointment|null $acceptedAppointment */
+            $acceptedAppointment = $decision['appointment'] ?? null;
+            if ($acceptedAppointment instanceof DoctorAppointment) {
+                $appointment = $acceptedAppointment;
+            }
+
+            $otherRowsToNotify = $decision['other_rows'] ?? collect();
         } else {
             $appointment->update([
                 'status' => 'declined',
@@ -417,6 +464,22 @@ class DoctorAppointmentController extends Controller
                 ['event' => 'appointment_declined']
             );
         }
+
+        if ($action === 'approved' && $otherRowsToNotify->isNotEmpty()) {
+            foreach ($otherRowsToNotify as $other) {
+                if (! ($other instanceof DoctorAppointment)) {
+                    continue;
+                }
+                $other->refresh()->loadMissing(['doctor', 'farmer']);
+                $this->notifyDoctor(
+                    $other,
+                    'Appointment Closed',
+                    'This appointment was accepted by another nearby doctor.',
+                    ['event' => 'appointment_taken_by_other_doctor']
+                );
+            }
+        }
+
         $this->notifyWebAdmin(
             $appointment,
             'appointment_doctor_decision_'.$action,
