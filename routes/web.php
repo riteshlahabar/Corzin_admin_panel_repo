@@ -126,4 +126,5 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::post('/diseases/{disease}/toggle', [DiseaseController::class, 'toggle'])->name('diseases.toggle');
     Route::get('/templates', [NotificationTemplateController::class, 'index'])->name('templates.index');
     Route::put('/templates/{template}', [NotificationTemplateController::class, 'update'])->name('templates.update');
+    Route::post('/templates/{template}/toggle', [NotificationTemplateController::class, 'toggle'])->name('templates.toggle');
 });

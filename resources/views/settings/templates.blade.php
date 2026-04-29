@@ -38,9 +38,17 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTemplate{{ $template->id }}">
-                                        Edit
-                                    </button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <form method="POST" action="{{ route('settings.templates.toggle', $template) }}" class="m-0">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm {{ $template->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}">
+                                                {{ $template->is_active ? 'Disable' : 'Enable' }}
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTemplate{{ $template->id }}">
+                                            Edit
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 

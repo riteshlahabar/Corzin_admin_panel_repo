@@ -39,6 +39,18 @@ class NotificationTemplateController extends Controller
         return back()->with('success', 'Notification template updated successfully.');
     }
 
+    public function toggle(NotificationTemplate $template)
+    {
+        $template->update([
+            'is_active' => ! (bool) $template->is_active,
+        ]);
+
+        return back()->with(
+            'success',
+            'Notification template '.($template->is_active ? 'enabled' : 'disabled').' successfully.'
+        );
+    }
+
     protected function ensureDefaultTemplates(): void
     {
         $defaults = [
@@ -55,10 +67,28 @@ class NotificationTemplateController extends Controller
                 'body_template' => 'Doctor accepted your appointment for {{animal_name}}.',
             ],
             [
+                'template_key' => 'appointment_accepted',
+                'template_name' => 'Appointment Accepted',
+                'title_template' => 'Appointment Accepted',
+                'body_template' => 'Doctor accepted your appointment for {{animal_name}}.',
+            ],
+            [
                 'template_key' => 'appointment_declined',
                 'template_name' => 'Appointment Declined',
                 'title_template' => 'Appointment Declined',
                 'body_template' => 'Doctor declined your appointment request.',
+            ],
+            [
+                'template_key' => 'appointment_proposed',
+                'template_name' => 'Appointment Proposed',
+                'title_template' => 'Appointment Proposed',
+                'body_template' => 'Doctor proposed a slot for your appointment.',
+            ],
+            [
+                'template_key' => 'appointment_rescheduled',
+                'template_name' => 'Appointment Rescheduled',
+                'title_template' => 'Appointment Rescheduled',
+                'body_template' => 'Your appointment has been rescheduled.',
             ],
             [
                 'template_key' => 'appointment_otp_sent',
@@ -71,6 +101,12 @@ class NotificationTemplateController extends Controller
                 'template_name' => 'Visit OTP Generated',
                 'title_template' => 'Visit OTP Generated',
                 'body_template' => 'Share OTP {{otp}} with doctor at visit time.',
+            ],
+            [
+                'template_key' => 'appointment_visit_otp_sent',
+                'template_name' => 'Visit OTP Sent',
+                'title_template' => 'Visit OTP Generated',
+                'body_template' => 'Doctor sent visit OTP. Share OTP {{otp}} at visit time.',
             ],
             [
                 'template_key' => 'appointment_otp_verified',
@@ -115,6 +151,12 @@ class NotificationTemplateController extends Controller
                 'body_template' => 'Farmer cancelled appointment {{appointment_id}}.',
             ],
             [
+                'template_key' => 'appointment_taken_by_other_doctor',
+                'template_name' => 'Appointment Taken By Another Doctor',
+                'title_template' => 'Appointment No Longer Available',
+                'body_template' => 'This appointment was accepted by another doctor.',
+            ],
+            [
                 'template_key' => 'shop_order_created',
                 'template_name' => 'Shop Order Created',
                 'title_template' => 'New Shop Order',
@@ -151,12 +193,5 @@ class NotificationTemplateController extends Controller
                 ]
             );
         }
-
-        NotificationTemplate::query()
-            ->whereIn('template_key', [
-                'appointment_proposed',
-                'appointment_rescheduled',
-            ])
-            ->delete();
     }
 }
