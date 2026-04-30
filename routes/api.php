@@ -60,6 +60,8 @@ Route::prefix('feeding')->group(function () {
     Route::post('/', [FeedingController::class, 'store']);
     Route::post('/update/{feeding_id}', [FeedingController::class, 'update']);
     Route::get('/types', [FeedingController::class, 'types']);
+    Route::post('/types', [FeedingController::class, 'createType']);
+    Route::post('/types/{feedTypeId}/update', [FeedingController::class, 'updateType']);
     Route::get('/list/{farmer_id}', [FeedingController::class, 'list']);
     Route::get('/summary/{farmer_id}', [FeedingController::class, 'summary']);
 });
