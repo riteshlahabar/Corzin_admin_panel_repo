@@ -127,7 +127,7 @@ class DairyController extends Controller
             'farmer_id' => 'required|exists:farmers,id',
             'dairy_id' => 'required|exists:dairies,id',
             'payment_date' => 'nullable|date',
-            'total_amount' => 'required|numeric|min:0',
+            'total_amount' => 'nullable|numeric|min:0',
             'paid_amount' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
@@ -206,7 +206,9 @@ class DairyController extends Controller
             /** @var DairyPaymentEntry|null $manualEntry */
             $manualEntry = $manualByDate->get($date);
             $milkDayTotal = (float) ($milkByDay->get($date) ?? 0);
-            $dayTotalAmount = $manualEntry ? (float) ($manualEntry->total_amount ?? 0) : $milkDayTotal;
+            // Daily amount is always derived from milk production.
+            // Payment entries only affect paid amount / notes for that date.
+            $dayTotalAmount = $milkDayTotal;
             $paidAmount = (float) ($manualEntry->paid_amount ?? 0);
             $previousBalance = $runningBalance;
             $totalAmount = $previousBalance + $dayTotalAmount;
