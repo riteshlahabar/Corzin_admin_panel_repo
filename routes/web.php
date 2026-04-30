@@ -23,6 +23,7 @@ use App\Http\Controllers\Shop\ShopProductController;
 use App\Http\Controllers\Shop\AnimalBuySellController;
 use App\Http\Controllers\Reproductive\ReproductiveListController;
 use App\Http\Controllers\Setting\DiseaseController;
+use App\Http\Controllers\Setting\FeedTypeController;
 use App\Http\Controllers\Setting\NotificationTemplateController;
 use App\Http\Controllers\AdminNotificationController;
 
@@ -124,6 +125,10 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::post('/diseases', [DiseaseController::class, 'store'])->name('diseases.store');
     Route::put('/diseases/{disease}', [DiseaseController::class, 'update'])->name('diseases.update');
     Route::post('/diseases/{disease}/toggle', [DiseaseController::class, 'toggle'])->name('diseases.toggle');
+    Route::get('/feed-types', [FeedTypeController::class, 'index'])->name('feed-types.index');
+    Route::post('/feed-types', [FeedTypeController::class, 'store'])->name('feed-types.store');
+    Route::put('/feed-types/{feedType}', [FeedTypeController::class, 'update'])->name('feed-types.update');
+    Route::post('/feed-types/{feedType}/toggle', [FeedTypeController::class, 'toggle'])->name('feed-types.toggle');
     Route::get('/templates', [NotificationTemplateController::class, 'index'])->name('templates.index');
     Route::put('/templates/{template}', [NotificationTemplateController::class, 'update'])->name('templates.update');
     Route::post('/templates/{template}/toggle', [NotificationTemplateController::class, 'toggle'])->name('templates.toggle');

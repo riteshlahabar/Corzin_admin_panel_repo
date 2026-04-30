@@ -195,6 +195,13 @@
                     </a>
                 </li>
                 @endif
+                @if (Route::has('settings.feed-types.index'))
+                <li class="menu-item">
+                    <a href="{{ route('settings.feed-types.index') }}" class="nav-link {{ request()->routeIs('settings.feed-types.*') ? 'active' : '' }}">
+                        <i class="iconoir-leaf me-2"></i> Add Feed Type
+                    </a>
+                </li>
+                @endif
                 @if (Route::has('settings.templates.index'))
                 <li class="menu-item">
                     <a href="{{ route('settings.templates.index') }}" class="nav-link {{ request()->routeIs('settings.templates.*') ? 'active' : '' }}">
