@@ -23,18 +23,10 @@
                             <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
                             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-6">
+                        <div class="col-12">
                             <label class="form-label">Default Unit</label>
-                            <select name="default_unit" class="form-select @error('default_unit') is-invalid @enderror" required>
-                                <option value="Kg" {{ old('default_unit', 'Kg') === 'Kg' ? 'selected' : '' }}>Kg</option>
-                                <option value="Gram" {{ old('default_unit') === 'Gram' ? 'selected' : '' }}>Gram</option>
-                            </select>
+                            <input type="text" name="default_unit" class="form-control @error('default_unit') is-invalid @enderror" value="{{ old('default_unit', 'Kg') }}" placeholder="Ex: Kg, Gram, Bundle" required>
                             @error('default_unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Package Quantity</label>
-                            <input type="number" step="0.01" min="0.01" name="package_quantity" class="form-control @error('package_quantity') is-invalid @enderror" value="{{ old('package_quantity') }}" required>
-                            @error('package_quantity')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
                             <label class="form-label">Subtypes (comma or new line)</label>
@@ -74,7 +66,6 @@
                                     <th>#</th>
                                     <th>Feed Type</th>
                                     <th>Unit</th>
-                                    <th>Package</th>
                                     <th>Subtypes</th>
                                     <th>Status</th>
                                     <th>Action</th>
@@ -86,7 +77,6 @@
                                         <td>{{ $feedTypes->firstItem() + $loop->index }}</td>
                                         <td class="fw-semibold">{{ $feedType->name }}</td>
                                         <td>{{ $feedType->default_unit }}</td>
-                                        <td>{{ number_format((float) $feedType->package_quantity, 2) }}</td>
                                         <td>
                                             @if($feedType->subtypes->isEmpty())
                                                 <span class="text-muted">-</span>
@@ -130,18 +120,9 @@
                                                                     <label class="form-label">Feed Type Name</label>
                                                                     <input type="text" name="name" class="form-control" value="{{ $feedType->name }}" required>
                                                                 </div>
-                                                                <div class="row g-2 mb-2">
-                                                                    <div class="col-6">
-                                                                        <label class="form-label">Default Unit</label>
-                                                                        <select name="default_unit" class="form-select" required>
-                                                                            <option value="Kg" {{ $feedType->default_unit === 'Kg' ? 'selected' : '' }}>Kg</option>
-                                                                            <option value="Gram" {{ $feedType->default_unit === 'Gram' ? 'selected' : '' }}>Gram</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="col-6">
-                                                                        <label class="form-label">Package Quantity</label>
-                                                                        <input type="number" step="0.01" min="0.01" name="package_quantity" class="form-control" value="{{ number_format((float) $feedType->package_quantity, 2, '.', '') }}" required>
-                                                                    </div>
+                                                                <div class="mb-2">
+                                                                    <label class="form-label">Default Unit</label>
+                                                                    <input type="text" name="default_unit" class="form-control" value="{{ $feedType->default_unit }}" placeholder="Ex: Kg, Gram, Bundle" required>
                                                                 </div>
                                                                 <div class="mb-2">
                                                                     <label class="form-label">Subtypes (comma or new line)</label>
@@ -164,7 +145,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">No feed type added yet.</td>
+                                        <td colspan="6" class="text-center text-muted py-4">No feed type added yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -179,4 +160,3 @@
     </div>
 </div>
 @endsection
-

@@ -27,7 +27,7 @@ class FeedingController extends Controller
             'feed_subtype_details.*.subtype_id' => 'nullable|integer',
             'feed_subtype_details.*.name' => 'required_with:feed_subtype_details|string|max:255',
             'feed_subtype_details.*.quantity' => 'required_with:feed_subtype_details|numeric|min:0',
-            'unit' => 'required|in:Kg,Gram',
+            'unit' => 'required|string|max:30',
             'feeding_time' => 'nullable|in:Morning,Afternoon,Evening',
             'date' => 'required|date',
             'notes' => 'nullable|string',
@@ -57,9 +57,7 @@ class FeedingController extends Controller
                 ? (float) $request->input('quantity')
                 : (float) $calculatedSubtypeTotal);
 
-        $packageQuantity = $request->filled('package_quantity')
-            ? (float) $request->input('package_quantity')
-            : (float) ($feedType->package_quantity ?? 0);
+        $packageQuantity = (float) $calculatedSubtypeTotal;
 
         $balanceQuantity = $request->filled('balance_quantity')
             ? (float) $request->input('balance_quantity')
@@ -125,8 +123,7 @@ class FeedingController extends Controller
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
             'name' => 'required|string|max:255',
-            'default_unit' => 'nullable|in:Kg,Gram',
-            'package_quantity' => 'required|numeric|min:0.01',
+            'default_unit' => 'required|string|max:30',
             'subtypes' => 'required|array|min:1',
             'subtypes.*.name' => 'required|string|max:255',
         ]);
@@ -168,8 +165,8 @@ class FeedingController extends Controller
             $type = FeedType::create([
                 'farmer_id' => $farmerId,
                 'name' => $name,
-                'default_unit' => $request->input('default_unit', 'Kg'),
-                'package_quantity' => $request->input('package_quantity'),
+                'default_unit' => trim((string) $request->input('default_unit', 'Kg')),
+                'package_quantity' => 0,
                 'is_active' => true,
             ]);
 
@@ -210,8 +207,7 @@ class FeedingController extends Controller
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
             'name' => 'required|string|max:255',
-            'default_unit' => 'nullable|in:Kg,Gram',
-            'package_quantity' => 'required|numeric|min:0.01',
+            'default_unit' => 'required|string|max:30',
             'subtypes' => 'required|array|min:1',
             'subtypes.*.name' => 'required|string|max:255',
         ]);
@@ -267,8 +263,8 @@ class FeedingController extends Controller
         $type = DB::transaction(function () use ($request, $type, $name, $subtypes) {
             $type->update([
                 'name' => $name,
-                'default_unit' => $request->input('default_unit', 'Kg'),
-                'package_quantity' => $request->input('package_quantity'),
+                'default_unit' => trim((string) $request->input('default_unit', 'Kg')),
+                'package_quantity' => 0,
             ]);
 
             FeedSubtype::where('feed_type_id', $type->id)->delete();
@@ -332,7 +328,7 @@ class FeedingController extends Controller
             'feed_subtype_details.*.subtype_id' => 'nullable|integer',
             'feed_subtype_details.*.name' => 'required_with:feed_subtype_details|string|max:255',
             'feed_subtype_details.*.quantity' => 'required_with:feed_subtype_details|numeric|min:0',
-            'unit' => 'required|in:Kg,Gram',
+            'unit' => 'required|string|max:30',
             'feeding_time' => 'nullable|in:Morning,Afternoon,Evening',
             'date' => 'required|date',
             'notes' => 'nullable|string',

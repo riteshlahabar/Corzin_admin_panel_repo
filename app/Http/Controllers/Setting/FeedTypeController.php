@@ -31,8 +31,7 @@ class FeedTypeController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'default_unit' => ['required', 'in:Kg,Gram'],
-            'package_quantity' => ['required', 'numeric', 'min:0.01'],
+            'default_unit' => ['required', 'string', 'max:30'],
             'subtypes_text' => ['required', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -55,8 +54,8 @@ class FeedTypeController extends Controller
             $type = FeedType::create([
                 'farmer_id' => null,
                 'name' => $name,
-                'default_unit' => $data['default_unit'],
-                'package_quantity' => (float) $data['package_quantity'],
+                'default_unit' => trim((string) $data['default_unit']),
+                'package_quantity' => 0,
                 'is_active' => (bool) ($data['is_active'] ?? true),
             ]);
 
@@ -81,8 +80,7 @@ class FeedTypeController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'default_unit' => ['required', 'in:Kg,Gram'],
-            'package_quantity' => ['required', 'numeric', 'min:0.01'],
+            'default_unit' => ['required', 'string', 'max:30'],
             'subtypes_text' => ['required', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -105,8 +103,8 @@ class FeedTypeController extends Controller
         DB::transaction(function () use ($feedType, $data, $name, $subtypes) {
             $feedType->update([
                 'name' => $name,
-                'default_unit' => $data['default_unit'],
-                'package_quantity' => (float) $data['package_quantity'],
+                'default_unit' => trim((string) $data['default_unit']),
+                'package_quantity' => 0,
                 'is_active' => (bool) ($data['is_active'] ?? false),
             ]);
 
@@ -153,4 +151,3 @@ class FeedTypeController extends Controller
         return array_values($clean);
     }
 }
-

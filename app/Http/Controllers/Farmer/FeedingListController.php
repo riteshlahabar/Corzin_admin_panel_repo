@@ -34,7 +34,7 @@ class FeedingListController extends Controller
             'animal_id' => 'required|exists:animals,id',
             'feed_type_id' => 'required|exists:feed_types,id',
             'quantity' => 'required|numeric|min:0.01',
-            'unit' => 'required|in:Kg,Gram',
+            'unit' => 'required|string|max:30',
             'feeding_time' => 'required|in:Morning,Afternoon,Evening',
             'date' => 'required|date',
             'notes' => 'nullable|string',
