@@ -30,4 +30,9 @@ class Dairy extends Model
     {
         return $this->belongsTo(Farmer::class);
     }
+
+    public function paymentEntries()
+    {
+        return $this->hasMany(DairyPaymentEntry::class);
+    }
 }

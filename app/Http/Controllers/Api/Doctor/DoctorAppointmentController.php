@@ -192,9 +192,7 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
 
         return response()->json([
             'status' => true,
-            'message' => $broadcastCount > 1
-                ? "Appointment created. First wave sent to 0-5 km doctors ({$broadcastCount} total queued up to 30 km)."
-                : 'Appointment request created successfully.',
+            'message' => 'Appointment request created successfully.',
             'data' => $this->appointmentPayload($primaryAppointment, true),
             'broadcast_count' => $broadcastCount,
             'appointment_ids' => $appointments->pluck('id')->values(),

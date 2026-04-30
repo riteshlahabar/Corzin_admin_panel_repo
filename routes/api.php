@@ -69,6 +69,7 @@ Route::prefix('feeding')->group(function () {
 Route::prefix('dairy')->group(function () {
     Route::post('/', [DairyController::class, 'store']);
     Route::get('/list/{farmer_id}', [DairyController::class, 'index']);
+    Route::post('/payments/entry', [DairyController::class, 'storePaymentEntry']);
     Route::get('/payments/{farmer_id}', [DairyController::class, 'payments']);
 });
 
