@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\DoctorApp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
+use App\Models\Doctor\DoctorAppointment;
 use App\Services\FirebaseService;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
@@ -276,6 +279,134 @@ class DoctorAppController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Password reset successful. Please sign in with your new password.',
+        ]);
+    }
+
+    public function reports(Request $request, Doctor $doctor)
+    {
+        $data = $request->validate([
+            'tab' => ['nullable', Rule::in(['earnings', 'clients'])],
+            'date' => ['nullable', 'date'],
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $tab = strtolower((string) ($data['tab'] ?? 'earnings'));
+        $search = trim((string) ($data['search'] ?? ''));
+        $selectedDate = ! empty($data['date'])
+            ? Carbon::parse((string) $data['date'])
+            : now();
+        $start = $selectedDate->copy()->startOfDay();
+        $end = $selectedDate->copy()->endOfDay();
+
+        $dateExpr = DB::raw('COALESCE(requested_at, created_at)');
+        $completedDateExpr = DB::raw('COALESCE(completed_at, requested_at, created_at)');
+
+        $summaryTotalRequest = DoctorAppointment::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereBetween($dateExpr, [$start, $end])
+            ->count();
+
+        $summaryTotalEarning = (float) DoctorAppointment::query()
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->whereBetween($completedDateExpr, [$start, $end])
+            ->sum(DB::raw('COALESCE(charges, 0)'));
+
+        $summaryMedicationCost = (float) DoctorAppointment::query()
+            ->where('doctor_id', $doctor->id)
+            ->where('status', 'completed')
+            ->whereBetween($completedDateExpr, [$start, $end])
+            ->sum(DB::raw('COALESCE(on_site_medicine_charges, 0)'));
+
+        if ($tab === 'clients') {
+            $clientsQuery = DoctorAppointment::query()
+                ->where('doctor_id', $doctor->id)
+                ->whereBetween($dateExpr, [$start, $end]);
+
+            if ($search !== '') {
+                $clientsQuery->where(function ($query) use ($search) {
+                    $query->where('farmer_name', 'like', "%{$search}%")
+                        ->orWhere('farmer_phone', 'like', "%{$search}%")
+                        ->orWhere('animal_name', 'like', "%{$search}%")
+                        ->orWhere('concern', 'like', "%{$search}%");
+                });
+            }
+
+            $items = $clientsQuery
+                ->selectRaw('COALESCE(NULLIF(farmer_name, ""), "Farmer") as farmer_name')
+                ->selectRaw('COALESCE(NULLIF(farmer_phone, ""), "-") as farmer_phone')
+                ->selectRaw('COUNT(*) as total_requests')
+                ->selectRaw('COALESCE(SUM(COALESCE(charges, 0)), 0) as total_earning')
+                ->selectRaw('COALESCE(SUM(COALESCE(on_site_medicine_charges, 0)), 0) as medication_cost')
+                ->selectRaw('MAX(COALESCE(completed_at, requested_at, created_at)) as last_activity_at')
+                ->groupBy('farmer_name', 'farmer_phone')
+                ->orderByDesc('last_activity_at')
+                ->limit(500)
+                ->get()
+                ->map(function ($row) {
+                    return [
+                        'farmer_name' => (string) ($row->farmer_name ?? 'Farmer'),
+                        'farmer_phone' => (string) ($row->farmer_phone ?? '-'),
+                        'total_requests' => (int) ($row->total_requests ?? 0),
+                        'total_earning' => (float) ($row->total_earning ?? 0),
+                        'medication_cost' => (float) ($row->medication_cost ?? 0),
+                        'last_activity_at' => ! empty($row->last_activity_at)
+                            ? Carbon::parse((string) $row->last_activity_at)->toIso8601String()
+                            : null,
+                    ];
+                })
+                ->values();
+        } else {
+            $earningsQuery = DoctorAppointment::query()
+                ->where('doctor_id', $doctor->id)
+                ->where('status', 'completed')
+                ->whereBetween($completedDateExpr, [$start, $end]);
+
+            if ($search !== '') {
+                $earningsQuery->where(function ($query) use ($search) {
+                    $query->where('farmer_name', 'like', "%{$search}%")
+                        ->orWhere('farmer_phone', 'like', "%{$search}%")
+                        ->orWhere('animal_name', 'like', "%{$search}%")
+                        ->orWhere('concern', 'like', "%{$search}%");
+                });
+            }
+
+            $items = $earningsQuery
+                ->latest('completed_at')
+                ->latest()
+                ->limit(500)
+                ->get()
+                ->map(function (DoctorAppointment $row) {
+                    return [
+                        'appointment_id' => $row->id,
+                        'appointment_code' => $row->appointment_code,
+                        'farmer_name' => (string) ($row->farmer_name ?? ''),
+                        'farmer_phone' => (string) ($row->farmer_phone ?? ''),
+                        'animal_name' => (string) ($row->animal_name ?? ''),
+                        'concern' => (string) ($row->concern ?? ''),
+                        'status' => (string) ($row->status ?? ''),
+                        'total_earning' => (float) ($row->charges ?? 0),
+                        'medication_cost' => (float) ($row->on_site_medicine_charges ?? 0),
+                        'completed_at' => optional($row->completed_at ?? $row->requested_at ?? $row->created_at)
+                            ->toIso8601String(),
+                    ];
+                })
+                ->values();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Doctor report fetched successfully.',
+            'data' => [
+                'tab' => $tab,
+                'date' => $selectedDate->toDateString(),
+                'summary' => [
+                    'total_request' => (int) $summaryTotalRequest,
+                    'total_earning' => round($summaryTotalEarning, 2),
+                    'medication_cost' => round($summaryMedicationCost, 2),
+                ],
+                'items' => $items,
+            ],
         ]);
     }
 

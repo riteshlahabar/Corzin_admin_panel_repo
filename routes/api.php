@@ -96,6 +96,7 @@ Route::prefix('doctor')->group(function () {
     Route::post('/forgot-password', [DoctorAppController::class, 'forgotPassword']);
     Route::post('/forgot-password/lookup', [DoctorAppController::class, 'forgotPasswordLookup']);
     Route::post('/forgot-password/reset', [DoctorAppController::class, 'resetForgotPasswordWithFirebase']);
+    Route::get('/reports/{doctor}', [DoctorAppController::class, 'reports']);
     Route::get('/profile/{doctor}', [DoctorAppController::class, 'profile']);
     Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
     Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
@@ -134,6 +135,7 @@ Route::prefix('doctor-app')->group(function () {
     Route::post('/forgot-password', [DoctorAppController::class, 'forgotPassword']);
     Route::post('/forgot-password/lookup', [DoctorAppController::class, 'forgotPasswordLookup']);
     Route::post('/forgot-password/reset', [DoctorAppController::class, 'resetForgotPasswordWithFirebase']);
+    Route::get('/reports/{doctor}', [DoctorAppController::class, 'reports']);
     Route::get('/profile/{doctor}', [DoctorAppController::class, 'profile']);
     Route::post('/profile/{doctor}/update', [DoctorAppController::class, 'updateProfile']);
     Route::post('/fcm-token/{doctor}', [DoctorAppController::class, 'updateFcmToken']);
