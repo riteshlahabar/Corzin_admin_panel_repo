@@ -4,6 +4,7 @@ namespace App\Models\Doctor;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class Doctor extends Model
 {
@@ -15,6 +16,10 @@ class Doctor extends Model
         'contact_number',
         'whatsapp_number',
         'email',
+        'referral_code',
+        'referred_by_doctor_id',
+        'referral_points',
+        'referral_reward_granted_at',
         'adhar_number',
         'pan_number',
         'mmc_registration_number',
@@ -51,6 +56,7 @@ class Doctor extends Model
         'is_active_for_appointments' => 'boolean',
         'approved_at' => 'datetime',
         'last_live_location_at' => 'datetime',
+        'referral_reward_granted_at' => 'datetime',
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
     ];
@@ -58,6 +64,17 @@ class Doctor extends Model
     protected $hidden = [
         'password',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Doctor $doctor): void {
+            if (blank($doctor->referral_code)) {
+                $doctor->referral_code = self::generateUniqueReferralCode();
+            } else {
+                $doctor->referral_code = strtoupper(trim((string) $doctor->referral_code));
+            }
+        });
+    }
 
     public function setPasswordAttribute($value): void
     {
@@ -100,9 +117,29 @@ class Doctor extends Model
         return $this->hasMany(DoctorAppointment::class);
     }
 
+    public function referredBy()
+    {
+        return $this->belongsTo(self::class, 'referred_by_doctor_id');
+    }
+
+    public function referredDoctors()
+    {
+        return $this->hasMany(self::class, 'referred_by_doctor_id');
+    }
+
     public function subscription()
     {
         return $this->hasOne(DoctorSubscription::class);
+    }
+
+    public function ensureReferralCode(): string
+    {
+        if (blank($this->referral_code)) {
+            $this->referral_code = self::generateUniqueReferralCode();
+            $this->save();
+        }
+
+        return (string) $this->referral_code;
     }
 
     protected function documentUrl(?string $path): ?string
@@ -112,5 +149,14 @@ class Doctor extends Model
         }
 
         return asset($path);
+    }
+
+    public static function generateUniqueReferralCode(): string
+    {
+        do {
+            $code = 'DOC'.strtoupper(Str::random(6));
+        } while (self::query()->where('referral_code', $code)->exists());
+
+        return $code;
     }
 }

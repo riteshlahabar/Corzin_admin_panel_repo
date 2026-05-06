@@ -15,6 +15,7 @@ use App\Http\Controllers\Farmer\FarmerPlanController;
 use App\Http\Controllers\Farmer\FarmerSubscriptionController;
 use App\Http\Controllers\Doctor\DoctorAppointmentController;
 use App\Http\Controllers\Doctor\DoctorListController;
+use App\Http\Controllers\Doctor\DoctorReferralController;
 use App\Http\Controllers\Doctor\DoctorSettingController;
 use App\Http\Controllers\Doctor\DoctorVisitedController;
 use App\Http\Controllers\Doctor\DoctorPlanController;
@@ -95,6 +96,7 @@ Route::prefix('doctor')->group(function () {
     Route::post('/appointments/{appointment}/assign-doctor', [DoctorAppointmentController::class, 'assignDoctor'])->name('doctor.appointments.assign');
     Route::get('/visited', [DoctorVisitedController::class, 'index'])->name('doctor.visited');
     Route::get('/settings', [DoctorSettingController::class, 'index'])->name('doctor.settings');
+    Route::get('/referred', [DoctorReferralController::class, 'index'])->name('doctor.referred');
     Route::post('/settings', [DoctorSettingController::class, 'update'])->name('doctor.settings.update');
     Route::post('/settings/banner', [DoctorSettingController::class, 'uploadBanner'])->name('doctor.settings.banner.upload');
     Route::delete('/settings/banner/{doctorBanner}', [DoctorSettingController::class, 'destroyBanner'])->name('doctor.settings.banner.destroy');

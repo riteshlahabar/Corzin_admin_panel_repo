@@ -117,6 +117,11 @@
                     </a>
                 </li>
                 <li class="menu-item">
+                    <a href="{{ route('doctor.referred') }}" class="nav-link {{ request()->routeIs('doctor.referred') ? 'active' : '' }}">
+                        <i class="iconoir-share-android me-2"></i> Referred Doctor
+                    </a>
+                </li>
+                <li class="menu-item">
                     <a href="{{ route('doctor.plan.index') }}" class="nav-link {{ request()->routeIs('doctor.plan.*') ? 'active' : '' }}">
                         <i class="iconoir-coins me-2"></i> Doctor Plan
                     </a>

@@ -6,12 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class DoctorListController extends Controller
 {
+    private const REFERRAL_REWARD_POINTS = 50;
+
     public function index()
     {
         $doctors = Doctor::latest()->get();
@@ -157,6 +160,32 @@ class DoctorListController extends Controller
         ]);
 
         if ($newStatus === 'approved') {
+            if ($doctor->referred_by_doctor_id !== null && $doctor->referral_reward_granted_at === null) {
+                DB::transaction(function () use ($doctor): void {
+                    $lockedDoctor = Doctor::query()
+                        ->whereKey($doctor->id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $lockedDoctor) {
+                        return;
+                    }
+                    if ($lockedDoctor->referred_by_doctor_id === null) {
+                        return;
+                    }
+                    if ($lockedDoctor->referral_reward_granted_at !== null) {
+                        return;
+                    }
+
+                    Doctor::query()
+                        ->whereKey($lockedDoctor->referred_by_doctor_id)
+                        ->increment('referral_points', self::REFERRAL_REWARD_POINTS);
+
+                    $lockedDoctor->referral_reward_granted_at = now();
+                    $lockedDoctor->save();
+                });
+            }
+
             try {
                 $firebaseService->sendToDevice(
                     $doctor->fcm_token,

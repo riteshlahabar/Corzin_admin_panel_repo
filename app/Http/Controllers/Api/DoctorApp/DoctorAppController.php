@@ -62,6 +62,7 @@ class DoctorAppController extends Controller
             'contact_number' => ['required', 'string', 'max:30'],
             'whatsapp_number' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'email', 'max:255', Rule::unique('doctors', 'email')],
+            'referral_code' => ['nullable', 'string', 'max:40'],
             'adhar_number' => ['required', 'string', 'max:50'],
             'pan_number' => ['required', 'string', 'max:50'],
             'mmc_registration_number' => ['required', 'string', 'max:100'],
@@ -96,6 +97,27 @@ class DoctorAppController extends Controller
         if ($whatsappNumber === '') {
             $whatsappNumber = trim((string) $request->contact_number);
         }
+        $inputReferralCode = strtoupper(trim((string) $request->input('referral_code', '')));
+        $referrerDoctor = null;
+        if ($inputReferralCode !== '') {
+            $referrerDoctor = Doctor::query()
+                ->whereRaw('UPPER(referral_code) = ?', [$inputReferralCode])
+                ->first();
+
+            if (! $referrerDoctor) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid referral code. Please check and try again.',
+                ], 422);
+            }
+
+            if ($referrerDoctor->status !== 'approved') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Referral code is not active yet. Please use an approved doctor referral.',
+                ], 422);
+            }
+        }
 
         $doctor = Doctor::create([
             'first_name' => $request->first_name,
@@ -105,6 +127,7 @@ class DoctorAppController extends Controller
             'contact_number' => $request->contact_number,
             'whatsapp_number' => $whatsappNumber,
             'email' => $request->email,
+            'referred_by_doctor_id' => $referrerDoctor?->id,
             'adhar_number' => $request->adhar_number,
             'pan_number' => $request->pan_number,
             'mmc_registration_number' => $request->mmc_registration_number,
@@ -412,10 +435,54 @@ class DoctorAppController extends Controller
 
     public function profile(Doctor $doctor)
     {
+        $doctor->ensureReferralCode();
+
         return response()->json([
             'status' => true,
             'message' => 'Doctor profile fetched successfully.',
             'data' => $this->doctorPayload($doctor),
+        ]);
+    }
+
+    public function referrals(Doctor $doctor)
+    {
+        $doctor->ensureReferralCode();
+
+        $items = Doctor::query()
+            ->where('referred_by_doctor_id', $doctor->id)
+            ->latest()
+            ->get()
+            ->map(function (Doctor $row) {
+                return [
+                    'doctor_id' => $row->id,
+                    'name' => $row->full_name,
+                    'contact_number' => (string) ($row->contact_number ?? ''),
+                    'email' => (string) ($row->email ?? ''),
+                    'status' => (string) ($row->status ?? 'pending'),
+                    'registered_at' => optional($row->created_at)->toIso8601String(),
+                    'reward_granted' => $row->referral_reward_granted_at !== null,
+                    'reward_granted_at' => optional($row->referral_reward_granted_at)->toIso8601String(),
+                ];
+            })
+            ->values();
+
+        $approvedCount = $items->where('status', 'approved')->count();
+        $pendingCount = $items->where('status', 'pending')->count();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Referral details fetched successfully.',
+            'data' => [
+                'referral_code' => (string) ($doctor->referral_code ?? ''),
+                'referral_link' => $this->buildReferralLink((string) ($doctor->referral_code ?? '')),
+                'referral_points' => (int) ($doctor->referral_points ?? 0),
+                'summary' => [
+                    'total_referred' => $items->count(),
+                    'approved_referred' => $approvedCount,
+                    'pending_referred' => $pendingCount,
+                ],
+                'items' => $items,
+            ],
         ]);
     }
 
@@ -585,6 +652,8 @@ class DoctorAppController extends Controller
 
     protected function doctorPayload(Doctor $doctor): array
     {
+        $doctor->ensureReferralCode();
+
         return [
             'id' => $doctor->id,
             'first_name' => $doctor->first_name,
@@ -594,6 +663,10 @@ class DoctorAppController extends Controller
             'contact_number' => $doctor->contact_number,
             'whatsapp_number' => $doctor->whatsapp_number,
             'email' => $doctor->email,
+            'referral_code' => $doctor->referral_code,
+            'referred_by_doctor_id' => $doctor->referred_by_doctor_id,
+            'referral_points' => (int) ($doctor->referral_points ?? 0),
+            'referral_link' => $this->buildReferralLink((string) ($doctor->referral_code ?? '')),
             'adhar_number' => $doctor->adhar_number,
             'pan_number' => $doctor->pan_number,
             'mmc_registration_number' => $doctor->mmc_registration_number,
@@ -615,6 +688,18 @@ class DoctorAppController extends Controller
             'doctor_photo_url' => $doctor->doctorPhotoUrl(),
             'documents' => array_filter($doctor->documents()),
         ];
+    }
+
+    protected function buildReferralLink(string $referralCode): string
+    {
+        $code = strtoupper(trim($referralCode));
+        if ($code === '') {
+            return '';
+        }
+
+        $referrerQuery = rawurlencode('doc_ref='.$code);
+
+        return 'https://play.google.com/store/apps/details?id=com.doctor.corzin&referrer='.$referrerQuery;
     }
 
     protected function resolveLiveLocationAddress(float $latitude, float $longitude): string
