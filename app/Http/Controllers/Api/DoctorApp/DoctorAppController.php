@@ -229,7 +229,7 @@ class DoctorAppController extends Controller
             'message' => 'Doctor mobile number fetched successfully.',
             'data' => [
                 'email' => $doctor->email,
-                'mobile_number' => $this->maskMobileNumber($mobile),
+                'mobile_number' => $mobile,
                 'firebase_phone_number' => '+91'.$mobile,
             ],
         ]);
