@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\DoctorApp;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
+use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -194,8 +195,51 @@ class DoctorAppController extends Controller
 
     public function forgotPassword(Request $request)
     {
+        return response()->json([
+            'status' => false,
+            'message' => 'Please verify Firebase OTP before resetting password.',
+        ], 422);
+    }
+
+    public function forgotPasswordLookup(Request $request)
+    {
         $payload = $request->validate([
             'email' => ['required', 'email'],
+        ]);
+
+        $doctor = Doctor::where('email', $payload['email'])->first();
+
+        if (! $doctor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Doctor account not found for this email.',
+            ], 404);
+        }
+
+        $mobile = $this->doctorResetMobile($doctor);
+        if ($mobile === null) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Mobile number is not available for this doctor account.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Doctor mobile number fetched successfully.',
+            'data' => [
+                'email' => $doctor->email,
+                'mobile_number' => $this->maskMobileNumber($mobile),
+                'firebase_phone_number' => '+91'.$mobile,
+            ],
+        ]);
+    }
+
+    public function resetForgotPasswordWithFirebase(Request $request, FirebaseService $firebaseService)
+    {
+        $payload = $request->validate([
+            'email' => ['required', 'email'],
+            'firebase_id_token' => ['required', 'string'],
             'password' => ['required', 'confirmed', 'min:8'],
         ]);
 
@@ -206,6 +250,23 @@ class DoctorAppController extends Controller
                 'status' => false,
                 'message' => 'Doctor account not found for this email.',
             ], 404);
+        }
+
+        try {
+            $verifiedToken = $firebaseService->verifyToken($payload['firebase_id_token']);
+            $firebasePhone = (string) ($verifiedToken->claims()->get('phone_number') ?? '');
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Firebase OTP verification failed. Please send OTP again.',
+            ], 401);
+        }
+
+        if (! $this->firebasePhoneMatchesDoctor($firebasePhone, $doctor)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Verified mobile number does not match this doctor account.',
+            ], 422);
         }
 
         $doctor->update([
@@ -440,5 +501,50 @@ class DoctorAppController extends Controller
         $file->move($directory, $filename);
 
         return 'assets/doctor_registration_images/'.$filename;
+    }
+
+    protected function doctorResetMobile(Doctor $doctor): ?string
+    {
+        foreach ([$doctor->contact_number, $doctor->whatsapp_number] as $mobile) {
+            $normalized = $this->normalizeIndianMobile($mobile);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    protected function firebasePhoneMatchesDoctor(string $firebasePhone, Doctor $doctor): bool
+    {
+        $firebaseMobile = $this->normalizeIndianMobile($firebasePhone);
+        if ($firebaseMobile === null) {
+            return false;
+        }
+
+        $doctorMobiles = [
+            $this->normalizeIndianMobile($doctor->contact_number),
+            $this->normalizeIndianMobile($doctor->whatsapp_number),
+        ];
+
+        return in_array($firebaseMobile, array_filter($doctorMobiles), true);
+    }
+
+    protected function normalizeIndianMobile(?string $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $value);
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            $digits = substr($digits, 2);
+        }
+        if (strlen($digits) > 10) {
+            $digits = substr($digits, -10);
+        }
+
+        return strlen($digits) === 10 ? $digits : null;
+    }
+
+    protected function maskMobileNumber(string $mobile): string
+    {
+        return substr($mobile, 0, 2).'******'.substr($mobile, -2);
     }
 }
