@@ -495,6 +495,30 @@ class DoctorAppController extends Controller
         ]);
     }
 
+    public function changePassword(Request $request, Doctor $doctor)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'confirmed', 'min:8'],
+        ]);
+
+        if (! Hash::check($data['current_password'], (string) $doctor->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Current password is incorrect.',
+            ], 422);
+        }
+
+        $doctor->update([
+            'password' => $data['password'],
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password updated successfully.',
+        ]);
+    }
+
     public function updateFcmToken(Request $request, Doctor $doctor)
     {
         $request->validate([
