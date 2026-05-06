@@ -13,6 +13,7 @@ class Doctor extends Model
         'clinic_name',
         'degree',
         'contact_number',
+        'whatsapp_number',
         'email',
         'adhar_number',
         'pan_number',

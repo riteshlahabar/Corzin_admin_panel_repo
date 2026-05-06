@@ -24,7 +24,8 @@ class DoctorAppController extends Controller
                     ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('degree', 'like', "%{$search}%")
                     ->orWhere('city', 'like', "%{$search}%")
-                    ->orWhere('contact_number', 'like', "%{$search}%");
+                    ->orWhere('contact_number', 'like', "%{$search}%")
+                    ->orWhere('whatsapp_number', 'like', "%{$search}%");
             });
         }
 
@@ -52,9 +53,10 @@ class DoctorAppController extends Controller
         $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'clinic_name' => ['required', 'string', 'max:255'],
+            'clinic_name' => ['nullable', 'string', 'max:255'],
             'degree' => ['required', 'string', 'max:255'],
             'contact_number' => ['required', 'string', 'max:30'],
+            'whatsapp_number' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'email', 'max:255', Rule::unique('doctors', 'email')],
             'adhar_number' => ['required', 'string', 'max:50'],
             'pan_number' => ['required', 'string', 'max:50'],
@@ -82,12 +84,22 @@ class DoctorAppController extends Controller
             $resolvedCity = trim((string) $request->taluka);
         }
 
+        $clinicName = trim((string) $request->clinic_name);
+        if ($clinicName === '') {
+            $clinicName = null;
+        }
+        $whatsappNumber = trim((string) $request->whatsapp_number);
+        if ($whatsappNumber === '') {
+            $whatsappNumber = trim((string) $request->contact_number);
+        }
+
         $doctor = Doctor::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
-            'clinic_name' => $request->clinic_name,
+            'clinic_name' => $clinicName,
             'degree' => $request->degree,
             'contact_number' => $request->contact_number,
+            'whatsapp_number' => $whatsappNumber,
             'email' => $request->email,
             'adhar_number' => $request->adhar_number,
             'pan_number' => $request->pan_number,
@@ -220,9 +232,10 @@ class DoctorAppController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'clinic_name' => ['required', 'string', 'max:255'],
+            'clinic_name' => ['nullable', 'string', 'max:255'],
             'degree' => ['required', 'string', 'max:255'],
             'contact_number' => ['required', 'string', 'max:30'],
+            'whatsapp_number' => ['nullable', 'string', 'max:30'],
             'email' => ['required', 'email', 'max:255', Rule::unique('doctors', 'email')->ignore($doctor->id)],
             'adhar_number' => ['required', 'string', 'max:50'],
             'pan_number' => ['required', 'string', 'max:50'],
@@ -246,13 +259,22 @@ class DoctorAppController extends Controller
         if ($resolvedCity === '') {
             $resolvedCity = trim((string) $data['taluka']);
         }
+        $clinicName = trim((string) ($data['clinic_name'] ?? ''));
+        if ($clinicName === '') {
+            $clinicName = null;
+        }
+        $whatsappNumber = trim((string) ($data['whatsapp_number'] ?? ''));
+        if ($whatsappNumber === '') {
+            $whatsappNumber = trim((string) $data['contact_number']);
+        }
 
         $doctor->update([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
-            'clinic_name' => $data['clinic_name'],
+            'clinic_name' => $clinicName,
             'degree' => $data['degree'],
             'contact_number' => $data['contact_number'],
+            'whatsapp_number' => $whatsappNumber,
             'email' => $data['email'],
             'adhar_number' => $data['adhar_number'],
             'pan_number' => $data['pan_number'],
@@ -354,6 +376,7 @@ class DoctorAppController extends Controller
             'clinic_name' => $doctor->clinic_name,
             'degree' => $doctor->degree,
             'contact_number' => $doctor->contact_number,
+            'whatsapp_number' => $doctor->whatsapp_number,
             'email' => $doctor->email,
             'adhar_number' => $doctor->adhar_number,
             'pan_number' => $doctor->pan_number,
