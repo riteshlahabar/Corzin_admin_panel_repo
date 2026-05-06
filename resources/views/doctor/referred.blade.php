@@ -7,41 +7,105 @@
         <h4 class="mb-0 text-dark">Referred Doctor</h4>
     </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 referral-card referral-card--blue">
-                <div class="card-body">
-                    <p class="mb-1 text-muted">Total Referred</p>
-                    <h3 class="mb-0">{{ number_format($summary['total_referred'] ?? 0) }}</h3>
+    <div class="row g-3 mb-4">
+
+    <!-- Total Referred -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-lg h-100 overflow-hidden"
+             style="background: linear-gradient(135deg, #4e73df, #224abe); border-radius:16px;">
+            <div class="card-body position-relative text-white p-4">
+                
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="mb-2 text-white-50 fw-semibold">Total Referred</p>
+                        <h2 class="fw-bold mb-0">
+                            {{ number_format($summary['total_referred'] ?? 0) }}
+                        </h2>
+                    </div>
+
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:60px;height:60px;background:rgba(255,255,255,0.15);">
+                        <i class="las la-user-md" style="font-size:30px;"></i>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 referral-card referral-card--green">
-                <div class="card-body">
-                    <p class="mb-1 text-muted">Approved Referred</p>
-                    <h3 class="mb-0">{{ number_format($summary['approved_referred'] ?? 0) }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 referral-card referral-card--amber">
-                <div class="card-body">
-                    <p class="mb-1 text-muted">Pending Referred</p>
-                    <h3 class="mb-0">{{ number_format($summary['pending_referred'] ?? 0) }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 referral-card referral-card--violet">
-                <div class="card-body">
-                    <p class="mb-1 text-muted">Total Points Distributed</p>
-                    <h3 class="mb-0">{{ number_format($summary['total_points_distributed'] ?? 0) }}</h3>
-                </div>
+
             </div>
         </div>
     </div>
 
+    <!-- Approved -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-lg h-100 overflow-hidden"
+             style="background: linear-gradient(135deg, #1cc88a, #13855c); border-radius:16px;">
+            <div class="card-body position-relative text-white p-4">
+
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="mb-2 text-white-50 fw-semibold">Approved Referred</p>
+                        <h2 class="fw-bold mb-0">
+                            {{ number_format($summary['approved_referred'] ?? 0) }}
+                        </h2>
+                    </div>
+
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:60px;height:60px;background:rgba(255,255,255,0.15);">
+                        <i class="las la-check-circle" style="font-size:30px;"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-lg h-100 overflow-hidden"
+             style="background: linear-gradient(135deg, #f6c23e, #dda20a); border-radius:16px;">
+            <div class="card-body position-relative text-white p-4">
+
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="mb-2 text-white-50 fw-semibold">Pending Referred</p>
+                        <h2 class="fw-bold mb-0">
+                            {{ number_format($summary['pending_referred'] ?? 0) }}
+                        </h2>
+                    </div>
+
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:60px;height:60px;background:rgba(255,255,255,0.15);">
+                        <i class="las la-clock" style="font-size:30px;"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Points -->
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-lg h-100 overflow-hidden"
+             style="background: linear-gradient(135deg, #9b59b6, #6f42c1); border-radius:16px;">
+            <div class="card-body position-relative text-white p-4">
+
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="mb-2 text-white-50 fw-semibold">Total Points Distributed</p>
+                        <h2 class="fw-bold mb-0">
+                            {{ number_format($summary['total_points_distributed'] ?? 0) }}
+                        </h2>
+                    </div>
+
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:60px;height:60px;background:rgba(255,255,255,0.15);">
+                        <i class="las la-gift" style="font-size:30px;"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent border-0 pt-4 pb-2">
             <h5 class="mb-0">Referral Entries</h5>
