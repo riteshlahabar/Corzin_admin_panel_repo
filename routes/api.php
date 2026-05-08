@@ -91,6 +91,7 @@ Route::prefix('doctor')->group(function () {
     Route::get('/list', [FarmerDoctorController::class, 'index']);
 
     // corzin_doctor auth/profile APIs stay in DoctorApp folder controllers
+    Route::post('/check-mobile', [DoctorAppController::class, 'checkMobileAvailability']);
     Route::post('/register', [DoctorAppController::class, 'register']);
     Route::post('/login', [DoctorAppController::class, 'login']);
     Route::post('/forgot-password', [DoctorAppController::class, 'forgotPassword']);
@@ -132,6 +133,7 @@ Route::prefix('doctor')->group(function () {
 
 Route::prefix('doctor-app')->group(function () {
     Route::get('/list', [DoctorAppController::class, 'index']);
+    Route::post('/check-mobile', [DoctorAppController::class, 'checkMobileAvailability']);
     Route::post('/register', [DoctorAppController::class, 'register']);
     Route::post('/login', [DoctorAppController::class, 'login']);
     Route::post('/forgot-password', [DoctorAppController::class, 'forgotPassword']);

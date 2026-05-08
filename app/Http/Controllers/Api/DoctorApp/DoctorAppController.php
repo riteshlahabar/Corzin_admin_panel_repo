@@ -52,6 +52,44 @@ class DoctorAppController extends Controller
         ]);
     }
 
+    public function checkMobileAvailability(Request $request)
+    {
+        $data = $request->validate([
+            'mobile_number' => ['required', 'digits:10'],
+        ]);
+
+        $mobile = $this->normalizeIndianMobile($data['mobile_number']);
+        if ($mobile === null) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Mobile number must be exactly 10 digits.',
+                'data' => [
+                    'is_available' => false,
+                ],
+            ], 422);
+        }
+
+        if ($this->doctorMobileExists($mobile)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This mobile number is already registered with another doctor.',
+                'data' => [
+                    'mobile_number' => $this->maskMobileNumber($mobile),
+                    'is_available' => false,
+                ],
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Mobile number is available for registration.',
+            'data' => [
+                'mobile_number' => $mobile,
+                'is_available' => true,
+            ],
+        ]);
+    }
+
     public function register(Request $request)
     {
         $request->validate([
@@ -59,8 +97,8 @@ class DoctorAppController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'clinic_name' => ['nullable', 'string', 'max:255'],
             'degree' => ['required', 'string', 'max:255'],
-            'contact_number' => ['required', 'string', 'max:30'],
-            'whatsapp_number' => ['nullable', 'string', 'max:30'],
+            'contact_number' => ['required', 'digits:10'],
+            'whatsapp_number' => ['nullable', 'digits:10'],
             'email' => ['required', 'email', 'max:255', Rule::unique('doctors', 'email')],
             'referral_code' => ['nullable', 'string', 'max:40'],
             'adhar_number' => ['required', 'string', 'max:50'],
@@ -84,6 +122,21 @@ class DoctorAppController extends Controller
             'doctor_photo' => ['required', 'image', 'max:5120'],
         ]);
 
+        $contactNumber = $this->normalizeIndianMobile($request->contact_number);
+        if ($contactNumber === null) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Contact number must be exactly 10 digits.',
+            ], 422);
+        }
+
+        if ($this->doctorMobileExists($contactNumber)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This mobile number is already registered with another doctor.',
+            ], 422);
+        }
+
         $resolvedCity = trim((string) ($request->city ?? ''));
         if ($resolvedCity === '') {
             $resolvedCity = trim((string) $request->taluka);
@@ -93,9 +146,9 @@ class DoctorAppController extends Controller
         if ($clinicName === '') {
             $clinicName = null;
         }
-        $whatsappNumber = trim((string) $request->whatsapp_number);
-        if ($whatsappNumber === '') {
-            $whatsappNumber = trim((string) $request->contact_number);
+        $whatsappNumber = $this->normalizeIndianMobile($request->whatsapp_number);
+        if ($whatsappNumber === null) {
+            $whatsappNumber = $contactNumber;
         }
         $inputReferralCode = strtoupper(trim((string) $request->input('referral_code', '')));
         $referrerDoctor = null;
@@ -124,7 +177,7 @@ class DoctorAppController extends Controller
             'last_name' => $request->last_name,
             'clinic_name' => $clinicName,
             'degree' => $request->degree,
-            'contact_number' => $request->contact_number,
+            'contact_number' => $contactNumber,
             'whatsapp_number' => $whatsappNumber,
             'email' => $request->email,
             'referred_by_doctor_id' => $referrerDoctor?->id,
@@ -794,6 +847,27 @@ class DoctorAppController extends Controller
         }
 
         return strlen($digits) === 10 ? $digits : null;
+    }
+
+    protected function doctorMobileExists(string $mobile, ?int $exceptDoctorId = null): bool
+    {
+        $normalizedMobile = $this->normalizeIndianMobile($mobile);
+        if ($normalizedMobile === null) {
+            return false;
+        }
+
+        $query = Doctor::query()->select(['id', 'contact_number']);
+        if ($exceptDoctorId !== null) {
+            $query->whereKeyNot($exceptDoctorId);
+        }
+
+        foreach ($query->cursor() as $doctor) {
+            if ($this->normalizeIndianMobile($doctor->contact_number) === $normalizedMobile) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function maskMobileNumber(string $mobile): string
