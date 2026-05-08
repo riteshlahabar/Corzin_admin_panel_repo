@@ -40,7 +40,8 @@
         }
         .corzin-table-pagination,
         .corzin-server-pagination {
-            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            border-top: 0 !important;
+            padding-top: 0.75rem;
         }
         .corzin-table-pagination .page-link,
         .corzin-server-pagination .page-link {
