@@ -23,6 +23,22 @@
     <link href="{{ asset('assets/css/bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/icons.min.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/app.min.css') }}" rel="stylesheet" type="text/css" />
+    <style>
+        .pagination {
+            align-items: center;
+            gap: 0.15rem;
+            margin-bottom: 0;
+        }
+        .pagination svg {
+            width: 0.9rem;
+            height: 0.9rem;
+        }
+        .pagination .page-link {
+            min-width: 2rem;
+            text-align: center;
+            line-height: 1.2;
+        }
+    </style>
     @stack('styles')
 </head>
 
