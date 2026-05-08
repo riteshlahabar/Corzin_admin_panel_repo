@@ -115,6 +115,7 @@ class DoctorAppController extends Controller
             'pincode' => ['required', 'string', 'max:15'],
             'password' => ['required', 'confirmed', 'min:8'],
             'terms_accepted' => ['required', 'accepted'],
+            'fcm_token' => ['nullable', 'string'],
             'adhar_document_front' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'adhar_document_back' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'pan_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
@@ -174,6 +175,7 @@ class DoctorAppController extends Controller
             'terms_accepted' => true,
             'terms_text' => 'Doctor agrees to all onboarding verification and approval conditions.',
             'status' => 'pending',
+            'fcm_token' => $request->input('fcm_token'),
             // Keep insert valid for NOT NULL doc columns, then overwrite with real files below.
             'adhar_document' => '',
             'adhar_document_back' => '',

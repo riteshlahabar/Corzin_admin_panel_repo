@@ -149,6 +149,7 @@ class DoctorListController extends Controller
         ]);
 
         $newStatus = $request->status;
+        $wasApproved = $doctor->status === 'approved';
 
         $doctor->update([
             'status' => $newStatus,
@@ -156,13 +157,17 @@ class DoctorListController extends Controller
             'approved_at' => $newStatus === 'approved' ? now() : null,
         ]);
 
-        if ($newStatus === 'approved') {
+        if ($newStatus === 'approved' && ! $wasApproved) {
             try {
                 $firebaseService->sendToDevice(
                     $doctor->fcm_token,
-                    'Doctor account approved',
-                    'Your registration has been approved. You can now sign in.',
-                    ['doctor_id' => (string) $doctor->id, 'status' => 'approved']
+                    'Registration Approved',
+                    'Admin approved your request. Please login.',
+                    [
+                        'doctor_id' => (string) $doctor->id,
+                        'status' => 'approved',
+                        'event' => 'doctor_registration_approved',
+                    ]
                 );
             } catch (\Throwable $exception) {
             }
