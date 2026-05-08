@@ -77,7 +77,7 @@ class DoctorListController extends Controller
             'taluka' => ['required', 'string', 'max:255'],
             'district' => ['required', 'string', 'max:255'],
             'state' => ['required', 'string', 'max:255'],
-            'pincode' => ['required', 'string', 'max:15'],
+            'pincode' => ['required', 'digits:6'],
             'password' => ['required', 'confirmed', 'min:8'],
             'doctor_photo' => ['required', 'image', 'max:5120'],
             'adhar_document_front' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
