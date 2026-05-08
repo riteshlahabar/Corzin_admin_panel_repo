@@ -505,17 +505,39 @@ class DoctorAppointmentController extends Controller
 
         $status = $data['status'] === 'approved' ? 'approved' : 'cancelled';
         $otpCode = $status === 'approved' ? (string) random_int(100000, 999999) : null;
+        $rowsToNotify = collect([$appointment]);
 
-        $appointment->update([
-            'status' => $status,
-            'farmer_approved_at' => $status === 'approved' ? now() : null,
-            'otp_code' => $otpCode,
-            'otp_verified_at' => null,
-            'treatment_started_at' => null,
-            'doctor_live_latitude' => null,
-            'doctor_live_longitude' => null,
-            'doctor_live_updated_at' => null,
-        ]);
+        if ($status === 'cancelled' && ! blank($appointment->appointment_group_id)) {
+            $rowsToNotify = DoctorAppointment::query()
+                ->where('appointment_group_id', $appointment->appointment_group_id)
+                ->whereNotIn('status', ['completed', 'cancelled', 'declined', 'rejected'])
+                ->get();
+
+            DoctorAppointment::query()
+                ->where('appointment_group_id', $appointment->appointment_group_id)
+                ->whereNotIn('status', ['completed', 'cancelled', 'declined', 'rejected'])
+                ->update([
+                    'status' => 'cancelled',
+                    'farmer_approved_at' => null,
+                    'otp_code' => null,
+                    'otp_verified_at' => null,
+                    'treatment_started_at' => null,
+                    'doctor_live_latitude' => null,
+                    'doctor_live_longitude' => null,
+                    'doctor_live_updated_at' => null,
+                ]);
+        } else {
+            $appointment->update([
+                'status' => $status,
+                'farmer_approved_at' => $status === 'approved' ? now() : null,
+                'otp_code' => $otpCode,
+                'otp_verified_at' => null,
+                'treatment_started_at' => null,
+                'doctor_live_latitude' => null,
+                'doctor_live_longitude' => null,
+                'doctor_live_updated_at' => null,
+            ]);
+        }
 
         $appointment->refresh()->loadMissing(['doctor', 'farmer']);
         if ($status === 'approved') {
@@ -532,12 +554,18 @@ class DoctorAppointmentController extends Controller
                 ['event' => 'appointment_visit_otp']
             );
         } else {
-            $this->notifyDoctor(
-                $appointment,
-                'Appointment Cancelled',
-                'Farmer cancelled this appointment.',
-                ['event' => 'appointment_farmer_cancelled']
-            );
+            foreach ($rowsToNotify as $row) {
+                if (! ($row instanceof DoctorAppointment)) {
+                    continue;
+                }
+                $row->refresh()->loadMissing(['doctor', 'farmer']);
+                $this->notifyDoctor(
+                    $row,
+                    'Appointment Cancelled',
+                    'Farmer cancelled this appointment.',
+                    ['event' => 'appointment_farmer_cancelled']
+                );
+            }
         }
         $this->notifyWebAdmin(
             $appointment,
@@ -550,7 +578,7 @@ class DoctorAppointmentController extends Controller
             'status' => true,
             'message' => $status === 'approved'
                 ? 'Appointment approved by farmer.'
-                : 'Appointment rejected by farmer.',
+                : 'Appointment cancelled by farmer.',
             'data' => $this->appointmentPayload($appointment, true),
         ]);
     }
