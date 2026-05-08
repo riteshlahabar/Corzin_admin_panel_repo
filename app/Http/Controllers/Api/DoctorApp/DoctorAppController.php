@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\DoctorApp;
 use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
+use App\Models\Farmer\Farmer;
 use App\Services\FirebaseService;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
@@ -150,28 +151,6 @@ class DoctorAppController extends Controller
         if ($whatsappNumber === null) {
             $whatsappNumber = $contactNumber;
         }
-        $inputReferralCode = strtoupper(trim((string) $request->input('referral_code', '')));
-        $referrerDoctor = null;
-        if ($inputReferralCode !== '') {
-            $referrerDoctor = Doctor::query()
-                ->whereRaw('UPPER(referral_code) = ?', [$inputReferralCode])
-                ->first();
-
-            if (! $referrerDoctor) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Invalid referral code. Please check and try again.',
-                ], 422);
-            }
-
-            if ($referrerDoctor->status !== 'approved') {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Referral code is not active yet. Please use an approved doctor referral.',
-                ], 422);
-            }
-        }
-
         $doctor = Doctor::create([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
@@ -180,7 +159,6 @@ class DoctorAppController extends Controller
             'contact_number' => $contactNumber,
             'whatsapp_number' => $whatsappNumber,
             'email' => $request->email,
-            'referred_by_doctor_id' => $referrerDoctor?->id,
             'adhar_number' => $request->adhar_number,
             'pan_number' => $request->pan_number,
             'mmc_registration_number' => $request->mmc_registration_number,
@@ -514,26 +492,33 @@ class DoctorAppController extends Controller
     {
         $doctor->ensureReferralCode();
 
-        $items = Doctor::query()
+        $items = Farmer::query()
+            ->with('subscription.plan')
             ->where('referred_by_doctor_id', $doctor->id)
             ->latest()
             ->get()
-            ->map(function (Doctor $row) {
+            ->map(function (Farmer $row) {
+                $subscription = $row->subscription;
+                $subscriptionStatus = strtolower((string) ($subscription->status ?? ''));
+                $registeredAt = $row->created_at;
+                $eligibleAt = $registeredAt ? $registeredAt->copy()->addMonth() : null;
                 return [
-                    'doctor_id' => $row->id,
-                    'name' => $row->full_name,
-                    'contact_number' => (string) ($row->contact_number ?? ''),
-                    'email' => (string) ($row->email ?? ''),
-                    'status' => (string) ($row->status ?? 'pending'),
+                    'farmer_id' => $row->id,
+                    'name' => trim(($row->first_name ?? '').' '.($row->last_name ?? '')),
+                    'contact_number' => (string) ($row->mobile ?? ''),
+                    'subscription_status' => $subscriptionStatus !== '' ? $subscriptionStatus : 'not_subscribed',
+                    'subscription_plan' => (string) (optional($subscription?->plan)->name ?? ''),
+                    'status' => $subscriptionStatus === 'active' ? 'subscribed' : 'pending',
                     'registered_at' => optional($row->created_at)->toIso8601String(),
                     'reward_granted' => $row->referral_reward_granted_at !== null,
                     'reward_granted_at' => optional($row->referral_reward_granted_at)->toIso8601String(),
+                    'reward_eligible_at' => optional($eligibleAt)->toIso8601String(),
                 ];
             })
             ->values();
 
-        $approvedCount = $items->where('status', 'approved')->count();
-        $pendingCount = $items->where('status', 'pending')->count();
+        $subscribedCount = $items->where('subscription_status', 'active')->count();
+        $rewardGrantedCount = $items->where('reward_granted', true)->count();
 
         return response()->json([
             'status' => true,
@@ -544,8 +529,9 @@ class DoctorAppController extends Controller
                 'referral_points' => (int) ($doctor->referral_points ?? 0),
                 'summary' => [
                     'total_referred' => $items->count(),
-                    'approved_referred' => $approvedCount,
-                    'pending_referred' => $pendingCount,
+                    'subscribed_referred' => $subscribedCount,
+                    'reward_granted' => $rewardGrantedCount,
+                    'pending_reward' => max(0, $items->count() - $rewardGrantedCount),
                 ],
                 'items' => $items,
             ],
@@ -765,7 +751,7 @@ class DoctorAppController extends Controller
 
         $referrerQuery = rawurlencode('doc_ref='.$code);
 
-        return 'https://play.google.com/store/apps/details?id=com.doctor.corzin&referrer='.$referrerQuery;
+        return 'https://play.google.com/store/apps/details?id=com.dairy.corzin&referrer='.$referrerQuery;
     }
 
     protected function resolveLiveLocationAddress(float $latitude, float $longitude): string

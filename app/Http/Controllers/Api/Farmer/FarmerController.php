@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Doctor\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -24,7 +25,16 @@ class FarmerController extends Controller
             'state' => 'nullable|string',
             'pincode' => 'nullable|string',
             'farmer_photo' => 'nullable|image|max:5120',
+            'referral_code' => 'nullable|string|max:40',
         ]);
+
+        $referrerDoctor = $this->resolveReferrerDoctor($request->input('referral_code'));
+        if ($request->filled('referral_code') && ! $referrerDoctor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid doctor referral code. Please check and try again.',
+            ], 422);
+        }
 
         $farmer = DB::table('farmers')
             ->where('mobile', $request->mobile)
@@ -32,20 +42,26 @@ class FarmerController extends Controller
 
         /// UPDATE EXISTING FARMER
         if ($farmer) {
+            $updates = [
+                'first_name' => $request->first_name,
+                'middle_name' => $request->middle_name,
+                'last_name' => $request->last_name,
+                'village' => $request->village,
+                'city' => $request->city,
+                'taluka' => $request->taluka,
+                'district' => $request->district,
+                'state' => $request->state,
+                'pincode' => $request->pincode,
+                'updated_at' => now(),
+            ];
+            if ($referrerDoctor && empty($farmer->referred_by_doctor_id)) {
+                $updates['referred_by_doctor_id'] = $referrerDoctor->id;
+                $updates['doctor_referral_code'] = $referrerDoctor->referral_code;
+            }
+
             DB::table('farmers')
                 ->where('mobile', $request->mobile)
-                ->update([
-                    'first_name' => $request->first_name,
-                    'middle_name' => $request->middle_name,
-                    'last_name' => $request->last_name,
-                    'village' => $request->village,
-                    'city' => $request->city,
-                    'taluka' => $request->taluka,
-                    'district' => $request->district,
-                    'state' => $request->state,
-                    'pincode' => $request->pincode,
-                    'updated_at' => now(),
-                ]);
+                ->update($updates);
 
             if ($request->hasFile('farmer_photo')) {
                 $photoPath = $this->storeFarmerPhoto(
@@ -78,6 +94,9 @@ class FarmerController extends Controller
         /// CREATE NEW FARMER
         $farmerId = DB::table('farmers')->insertGetId([
             'mobile' => $request->mobile,
+            'referred_by_doctor_id' => $referrerDoctor?->id,
+            'doctor_referral_code' => $referrerDoctor?->referral_code,
+            'referral_reward_granted_at' => null,
             'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
             'last_name' => $request->last_name,
@@ -294,9 +313,25 @@ class FarmerController extends Controller
             'current_location_address' => $farmer->current_location_address ?? '',
             'farmer_photo' => $farmer->farmer_photo ?? '',
             'farmer_photo_url' => ! empty($farmer->farmer_photo) ? asset($farmer->farmer_photo) : '',
+            'referred_by_doctor_id' => $farmer->referred_by_doctor_id ?? null,
+            'doctor_referral_code' => $farmer->doctor_referral_code ?? '',
+            'referral_reward_granted_at' => $farmer->referral_reward_granted_at ?? null,
             'created_at' => $farmer->created_at ?? null,
             'updated_at' => $farmer->updated_at ?? null,
         ];
+    }
+
+    private function resolveReferrerDoctor(?string $code): ?Doctor
+    {
+        $normalized = strtoupper(trim((string) $code));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return Doctor::query()
+            ->whereRaw('UPPER(referral_code) = ?', [$normalized])
+            ->where('status', 'approved')
+            ->first();
     }
 
     private function resolveAddressFromCoordinates(float $latitude, float $longitude): string

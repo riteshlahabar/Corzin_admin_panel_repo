@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Farmer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Doctor\Doctor;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\FarmerPlan;
 use App\Models\Farmer\FarmerSubscription;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FarmerSubscriptionController extends Controller
 {
+    private const REFERRAL_REWARD_POINTS = 50;
+
     public function index(Request $request)
     {
         $farmersQuery = Farmer::query()
@@ -65,7 +69,7 @@ class FarmerSubscriptionController extends Controller
             : (clone $startDate)->addDays((int) $plan->duration_days);
         $status = $data['status'] ?? ($dueDate->isPast() ? 'expired' : 'active');
 
-        FarmerSubscription::updateOrCreate(
+        $subscription = FarmerSubscription::updateOrCreate(
             ['farmer_id' => $data['farmer_id']],
             [
                 'farmer_plan_id' => $data['farmer_plan_id'],
@@ -76,6 +80,54 @@ class FarmerSubscriptionController extends Controller
             ]
         );
 
+        $this->grantDoctorReferralRewardIfEligible($subscription->fresh('farmer'));
+
         return redirect()->route('farmer.subscription.index')->with('success', 'Farmer subscription updated successfully.');
+    }
+
+    private function grantDoctorReferralRewardIfEligible(?FarmerSubscription $subscription): void
+    {
+        if (! $subscription || strtolower((string) $subscription->status) !== 'active') {
+            return;
+        }
+
+        $farmer = $subscription->farmer;
+        if (! $farmer || ! $farmer->referred_by_doctor_id || $farmer->referral_reward_granted_at) {
+            return;
+        }
+
+        if (! $farmer->created_at || $farmer->created_at->gt(now()->subMonth())) {
+            return;
+        }
+
+        DB::transaction(function () use ($subscription): void {
+            $lockedFarmer = Farmer::query()
+                ->whereKey($subscription->farmer_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedFarmer ||
+                ! $lockedFarmer->referred_by_doctor_id ||
+                $lockedFarmer->referral_reward_granted_at ||
+                ! $lockedFarmer->created_at ||
+                $lockedFarmer->created_at->gt(now()->subMonth())) {
+                return;
+            }
+
+            $activeSubscription = FarmerSubscription::query()
+                ->where('farmer_id', $lockedFarmer->id)
+                ->where('status', 'active')
+                ->exists();
+            if (! $activeSubscription) {
+                return;
+            }
+
+            Doctor::query()
+                ->whereKey($lockedFarmer->referred_by_doctor_id)
+                ->increment('referral_points', self::REFERRAL_REWARD_POINTS);
+
+            $lockedFarmer->referral_reward_granted_at = now();
+            $lockedFarmer->save();
+        });
     }
 }

@@ -118,7 +118,7 @@
                 </li>
                 <li class="menu-item">
                     <a href="{{ route('doctor.referred') }}" class="nav-link {{ request()->routeIs('doctor.referred') ? 'active' : '' }}">
-                        <i class="iconoir-share-android me-2"></i> Referred Doctor
+                        <i class="iconoir-share-android me-2"></i> Refer & Earn
                     </a>
                 </li>
                 <li class="menu-item">

@@ -3,12 +3,16 @@
 namespace App\Models\Farmer;
 
 use App\Models\Dairy\Dairy;
+use App\Models\Doctor\Doctor;
 use Illuminate\Database\Eloquent\Model;
 
 class Farmer extends Model
 {
     protected $fillable = [
         'mobile',
+        'referred_by_doctor_id',
+        'doctor_referral_code',
+        'referral_reward_granted_at',
         'first_name',
         'middle_name',
         'last_name',
@@ -29,6 +33,7 @@ class Farmer extends Model
         'is_active' => 'boolean',
         'latitude' => 'float',
         'longitude' => 'float',
+        'referral_reward_granted_at' => 'datetime',
     ];
 
     public function animals()
@@ -49,6 +54,11 @@ class Farmer extends Model
     public function subscription()
     {
         return $this->hasOne(FarmerSubscription::class);
+    }
+
+    public function referredByDoctor()
+    {
+        return $this->belongsTo(Doctor::class, 'referred_by_doctor_id');
     }
 }
 
