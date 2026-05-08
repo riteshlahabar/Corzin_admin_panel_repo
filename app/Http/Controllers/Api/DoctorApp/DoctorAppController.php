@@ -310,6 +310,8 @@ class DoctorAppController extends Controller
         $data = $request->validate([
             'tab' => ['nullable', Rule::in(['earnings', 'clients'])],
             'date' => ['nullable', 'date'],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date'],
             'search' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -318,8 +320,17 @@ class DoctorAppController extends Controller
         $selectedDate = ! empty($data['date'])
             ? Carbon::parse((string) $data['date'])
             : now();
-        $start = $selectedDate->copy()->startOfDay();
-        $end = $selectedDate->copy()->endOfDay();
+        $fromDate = ! empty($data['from_date'])
+            ? Carbon::parse((string) $data['from_date'])
+            : $selectedDate->copy();
+        $toDate = ! empty($data['to_date'])
+            ? Carbon::parse((string) $data['to_date'])
+            : $selectedDate->copy();
+        if ($toDate->lt($fromDate)) {
+            [$fromDate, $toDate] = [$toDate, $fromDate];
+        }
+        $start = $fromDate->copy()->startOfDay();
+        $end = $toDate->copy()->endOfDay();
 
         $dateExpr = DB::raw('COALESCE(requested_at, created_at)');
         $completedDateExpr = DB::raw('COALESCE(completed_at, requested_at, created_at)');
@@ -422,7 +433,9 @@ class DoctorAppController extends Controller
             'message' => 'Doctor report fetched successfully.',
             'data' => [
                 'tab' => $tab,
-                'date' => $selectedDate->toDateString(),
+                'date' => $fromDate->toDateString(),
+                'from_date' => $fromDate->toDateString(),
+                'to_date' => $toDate->toDateString(),
                 'summary' => [
                     'total_request' => (int) $summaryTotalRequest,
                     'total_earning' => round($summaryTotalEarning, 2),
