@@ -118,6 +118,7 @@ class DoctorAppointmentController extends Controller
             'doctor_id' => $doctorId,
             'status' => 'approved',
             'scheduled_at' => $target->scheduled_at ?? now(),
+            'accepted_at' => $target->accepted_at ?? now(),
             'farmer_approved_at' => now(),
             'otp_code' => $otpCode,
             'otp_verified_at' => null,

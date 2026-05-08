@@ -390,6 +390,7 @@ class DoctorAppointmentController extends Controller
 
                 $updateData = [
                     'status' => 'approved',
+                    'accepted_at' => $lockedAppointment->accepted_at ?? now(),
                     'farmer_approved_at' => now(),
                 ];
                 if ($sendOtp) {
@@ -812,6 +813,7 @@ class DoctorAppointmentController extends Controller
             'status' => 'approved',
             'requested_at' => now(),
             'notified_at' => now(),
+            'accepted_at' => now(),
             'address' => $appointment->address,
             'latitude' => $appointment->latitude,
             'longitude' => $appointment->longitude,
@@ -932,6 +934,7 @@ class DoctorAppointmentController extends Controller
             'followup_due_today' => $followupDueToday,
             'requested_at' => optional($appointment->requested_at)->toIso8601String(),
             'scheduled_at' => optional($appointment->scheduled_at)->toIso8601String(),
+            'accepted_at' => optional($appointment->accepted_at)->toIso8601String(),
             'completed_at' => optional($appointment->completed_at)->toIso8601String(),
             'otp_verified_at' => optional($appointment->otp_verified_at)->toIso8601String(),
             'treatment_started_at' => optional($appointment->treatment_started_at)->toIso8601String(),
