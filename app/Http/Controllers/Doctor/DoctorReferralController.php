@@ -4,16 +4,17 @@ namespace App\Http\Controllers\Doctor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
+use Illuminate\Http\Request;
 
 class DoctorReferralController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $referredDoctors = Doctor::query()
             ->with('referredBy:id,first_name,last_name,contact_number,referral_code')
             ->whereNotNull('referred_by_doctor_id')
             ->latest()
-            ->paginate(30)
+            ->paginate($this->tablePerPage($request))
             ->withQueryString();
 
         $summary = [
@@ -32,4 +33,3 @@ class DoctorReferralController extends Controller
         return view('doctor.referred', compact('referredDoctors', 'summary'));
     }
 }
-

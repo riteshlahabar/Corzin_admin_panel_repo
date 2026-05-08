@@ -165,12 +165,8 @@
                 </table>
             </div>
 
-            @if(method_exists($referredDoctors, 'links'))
-                <div class="mt-3">
-                    {{ $referredDoctors->links() }}
-                </div>
-            @endif
         </div>
+        @include('partials.table-pagination', ['paginator' => $referredDoctors])
     </div>
 </div>
 @endsection
@@ -183,4 +179,3 @@
     .referral-card--violet { border-left: 4px solid #6f42c1; }
 </style>
 @endpush
-

@@ -38,6 +38,17 @@
             text-align: center;
             line-height: 1.2;
         }
+        .corzin-table-pagination,
+        .corzin-server-pagination {
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .corzin-table-pagination .page-link,
+        .corzin-server-pagination .page-link {
+            border-radius: 0.35rem;
+        }
+        .corzin-page-hidden {
+            display: none !important;
+        }
     </style>
     @stack('styles')
 </head>
@@ -62,6 +73,7 @@
     </div>
     <script src="{{ asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/app.js') }}"></script>
+    <script src="{{ asset('js/table-pagination.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             try {

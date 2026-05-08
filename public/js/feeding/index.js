@@ -14,6 +14,8 @@ function filterFeedingRows() {
 
         row.style.display = show ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('feedingTableExport');
 }
 
 function exportTableToExcel(tableId, filename) {

@@ -14,6 +14,8 @@ function filterFarmers() {
 
         row.style.display = show ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('farmerTableExport');
 }
 
 function exportTableToExcel(tableId, filename) {

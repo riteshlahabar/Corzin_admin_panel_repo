@@ -14,6 +14,8 @@ function filterHealthRows() {
 
         row.style.display = show ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('healthTableExport');
 }
 
 function exportTableToExcel(tableId, filename) {

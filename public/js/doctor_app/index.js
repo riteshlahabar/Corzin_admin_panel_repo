@@ -17,6 +17,8 @@ function filterDoctorRows() {
 
         row.style.display = matchesSearch && matchesStatus && matchesFromDate && matchesToDate ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('doctorTable');
 }
 
 document.getElementById('doctorSearch')?.addEventListener('input', filterDoctorRows);

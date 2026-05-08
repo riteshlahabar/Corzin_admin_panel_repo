@@ -50,6 +50,9 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="{{ route('settings.diseases.index') }}" class="row g-2 mb-3">
+                        @if(request('per_page'))
+                            <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                        @endif
                         <div class="col-md-9">
                             <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search disease...">
                         </div>
@@ -149,9 +152,7 @@
                         </table>
                     </div>
                 </div>
-                @if($diseases->hasPages())
-                    <div class="card-footer bg-white">{{ $diseases->links() }}</div>
-                @endif
+                @include('partials.table-pagination', ['paginator' => $diseases])
             </div>
         </div>
     </div>

@@ -14,6 +14,8 @@ function filterLifecycleRows() {
 
         row.style.display = show ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('lifecycleTableExport');
 }
 
 function exportTableToExcel(tableId, filename) {

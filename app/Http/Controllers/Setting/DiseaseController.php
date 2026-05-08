@@ -20,7 +20,7 @@ class DiseaseController extends Controller
             });
         }
 
-        $diseases = $query->paginate(20)->withQueryString();
+        $diseases = $query->paginate($this->tablePerPage($request))->withQueryString();
 
         return view('settings.diseases', compact('diseases'));
     }

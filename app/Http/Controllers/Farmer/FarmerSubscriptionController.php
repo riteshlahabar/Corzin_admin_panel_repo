@@ -26,7 +26,7 @@ class FarmerSubscriptionController extends Controller
             });
         }
 
-        $farmers = $farmersQuery->paginate(20)->withQueryString();
+        $farmers = $farmersQuery->paginate($this->tablePerPage($request))->withQueryString();
         $farmerOptions = Farmer::query()
             ->orderBy('first_name')
             ->orderBy('last_name')

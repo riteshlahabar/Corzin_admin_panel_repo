@@ -22,7 +22,7 @@ class FeedTypeController extends Controller
             $query->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"]);
         }
 
-        $feedTypes = $query->paginate(20)->withQueryString();
+        $feedTypes = $query->paginate($this->tablePerPage($request))->withQueryString();
 
         return view('settings.feed_types', compact('feedTypes'));
     }

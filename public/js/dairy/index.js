@@ -4,6 +4,8 @@ document.getElementById('dairySearch')?.addEventListener('input', function () {
         const haystack = row.dataset.search || '';
         row.style.display = haystack.includes(value) ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('dairyTableExport');
 });
 
 function exportTableToExcel(tableId, filename) {

@@ -18,6 +18,8 @@ function filterAnimals() {
 
         row.style.display = show ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('animalTableExport');
 }
 
 function exportTableToExcel(tableId, filename) {

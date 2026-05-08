@@ -26,7 +26,7 @@ class DoctorVisitedController extends Controller
             });
         }
 
-        $visits = $query->paginate(20)->withQueryString();
+        $visits = $query->paginate($this->tablePerPage($request))->withQueryString();
 
         return view('doctor.visited', compact('visits'));
     }

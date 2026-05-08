@@ -51,6 +51,9 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form method="GET" action="{{ route('settings.feed-types.index') }}" class="row g-2 mb-3">
+                        @if(request('per_page'))
+                            <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                        @endif
                         <div class="col-md-9">
                             <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search feed type...">
                         </div>
@@ -152,9 +155,7 @@
                         </table>
                     </div>
                 </div>
-                @if($feedTypes->hasPages())
-                    <div class="card-footer bg-white">{{ $feedTypes->links() }}</div>
-                @endif
+                @include('partials.table-pagination', ['paginator' => $feedTypes])
             </div>
         </div>
     </div>

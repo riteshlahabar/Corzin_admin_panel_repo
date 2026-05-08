@@ -57,7 +57,7 @@ class DoctorAppointmentController extends Controller
             })->values();
         }
 
-        $perPage = 20;
+        $perPage = $this->tablePerPage($request);
         $currentPage = max(1, (int) $request->query('page', 1));
         $total = $representative->count();
         $pageItems = $representative->forPage($currentPage, $perPage)->values();

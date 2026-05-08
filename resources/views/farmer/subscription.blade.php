@@ -118,6 +118,9 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <form method="GET" action="{{ route('farmer.subscription.index') }}" class="row g-2 mb-3">
+                @if(request('per_page'))
+                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                @endif
                 <div class="col-md-5">
                     <input
                         type="text"
@@ -192,11 +195,7 @@
                 </table>
             </div>
         </div>
-        @if($farmers->hasPages())
-            <div class="card-footer bg-white">
-                {{ $farmers->links() }}
-            </div>
-        @endif
+        @include('partials.table-pagination', ['paginator' => $farmers])
     </div>
 </div>
 @endsection

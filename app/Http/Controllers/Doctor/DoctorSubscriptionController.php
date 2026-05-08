@@ -27,7 +27,7 @@ class DoctorSubscriptionController extends Controller
             });
         }
 
-        $doctors = $doctorsQuery->paginate(20)->withQueryString();
+        $doctors = $doctorsQuery->paginate($this->tablePerPage($request))->withQueryString();
         $doctorOptions = Doctor::query()
             ->orderBy('first_name')
             ->orderBy('last_name')

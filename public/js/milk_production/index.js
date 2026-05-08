@@ -18,6 +18,8 @@ function filterMilkRows() {
         if (end && date && date > end) show = false;
         row.style.display = show ? '' : 'none';
     });
+
+    window.CorzinTablePagination?.refresh('milkTableExport');
 }
 
 function exportTableToExcel(tableId, filename) {

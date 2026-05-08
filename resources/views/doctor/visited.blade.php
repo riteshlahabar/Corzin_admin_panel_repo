@@ -28,6 +28,9 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <form id="visitedSearchForm" method="GET" action="{{ route('doctor.visited') }}" class="row g-2 mb-3">
+                @if(request('per_page'))
+                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                @endif
                 <div class="col-md-4 col-lg-3">
                     <input
                         id="visitedSearchInput"
@@ -122,11 +125,7 @@
                 </table>
             </div>
         </div>
-        @if($visits->hasPages())
-            <div class="card-footer bg-white">
-                {{ $visits->links() }}
-            </div>
-        @endif
+        @include('partials.table-pagination', ['paginator' => $visits])
     </div>
 </div>
 <script>
