@@ -30,8 +30,12 @@ class DoctorAppointmentController extends Controller
         if ($request->filled('search')) {
             $search = strtolower(trim((string) $request->search));
             $representative = $representative->filter(function (DoctorAppointment $row) use ($search) {
-                $doctorName = strtolower((string) optional($row->doctor)->full_name);
-                $doctorAltName = strtolower((string) optional($row->doctor)->name);
+                $doctorName = $row->admin_doctor_name === '-'
+                    ? ''
+                    : strtolower((string) $row->admin_doctor_name);
+                $doctorAltName = $row->admin_doctor_name === '-'
+                    ? ''
+                    : strtolower((string) optional($row->doctor)->name);
                 $farmerFullName = strtolower(trim(implode(' ', array_filter([
                     optional($row->farmer)->first_name,
                     optional($row->farmer)->middle_name,

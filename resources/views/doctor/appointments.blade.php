@@ -139,7 +139,7 @@
                                             <button type="submit" class="btn btn-success btn-sm">Assign</button>
                                         </form>
                                     @else
-                                        {{ optional($appointment->doctor)->full_name ?: optional($appointment->doctor)->name ?: '-' }}
+                                        {{ $appointment->admin_doctor_name }}
                                     @endif
                                 </td>
                                 <td><span class="badge {{ $badgeClass }}">{{ ucwords(str_replace('_', ' ', $status)) }}</span></td>

@@ -943,7 +943,9 @@ class DoctorAppointmentController extends Controller
             'appointment_code' => $appointment->appointment_code,
             'appointment_group_id' => $appointment->appointment_group_id,
             'doctor_id' => $appointment->doctor_id,
-            'doctor_name' => optional($appointment->doctor)->full_name ?? '',
+            'doctor_name' => strtolower((string) ($appointment->status ?? '')) === 'cancelled'
+                ? ''
+                : (optional($appointment->doctor)->full_name ?? ''),
             'farmer_id' => $appointment->farmer_id,
             'animal_id' => $appointment->animal_id,
             'farmer_name' => $farmerFullName,

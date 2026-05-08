@@ -105,4 +105,13 @@ class DoctorAppointment extends Model
 
         return 'C/APP/'.str_pad((string) $id, 2, '0', STR_PAD_LEFT);
     }
+
+    public function getAdminDoctorNameAttribute(): string
+    {
+        if (strtolower((string) ($this->status ?? '')) === 'cancelled') {
+            return '-';
+        }
+
+        return optional($this->doctor)->full_name ?: optional($this->doctor)->name ?: '-';
+    }
 }
