@@ -41,6 +41,7 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Banner Image</label>
+                            <div class="text-muted small mb-1">Recommended size: 1200 x 450 px</div>
                             <input
                                 type="file"
                                 name="banner_image"
