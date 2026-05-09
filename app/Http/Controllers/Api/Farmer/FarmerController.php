@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class FarmerController extends Controller
 {
@@ -26,9 +27,13 @@ class FarmerController extends Controller
             'pincode' => 'nullable|string',
             'farmer_photo' => 'nullable|image|max:5120',
             'referral_code' => 'nullable|string|max:40',
+            'device_id' => 'nullable|string|max:120',
+            'fcm_token' => 'nullable|string',
+            'start_session' => 'nullable|boolean',
         ]);
 
         $referrerDoctor = $this->resolveReferrerDoctor($request->input('referral_code'));
+        $sessionToken = $request->boolean('start_session') ? Str::random(64) : null;
         if ($request->filled('referral_code') && ! $referrerDoctor) {
             return response()->json([
                 'status' => false,
@@ -57,6 +62,14 @@ class FarmerController extends Controller
             if ($referrerDoctor && empty($farmer->referred_by_doctor_id)) {
                 $updates['referred_by_doctor_id'] = $referrerDoctor->id;
                 $updates['doctor_referral_code'] = $referrerDoctor->referral_code;
+            }
+            if ($sessionToken !== null) {
+                $updates['active_device_id'] = $request->input('device_id');
+                $updates['active_session_token'] = $sessionToken;
+                $updates['active_session_at'] = now();
+                if ($request->filled('fcm_token')) {
+                    $updates['fcm_token'] = $request->input('fcm_token');
+                }
             }
 
             DB::table('farmers')
@@ -87,6 +100,7 @@ class FarmerController extends Controller
                 'message' => 'Farmer updated successfully',
                 'is_registered' => true,
                 'farmer_name' => $updatedFarmer->first_name ?? '',
+                'session_token' => $sessionToken ?: ($updatedFarmer->active_session_token ?? ''),
                 'data' => $this->transformFarmer($updatedFarmer),
             ], 200);
         }
@@ -97,6 +111,10 @@ class FarmerController extends Controller
             'referred_by_doctor_id' => $referrerDoctor?->id,
             'doctor_referral_code' => $referrerDoctor?->referral_code,
             'referral_reward_granted_at' => null,
+            'fcm_token' => $request->input('fcm_token'),
+            'active_device_id' => $sessionToken !== null ? $request->input('device_id') : null,
+            'active_session_token' => $sessionToken,
+            'active_session_at' => $sessionToken !== null ? now() : null,
             'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
             'last_name' => $request->last_name,
@@ -131,6 +149,7 @@ class FarmerController extends Controller
             'message' => 'Farmer created successfully',
             'is_registered' => true,
             'farmer_name' => $newFarmer->first_name ?? '',
+            'session_token' => $sessionToken ?: '',
             'data' => $this->transformFarmer($newFarmer),
         ], 201);
     }
@@ -217,6 +236,8 @@ class FarmerController extends Controller
     {
         $request->validate([
             'fcm_token' => 'required|string',
+            'device_id' => 'nullable|string|max:120',
+            'session_token' => 'nullable|string|max:120',
         ]);
 
         $farmer = DB::table('farmers')->where('id', $id)->first();
@@ -228,10 +249,25 @@ class FarmerController extends Controller
             ], 404);
         }
 
-        DB::table('farmers')->where('id', $id)->update([
+        $activeToken = trim((string) ($farmer->active_session_token ?? ''));
+        $requestToken = trim((string) $request->input('session_token', ''));
+        if ($activeToken !== '' && ($requestToken === '' || ! hash_equals($activeToken, $requestToken))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This account is logged in on another device.',
+                'force_logout' => true,
+            ], 401);
+        }
+
+        $updates = [
             'fcm_token' => $request->fcm_token,
             'updated_at' => now(),
-        ]);
+        ];
+        if ($request->filled('device_id')) {
+            $updates['active_device_id'] = $request->input('device_id');
+        }
+
+        DB::table('farmers')->where('id', $id)->update($updates);
 
         return response()->json([
             'status' => true,

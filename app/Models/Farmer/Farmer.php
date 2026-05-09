@@ -27,6 +27,9 @@ class Farmer extends Model
         'current_location_address',
         'is_active',
         'fcm_token',
+        'active_device_id',
+        'active_session_token',
+        'active_session_at',
     ];
 
     protected $casts = [
@@ -34,6 +37,7 @@ class Farmer extends Model
         'latitude' => 'float',
         'longitude' => 'float',
         'referral_reward_granted_at' => 'datetime',
+        'active_session_at' => 'datetime',
     ];
 
     public function animals()
