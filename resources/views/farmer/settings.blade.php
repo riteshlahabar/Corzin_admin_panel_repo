@@ -41,7 +41,6 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Banner Image</label>
-                            <div class="text-muted small mb-1">Recommended size: 1200 x 450 px</div>
                             <input
                                 type="file"
                                 name="banner_image"
@@ -49,6 +48,7 @@
                                 accept="image/*"
                                 required
                             >
+                            <div class="text-muted small mt-1">Recommended size: 1200 x 450 px</div>
                             @error('banner_image')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
