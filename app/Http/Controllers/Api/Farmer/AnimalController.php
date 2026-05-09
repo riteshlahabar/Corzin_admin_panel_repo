@@ -156,6 +156,7 @@ class AnimalController extends Controller
                 return [
                     'id' => $pan->id,
                     'name' => $pan->name,
+                    'milk_shifts' => $this->normalizeMilkShifts($pan->milk_shifts),
                     'animals_count' => $pan->animals->count(),
                     'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
                     'created_at' => optional($pan->created_at)->toDateTimeString(),
@@ -171,6 +172,8 @@ class AnimalController extends Controller
             'name' => 'required|string|max:255',
             'animal_ids' => 'required|array|min:1',
             'animal_ids.*' => 'integer|exists:animals,id',
+            'milk_shifts' => 'nullable|array|min:1',
+            'milk_shifts.*' => 'string|in:Morning,Afternoon,Evening',
         ]);
 
         if ($validator->fails()) {
@@ -185,12 +188,14 @@ class AnimalController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+        $milkShifts = $this->normalizeMilkShifts($request->input('milk_shifts', []));
 
         try {
-            $pan = DB::transaction(function () use ($request, $farmerId, $animalIds) {
+            $pan = DB::transaction(function () use ($request, $farmerId, $animalIds, $milkShifts) {
                 $pan = FarmerPan::create([
                     'farmer_id' => $farmerId,
                     'name' => trim((string) $request->name),
+                    'milk_shifts' => $milkShifts,
                 ]);
 
                 $animals = Animal::query()
@@ -225,6 +230,7 @@ class AnimalController extends Controller
                 'data' => [
                     'id' => $pan->id,
                     'name' => $pan->name,
+                    'milk_shifts' => $this->normalizeMilkShifts($pan->milk_shifts),
                     'animals_count' => $pan->animals->count(),
                     'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
                 ],
@@ -245,6 +251,8 @@ class AnimalController extends Controller
             'name' => 'required|string|max:255',
             'animal_ids' => 'nullable|array',
             'animal_ids.*' => 'integer|exists:animals,id',
+            'milk_shifts' => 'nullable|array|min:1',
+            'milk_shifts.*' => 'string|in:Morning,Afternoon,Evening',
         ]);
 
         if ($validator->fails()) {
@@ -271,11 +279,13 @@ class AnimalController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+        $milkShifts = $this->normalizeMilkShifts($request->input('milk_shifts', []));
 
         try {
-            DB::transaction(function () use ($request, $pan, $farmerId, $targetIds) {
+            DB::transaction(function () use ($request, $pan, $farmerId, $targetIds, $milkShifts) {
                 $pan->update([
                     'name' => trim((string) $request->name),
+                    'milk_shifts' => $milkShifts,
                 ]);
 
                 if (! $request->has('animal_ids')) {
@@ -318,6 +328,7 @@ class AnimalController extends Controller
                 'data' => [
                     'id' => $pan->id,
                     'name' => $pan->name,
+                    'milk_shifts' => $this->normalizeMilkShifts($pan->milk_shifts),
                     'animals_count' => $pan->animals->count(),
                     'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
                 ],
@@ -683,6 +694,7 @@ class AnimalController extends Controller
             'animal_type_name' => optional($animal->animalType)->name,
             'pan_id' => $animal->pan_id,
             'pan_name' => optional($animal->pan)->name,
+            'pan_milk_shifts' => $this->normalizeMilkShifts(optional($animal->pan)->milk_shifts ?? []),
             'mother_animal_id' => $animal->mother_animal_id,
             'mother_animal_name' => optional($animal->motherAnimal)->animal_name,
             'mother_tag_number' => optional($animal->motherAnimal)->tag_number,
@@ -696,6 +708,20 @@ class AnimalController extends Controller
             'listed_for_sale_at' => optional($animal->listed_for_sale_at)->toDateTimeString(),
             'image' => $animal->image_url,
         ];
+    }
+
+    private function normalizeMilkShifts($value): array
+    {
+        $allowed = ['Morning', 'Afternoon', 'Evening'];
+        $items = is_array($value) ? $value : [];
+        $normalized = collect($items)
+            ->map(fn ($item) => ucfirst(strtolower(trim((string) $item))))
+            ->filter(fn ($item) => in_array($item, $allowed, true))
+            ->unique()
+            ->values()
+            ->all();
+
+        return empty($normalized) ? $allowed : array_values(array_intersect($allowed, $normalized));
     }
 }
 

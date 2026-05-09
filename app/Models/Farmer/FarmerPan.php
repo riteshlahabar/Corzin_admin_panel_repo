@@ -9,6 +9,11 @@ class FarmerPan extends Model
     protected $fillable = [
         'farmer_id',
         'name',
+        'milk_shifts',
+    ];
+
+    protected $casts = [
+        'milk_shifts' => 'array',
     ];
 
     public function farmer()
@@ -31,4 +36,3 @@ class FarmerPan extends Model
         return $this->hasMany(AnimalLifecycleHistory::class, 'to_pan_id');
     }
 }
-

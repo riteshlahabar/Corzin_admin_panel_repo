@@ -30,7 +30,14 @@ class MilkProductionController extends Controller
             ], 422);
         }
 
-        $date = Carbon::createFromFormat('Y-m-d', $request->date)->format('Y-m-d');
+        $dateObject = Carbon::createFromFormat('Y-m-d', $request->date)->startOfDay();
+        if ($dateObject->gt(now()->startOfDay())) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Milk date cannot be a future date.',
+            ], 422);
+        }
+        $date = $dateObject->format('Y-m-d');
         $quantity = (float) $request->quantity;
         $morning = 0;
         $afternoon = 0;
@@ -181,9 +188,17 @@ class MilkProductionController extends Controller
             $evening = $quantity;
         }
 
+        $dateObject = Carbon::createFromFormat('Y-m-d', $request->date)->startOfDay();
+        if ($dateObject->gt(now()->startOfDay())) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Milk date cannot be a future date.',
+            ], 422);
+        }
+
         $milk->update([
             'dairy_id' => $request->dairy_id,
-            'date' => Carbon::createFromFormat('Y-m-d', $request->date)->format('Y-m-d'),
+            'date' => $dateObject->format('Y-m-d'),
             'morning_milk' => $morning,
             'afternoon_milk' => $afternoon,
             'evening_milk' => $evening,
