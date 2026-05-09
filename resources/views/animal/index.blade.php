@@ -53,6 +53,9 @@
                             <th>Farmer</th>
                             <th>Animal Name</th>
                             <th>Tag Number</th>
+                            <th>Lactation No.</th>
+                            <th>AI Date</th>
+                            <th>Breed Name</th>
                             <th>Type</th>
                             <th>PAN</th>
                             <th>Gender</th>
@@ -68,13 +71,16 @@
                         @forelse($animals as $key => $animal)
                         <tr class="animal-row"
                             data-type="{{ $animal->animal_type_id }}"
-                            data-search="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '').' '.($animal->animal_name ?? '').' '.($animal->tag_number ?? '').' '.($animal->unique_id ?? ''))) }}"
+                            data-search="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '').' '.($animal->animal_name ?? '').' '.($animal->tag_number ?? '').' '.($animal->unique_id ?? '').' '.($animal->breed_name ?? '').' '.($animal->lactation_number ?? ''))) }}"
                             data-date="{{ optional($animal->created_at)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $animal->unique_id }}</td>
                             <td>{{ trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '')) ?: '-' }}</td>
                             <td>{{ $animal->animal_name }}</td>
                             <td>{{ $animal->tag_number }}</td>
+                            <td>{{ $animal->lactation_number ?? '-' }}</td>
+                            <td>{{ $animal->ai_date ? \Carbon\Carbon::parse($animal->ai_date)->format('d-m-Y') : '-' }}</td>
+                            <td>{{ $animal->breed_name ?: '-' }}</td>
                             <td>{{ $animal->animalType->name ?? '-' }}</td>
                             <td>{{ $animal->pan->name ?? '-' }}</td>
                             <td>{{ $animal->gender }}</td>
@@ -110,7 +116,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="14" class="text-center text-muted">No Animals Found</td></tr>
+                        <tr><td colspan="17" class="text-center text-muted">No Animals Found</td></tr>
                         @endforelse
                     </tbody>
                 </table>

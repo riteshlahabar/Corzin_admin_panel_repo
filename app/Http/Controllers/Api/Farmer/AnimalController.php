@@ -28,6 +28,9 @@ class AnimalController extends Controller
             'tag_number' => 'required|string|max:255',
             'animal_type_id' => 'required|exists:animal_types,id',
             'mother_animal_id' => 'nullable|exists:animals,id',
+            'lactation_number' => 'nullable|integer|min:0',
+            'ai_date' => 'nullable|date_format:d/m/Y',
+            'breed_name' => 'nullable|string|max:255',
             'birth_date' => 'required|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
@@ -56,6 +59,9 @@ class AnimalController extends Controller
 
         $birthDateObj = Carbon::createFromFormat('d/m/Y', $request->birth_date);
         $birthDate = $birthDateObj->format('Y-m-d');
+        $aiDate = $request->filled('ai_date')
+            ? Carbon::createFromFormat('d/m/Y', $request->ai_date)->format('Y-m-d')
+            : null;
         $age = max($birthDateObj->age, 0);
         $imagePath = null;
 
@@ -84,6 +90,9 @@ class AnimalController extends Controller
             'tag_number' => $request->tag_number,
             'animal_type_id' => $request->animal_type_id,
             'mother_animal_id' => $request->filled('mother_animal_id') ? (int) $request->mother_animal_id : null,
+            'lactation_number' => $request->filled('lactation_number') ? (int) $request->lactation_number : null,
+            'ai_date' => $aiDate,
+            'breed_name' => $request->filled('breed_name') ? trim((string) $request->breed_name) : null,
             'age' => $age,
             'birth_date' => $birthDate,
             'gender' => $request->gender,
@@ -429,6 +438,9 @@ class AnimalController extends Controller
             'tag_number' => 'required|string|max:255',
             'animal_type_id' => 'required|exists:animal_types,id',
             'mother_animal_id' => 'nullable|exists:animals,id',
+            'lactation_number' => 'nullable|integer|min:0',
+            'ai_date' => 'nullable|date_format:d/m/Y',
+            'breed_name' => 'nullable|string|max:255',
             'birth_date' => 'required|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
@@ -468,6 +480,9 @@ class AnimalController extends Controller
 
         $birthDateObj = Carbon::createFromFormat('d/m/Y', $request->birth_date);
         $birthDate = $birthDateObj->format('Y-m-d');
+        $aiDate = $request->filled('ai_date')
+            ? Carbon::createFromFormat('d/m/Y', $request->ai_date)->format('Y-m-d')
+            : null;
         $age = max($birthDateObj->age, 0);
         $imagePath = $animal->image;
 
@@ -487,6 +502,9 @@ class AnimalController extends Controller
             'tag_number' => $request->tag_number,
             'animal_type_id' => $request->animal_type_id,
             'mother_animal_id' => $request->filled('mother_animal_id') ? (int) $request->mother_animal_id : null,
+            'lactation_number' => $request->filled('lactation_number') ? (int) $request->lactation_number : null,
+            'ai_date' => $aiDate,
+            'breed_name' => $request->filled('breed_name') ? trim((string) $request->breed_name) : null,
             'age' => $age,
             'birth_date' => $birthDate,
             'gender' => $request->gender,
@@ -698,6 +716,9 @@ class AnimalController extends Controller
             'mother_animal_id' => $animal->mother_animal_id,
             'mother_animal_name' => optional($animal->motherAnimal)->animal_name,
             'mother_tag_number' => optional($animal->motherAnimal)->tag_number,
+            'lactation_number' => $animal->lactation_number !== null ? (int) $animal->lactation_number : null,
+            'ai_date' => $animal->ai_date ? Carbon::parse($animal->ai_date)->format('d/m/Y') : null,
+            'breed_name' => $animal->breed_name,
             'age' => $animal->calculated_age,
             'birth_date' => $animal->birth_date ? Carbon::parse($animal->birth_date)->format('d/m/Y') : null,
             'gender' => $animal->gender,

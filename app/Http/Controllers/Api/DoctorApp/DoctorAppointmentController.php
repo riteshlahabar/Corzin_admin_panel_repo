@@ -12,7 +12,6 @@ use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\FeedingRecord;
 use App\Models\Farmer\MilkProduction;
-use App\Models\Reproductive\ReproductiveRecord;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -1100,29 +1099,20 @@ class DoctorAppointmentController extends Controller
             return [];
         }
 
-        $since = now()->subMonths(6)->toDateString();
+        $animal = Animal::query()->find($appointment->animal_id);
 
-        return ReproductiveRecord::query()
-            ->where('animal_id', $appointment->animal_id)
-            ->where(function ($query) use ($since) {
-                $query->whereDate('ai_date', '>=', $since)
-                    ->orWhereDate('calving_date', '>=', $since)
-                    ->orWhere('pregnancy_confirmation', true);
-            })
-            ->latest('ai_date')
-            ->latest('calving_date')
-            ->limit(10)
-            ->get()
-            ->map(fn (ReproductiveRecord $row) => [
-                'ai_date' => optional($row->ai_date)->toDateString(),
-                'calving_date' => optional($row->calving_date)->toDateString(),
-                'breed_name' => (string) ($row->breed_name ?? ''),
-                'lactation_number' => $row->lactation_number !== null ? (int) $row->lactation_number : null,
-                'pregnancy_confirmation' => (bool) ($row->pregnancy_confirmation ?? false),
-                'notes' => (string) ($row->notes ?? ''),
-            ])
-            ->values()
-            ->all();
+        if (! $animal || (blank($animal->ai_date) && blank($animal->breed_name) && $animal->lactation_number === null)) {
+            return [];
+        }
+
+        return [[
+            'ai_date' => optional($animal->ai_date)->toDateString(),
+            'calving_date' => null,
+            'breed_name' => (string) ($animal->breed_name ?? ''),
+            'lactation_number' => $animal->lactation_number !== null ? (int) $animal->lactation_number : null,
+            'pregnancy_confirmation' => false,
+            'notes' => '',
+        ]];
     }
 
     protected function farmerStatusRank(DoctorAppointment $appointment): int

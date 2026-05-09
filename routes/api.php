@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\Farmer\MilkProductionController;
 use App\Http\Controllers\Api\Farmer\AnimalTypeController;
 use App\Http\Controllers\Api\Farmer\DairyController;
 use App\Http\Controllers\Api\Farmer\FeedingController;
-use App\Http\Controllers\Api\Farmer\ReproductiveController;
 use App\Http\Controllers\Api\Farmer\HealthController;
 use App\Http\Controllers\Api\Farmer\SubscriptionController;
 use App\Http\Controllers\Api\Doctor\DoctorController as FarmerDoctorController;
@@ -71,11 +70,6 @@ Route::prefix('dairy')->group(function () {
     Route::get('/list/{farmer_id}', [DairyController::class, 'index']);
     Route::post('/payments/entry', [DairyController::class, 'storePaymentEntry']);
     Route::get('/payments/{farmer_id}', [DairyController::class, 'payments']);
-});
-
-Route::prefix('reproductive')->group(function () {
-    Route::post('/', [ReproductiveController::class, 'store']);
-    Route::get('/list/{farmer_id}', [ReproductiveController::class, 'index']);
 });
 
 Route::prefix('health')->group(function () {

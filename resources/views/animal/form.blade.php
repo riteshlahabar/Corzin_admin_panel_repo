@@ -36,6 +36,18 @@
                                 <input type="text" name="tag_number" class="form-control" value="{{ old('tag_number', $animal->tag_number) }}" required>
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label">Lactation Number</label>
+                                <input type="number" min="0" name="lactation_number" class="form-control" value="{{ old('lactation_number', $animal->lactation_number) }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">AI Date</label>
+                                <input type="date" name="ai_date" class="form-control" value="{{ old('ai_date', $animal->ai_date ? \Carbon\Carbon::parse($animal->ai_date)->format('Y-m-d') : '') }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Breed Name</label>
+                                <input type="text" name="breed_name" class="form-control" value="{{ old('breed_name', $animal->breed_name) }}">
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">Animal Type</label>
                                 <select name="animal_type_id" class="form-select" required>
                                     <option value="">Select type</option>

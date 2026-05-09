@@ -41,13 +41,6 @@
     </li>
 
     <li class="nav-item">
-        <a class="nav-link" href="{{ route('reproductive.index') }}">
-            <i class="iconoir-heart menu-icon me-2"></i>
-            <span>Reproductive</span>
-        </a>
-    </li>
-
-    <li class="nav-item">
         <a class="nav-link" href="#lifecycleMenu" data-bs-toggle="collapse" role="button">
             <i class="iconoir-refresh-circle menu-icon me-2"></i>
             <span>Animal Lifecycle</span>

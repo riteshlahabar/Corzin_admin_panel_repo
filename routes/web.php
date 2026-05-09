@@ -22,7 +22,6 @@ use App\Http\Controllers\Doctor\DoctorPlanController;
 use App\Http\Controllers\Doctor\DoctorSubscriptionController;
 use App\Http\Controllers\Shop\ShopProductController;
 use App\Http\Controllers\Shop\AnimalBuySellController;
-use App\Http\Controllers\Reproductive\ReproductiveListController;
 use App\Http\Controllers\Setting\DiseaseController;
 use App\Http\Controllers\Setting\FeedTypeController;
 use App\Http\Controllers\Setting\NotificationTemplateController;
@@ -72,11 +71,6 @@ Route::prefix('animal-lifecycle')->group(function () {
     Route::get('/sold', [AnimalLifecycleController::class, 'sold'])->name('animal.lifecycle.sold');
     Route::get('/death', [AnimalLifecycleController::class, 'death'])->name('animal.lifecycle.death');
     Route::get('/pan-transfer', [AnimalLifecycleController::class, 'panTransfer'])->name('animal.lifecycle.pan_transfer');
-});
-
-Route::prefix('reproductive')->group(function () {
-    Route::get('/', [ReproductiveListController::class, 'index'])->name('reproductive.index');
-    Route::post('/', [ReproductiveListController::class, 'store'])->name('reproductive.store');
 });
 
 Route::prefix('health')->group(function () {

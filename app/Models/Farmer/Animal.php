@@ -15,6 +15,9 @@ class Animal extends Model
         'animal_type_id',
         'pan_id',
         'mother_animal_id',
+        'lactation_number',
+        'ai_date',
+        'breed_name',
         'age',
         'birth_date',
         'gender',
@@ -31,6 +34,7 @@ class Animal extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'is_for_sale' => 'boolean',
+        'ai_date' => 'date',
         'listed_for_sale_at' => 'datetime',
         'sold_at' => 'datetime',
         'death_at' => 'datetime',
