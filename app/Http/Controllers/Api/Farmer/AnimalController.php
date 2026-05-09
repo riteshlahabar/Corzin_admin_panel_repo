@@ -726,6 +726,7 @@ class AnimalController extends Controller
     {
         return [
             'id' => $animal->id,
+            'farmer_id' => $animal->farmer_id,
             'unique_id' => $animal->unique_id,
             'animal_name' => $animal->animal_name,
             'tag_number' => $animal->tag_number,
