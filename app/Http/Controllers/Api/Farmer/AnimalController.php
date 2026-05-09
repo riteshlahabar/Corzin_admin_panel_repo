@@ -548,7 +548,7 @@ class AnimalController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Animal is already listed for sale.',
-                'data' => $this->transformAnimal($animal->load('animalType')),
+                'data' => $this->transformAnimal($animal->load(['animalType', 'pan', 'motherAnimal'])),
             ], 200);
         }
 
@@ -557,23 +557,26 @@ class AnimalController extends Controller
             'listed_for_sale_at' => now(),
         ]);
 
-        $seller = $animal->farmer;
-        $sellerName = trim(($seller->first_name ?? '').' '.($seller->last_name ?? ''));
         $animalLabel = trim(($animal->animal_name ?: 'Animal').' (Tag: '.($animal->tag_number ?: '-').')');
+        $animalType = optional($animal->animalType)->name ?: 'Animal';
 
         Farmer::query()
             ->where('id', '!=', (int) $request->farmer_id)
             ->whereNotNull('fcm_token')
-            ->chunkById(100, function ($farmers) use ($sellerName, $animalLabel, $animal) {
+            ->chunkById(100, function ($farmers) use ($animalLabel, $animal, $animalType) {
                 foreach ($farmers as $farmer) {
                     $this->firebaseService->sendToDevice(
                         $farmer->fcm_token,
                         'Animal For Sale',
-                        trim(($sellerName !== '' ? $sellerName : 'A farmer').' listed '.$animalLabel.' for selling.'),
+                        trim($animalLabel.' is available for selling.'),
                         [
                             'type' => 'animal_sell',
                             'event' => 'animal_listed_for_sale',
                             'animal_id' => (string) $animal->id,
+                            'animal_name' => (string) ($animal->animal_name ?? ''),
+                            'tag_number' => (string) ($animal->tag_number ?? ''),
+                            'animal_type' => (string) $animalType,
+                            'image' => (string) ($animal->image_url ?? ''),
                         ]
                     );
                 }
@@ -582,8 +585,26 @@ class AnimalController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Animal listed for sale and notification sent.',
-            'data' => $this->transformAnimal($animal->fresh()->load('animalType')),
+            'data' => $this->transformAnimal($animal->fresh()->load(['animalType', 'pan', 'motherAnimal'])),
         ], 200);
+    }
+
+    public function forSaleList()
+    {
+        $animals = Animal::query()
+            ->with(['animalType', 'pan', 'motherAnimal'])
+            ->where('is_for_sale', true)
+            ->latest('listed_for_sale_at')
+            ->latest('id')
+            ->take(30)
+            ->get()
+            ->map(fn (Animal $animal) => $this->transformAnimal($animal));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Animals for sale fetched successfully.',
+            'data' => $animals,
+        ]);
     }
 
     public function updateLifecycle(Request $request, $animalId)

@@ -387,14 +387,19 @@ class FeedingController extends Controller
 
     public function summary($farmer_id)
     {
-        $records = FeedingRecord::where('farmer_id', $farmer_id)->get();
+        $today = now()->toDateString();
+        $todayFeeding = FeedingRecord::where('farmer_id', $farmer_id)
+            ->whereDate('date', $today)
+            ->sum('quantity');
+        $totalFeeding = FeedingRecord::where('farmer_id', $farmer_id)
+            ->sum('quantity');
 
         return response()->json([
             'status' => true,
             'message' => 'Feeding summary fetched successfully',
             'data' => [
-                'today_feeding' => round($records->where('date', now()->toDateString())->sum('quantity'), 2),
-                'total_feeding' => round($records->sum('quantity'), 2),
+                'today_feeding' => round((float) $todayFeeding, 2),
+                'total_feeding' => round((float) $totalFeeding, 2),
                 'unit' => 'Kg',
             ],
         ]);

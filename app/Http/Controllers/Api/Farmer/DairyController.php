@@ -75,6 +75,7 @@ class DairyController extends Controller
     {
         $dairies = Dairy::where('farmer_id', $farmer_id)->latest()->get();
         $dairyIds = $dairies->pluck('id')->values();
+        $today = now()->toDateString();
 
         $milkByDay = MilkProduction::query()
             ->selectRaw('dairy_id, DATE(`date`) as entry_date, COALESCE(SUM(total_milk * COALESCE(rate, 0)), 0) as day_total_amount')
@@ -90,6 +91,16 @@ class DairyController extends Controller
                 });
             });
 
+        $milkQuantityByDairy = MilkProduction::query()
+            ->selectRaw(
+                'dairy_id, COALESCE(SUM(total_milk), 0) as total_milk, COALESCE(SUM(CASE WHEN DATE(`date`) = ? THEN total_milk ELSE 0 END), 0) as today_milk',
+                [$today]
+            )
+            ->whereIn('dairy_id', $dairyIds)
+            ->groupBy('dairy_id')
+            ->get()
+            ->keyBy('dairy_id');
+
         $paymentEntriesByDairy = DairyPaymentEntry::query()
             ->where('farmer_id', $farmer_id)
             ->whereIn('dairy_id', $dairyIds)
@@ -97,17 +108,20 @@ class DairyController extends Controller
             ->get()
             ->groupBy('dairy_id');
 
-        $data = $dairies->map(function (Dairy $dairy) use ($milkByDay, $paymentEntriesByDairy) {
+        $data = $dairies->map(function (Dairy $dairy) use ($milkByDay, $paymentEntriesByDairy, $milkQuantityByDairy) {
             $ledger = $this->buildLedgerForDairy(
                 $dairy,
                 $milkByDay->get($dairy->id, collect()),
                 $paymentEntriesByDairy->get($dairy->id, collect())
             );
             $latest = $ledger['history']->first();
+            $milkQuantity = $milkQuantityByDairy->get($dairy->id);
 
             return [
                 'id' => $dairy->id,
                 'dairy_name' => $dairy->dairy_name,
+                'today_milk' => round((float) ($milkQuantity->today_milk ?? 0), 2),
+                'total_milk' => round((float) ($milkQuantity->total_milk ?? 0), 2),
                 'current_balance' => round((float) ($ledger['current_balance'] ?? 0), 2),
                 'history' => $ledger['history'],
                 'latest' => $latest,

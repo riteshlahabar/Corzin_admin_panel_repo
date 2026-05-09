@@ -10,7 +10,7 @@ class AnimalBuySellController extends Controller
     public function index()
     {
         $sellingAnimals = Animal::query()
-            ->with(['farmer', 'animalType'])
+            ->with(['farmer', 'animalType', 'pan', 'motherAnimal'])
             ->where('is_for_sale', true)
             ->latest('listed_for_sale_at')
             ->latest()
@@ -19,4 +19,3 @@ class AnimalBuySellController extends Controller
         return view('shop.animal_buy_sell', compact('sellingAnimals'));
     }
 }
-
