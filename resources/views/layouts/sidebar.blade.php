@@ -34,6 +34,21 @@
                 <li class="menu-item"><a href="{{ route('farmer.milk') }}" class="nav-link"><i class="iconoir-droplet me-2"></i> Milk Production</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.feeding') }}" class="nav-link"><i class="iconoir-leaf me-2"></i> Feeding</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.dairy') }}" class="nav-link"><i class="iconoir-building me-2"></i> Dairy</a></li>
+                <li class="menu-item">
+                    <a href="#farmerSettingsMenu" class="nav-link {{ request()->routeIs('farmer.settings*') ? 'active' : '' }}" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('farmer.settings*') ? 'true' : 'false' }}">
+                        <i class="iconoir-settings me-2"></i> Settings
+                        <span class="menu-arrow"></span>
+                    </a>
+                    <div class="collapse {{ request()->routeIs('farmer.settings*') ? 'show' : '' }}" id="farmerSettingsMenu">
+                        <ul class="nav flex-column ms-4">
+                            <li class="menu-item">
+                                <a href="{{ route('farmer.settings') }}" class="nav-link {{ request()->routeIs('farmer.settings*') ? 'active' : '' }}">
+                                    <i class="iconoir-media-image me-2"></i> Banner
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
                 <li class="menu-item"><a href="{{ route('farmer.plan.index') }}" class="nav-link"><i class="iconoir-coins me-2"></i> Farmer Plan</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.subscription.index') }}" class="nav-link"><i class="iconoir-wallet me-2"></i> Farmer Subscription</a></li>
             </ul>

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Farmer\DairyController;
 use App\Http\Controllers\Api\Farmer\FeedingController;
 use App\Http\Controllers\Api\Farmer\HealthController;
 use App\Http\Controllers\Api\Farmer\SubscriptionController;
+use App\Http\Controllers\Api\Farmer\FarmerSettingController as ApiFarmerSettingController;
 use App\Http\Controllers\Api\Doctor\DoctorController as FarmerDoctorController;
 use App\Http\Controllers\Api\Doctor\DoctorAppointmentController as FarmerDoctorAppointmentController;
 use App\Http\Controllers\Api\Doctor\DoctorSettingController as FarmerDoctorSettingController;
@@ -32,6 +33,7 @@ Route::prefix('farmer')->group(function () {
     Route::post('/update/{id}', [FarmerController::class, 'update']);
     Route::post('/fcm-token/{id}', [FarmerController::class, 'updateFcmToken']);
     Route::post('/location/{id}', [FarmerController::class, 'updateCurrentLocation']);
+    Route::get('/settings', [ApiFarmerSettingController::class, 'show']);
 });
 
 Route::prefix('animal')->group(function () {

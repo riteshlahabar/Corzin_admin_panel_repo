@@ -13,6 +13,7 @@ use App\Http\Controllers\Farmer\AnimalLifecycleController;
 use App\Http\Controllers\Farmer\HealthManagementController;
 use App\Http\Controllers\Farmer\FarmerPlanController;
 use App\Http\Controllers\Farmer\FarmerSubscriptionController;
+use App\Http\Controllers\Farmer\FarmerSettingController;
 use App\Http\Controllers\Doctor\DoctorAppointmentController;
 use App\Http\Controllers\Doctor\DoctorListController;
 use App\Http\Controllers\Doctor\DoctorReferralController;
@@ -59,6 +60,9 @@ Route::prefix('farmer')->group(function () {
     Route::post('/feeding', [FeedingListController::class, 'store'])->name('farmer.feeding.store');
     Route::get('/dairy', [DairyListController::class, 'index'])->name('farmer.dairy');
     Route::post('/dairy', [DairyListController::class, 'store'])->name('farmer.dairy.store');
+    Route::get('/settings', [FarmerSettingController::class, 'index'])->name('farmer.settings');
+    Route::post('/settings/banner', [FarmerSettingController::class, 'uploadBanner'])->name('farmer.settings.banner.upload');
+    Route::delete('/settings/banner/{farmerBanner}', [FarmerSettingController::class, 'destroyBanner'])->name('farmer.settings.banner.destroy');
     Route::get('/plan', [FarmerPlanController::class, 'index'])->name('farmer.plan.index');
     Route::post('/plan', [FarmerPlanController::class, 'store'])->name('farmer.plan.store');
     Route::put('/plan/{farmerPlan}', [FarmerPlanController::class, 'update'])->name('farmer.plan.update');
