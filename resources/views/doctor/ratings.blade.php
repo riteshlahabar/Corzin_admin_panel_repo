@@ -145,7 +145,11 @@
                 </table>
             </div>
         </div>
-        @include('partials.table-pagination', ['paginator' => $doctors])
+       <div class="card-footer bg-white border-0">
+    <div class="d-flex justify-content-center">
+        {{ $doctors->onEachSide(1)->links('pagination::bootstrap-4') }}
+    </div>
+</div>
     </div>
 </div>
 @endsection
