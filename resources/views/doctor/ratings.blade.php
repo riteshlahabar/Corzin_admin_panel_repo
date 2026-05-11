@@ -146,8 +146,30 @@
             </div>
         </div>
        <div class="card-footer bg-white border-0">
-    <div class="d-flex justify-content-center">
-        {{ $doctors->onEachSide(1)->links('pagination::bootstrap-4') }}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+
+        <form method="GET" action="{{ route('doctor.ratings') }}" class="d-flex align-items-center gap-2">
+            @if(request('search'))
+                <input type="hidden" name="search" value="{{ request('search') }}">
+            @endif
+
+            <select name="per_page" class="form-select form-select-sm" style="width: 80px;" onchange="this.form.submit()">
+                @foreach([10, 25, 50, 100] as $size)
+                    <option value="{{ $size }}" {{ request('per_page', 10) == $size ? 'selected' : '' }}>
+                        {{ $size }}
+                    </option>
+                @endforeach
+            </select>
+
+            <span class="text-muted small">
+                Showing {{ $doctors->firstItem() ?? 0 }} to {{ $doctors->lastItem() ?? 0 }} of {{ $doctors->total() }} results
+            </span>
+        </form>
+
+        <div>
+            {{ $doctors->appends(request()->query())->onEachSide(1)->links('pagination::bootstrap-4') }}
+        </div>
+
     </div>
 </div>
     </div>
