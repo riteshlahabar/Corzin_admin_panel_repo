@@ -7,6 +7,7 @@ use App\Models\Doctor\DoctorAdminNotification;
 use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
 use App\Models\Doctor\DoctorDisease;
+use App\Models\Doctor\DoctorRating;
 use App\Models\NotificationTemplate;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
@@ -20,6 +21,8 @@ use Illuminate\Validation\Rule;
 
 class DoctorAppointmentController extends Controller
 {
+    protected const int MAX_ACTIVE_ACCEPTED_APPOINTMENTS_PER_DOCTOR = 2;
+
     public function __construct(protected FirebaseService $firebaseService)
     {
     }
@@ -40,7 +43,7 @@ class DoctorAppointmentController extends Controller
                     })
                     ->orWhereNotIn('status', ['pending']);
             })
-            ->with(['doctor', 'farmer'])
+            ->with(['doctor', 'farmer', 'rating'])
             ->latest('requested_at')
             ->latest()
             ->get()
@@ -62,7 +65,7 @@ class DoctorAppointmentController extends Controller
                     $query->orWhere('farmer_phone', $farmer->mobile);
                 }
             })
-            ->with(['doctor', 'farmer'])
+            ->with(['doctor', 'farmer', 'rating'])
             ->latest('requested_at')
             ->latest()
             ->get();
@@ -152,6 +155,13 @@ class DoctorAppointmentController extends Controller
             $animalPhoto = $animal->image;
         }
 
+        if (! $this->doctorHasActiveAppointmentCapacity((int) $data['doctor_id'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Doctor already has two active accepted appointments. Please choose another doctor.',
+            ], 422);
+        }
+
         $appointment = DoctorAppointment::create([
             'doctor_id' => (int) $data['doctor_id'],
             'appointment_group_id' => (string) Str::uuid(),
@@ -191,6 +201,56 @@ class DoctorAppointmentController extends Controller
             'message' => 'Appointment request created successfully.',
             'data' => $this->appointmentPayload($appointment, true),
         ], 201);
+    }
+
+    public function rate(Request $request, DoctorAppointment $appointment)
+    {
+        $data = $request->validate([
+            'farmer_id' => ['nullable', 'exists:farmers,id'],
+            'rating' => ['required', 'integer', 'between:1,5'],
+        ]);
+
+        if (strtolower((string) ($appointment->status ?? '')) !== 'completed') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Rating can be added only after appointment completion.',
+            ], 422);
+        }
+
+        if (empty($appointment->doctor_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Doctor details are missing for this appointment.',
+            ], 422);
+        }
+
+        $farmerId = (int) ($data['farmer_id'] ?? 0);
+        if ($farmerId > 0 && (int) ($appointment->farmer_id ?? 0) > 0 && $farmerId !== (int) $appointment->farmer_id) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This appointment does not belong to the selected farmer.',
+            ], 403);
+        }
+        if ($farmerId <= 0) {
+            $farmerId = (int) ($appointment->farmer_id ?? 0);
+        }
+
+        DoctorRating::updateOrCreate(
+            ['doctor_appointment_id' => $appointment->id],
+            [
+                'doctor_id' => (int) $appointment->doctor_id,
+                'farmer_id' => $farmerId > 0 ? $farmerId : null,
+                'rating' => (int) $data['rating'],
+            ]
+        );
+
+        $appointment->loadMissing(['doctor', 'farmer']);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Thank you for rating the doctor.',
+            'data' => $this->appointmentPayload($appointment->fresh()->loadMissing(['doctor', 'farmer', 'rating']), true),
+        ]);
     }
 
     public function propose(Request $request, DoctorAppointment $appointment)
@@ -387,6 +447,15 @@ class DoctorAppointmentController extends Controller
                         ->values();
                 }
 
+                if (! $this->doctorHasActiveAppointmentCapacity((int) $lockedAppointment->doctor_id, (int) $lockedAppointment->id)) {
+                    return [
+                        'conflict' => true,
+                        'message' => 'You already have two active accepted appointments. Complete one appointment before accepting another.',
+                        'appointment' => null,
+                        'other_rows' => collect(),
+                    ];
+                }
+
                 $updateData = [
                     'status' => 'approved',
                     'accepted_at' => $lockedAppointment->accepted_at ?? now(),
@@ -505,6 +574,15 @@ class DoctorAppointmentController extends Controller
         $status = $data['status'] === 'approved' ? 'approved' : 'cancelled';
         $otpCode = $status === 'approved' ? (string) random_int(100000, 999999) : null;
         $rowsToNotify = collect([$appointment]);
+
+        if ($status === 'approved' &&
+            ! $this->doctorHasActiveAppointmentCapacity((int) $appointment->doctor_id, (int) $appointment->id)
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Doctor already has two active accepted appointments. Please wait until one appointment is completed.',
+            ], 422);
+        }
 
         if ($status === 'cancelled' && ! blank($appointment->appointment_group_id)) {
             $rowsToNotify = DoctorAppointment::query()
@@ -823,6 +901,13 @@ class DoctorAppointmentController extends Controller
             ]);
         }
 
+        if (! $this->doctorHasActiveAppointmentCapacity((int) $appointment->doctor_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You already have two active accepted appointments. Complete one appointment before continuing with another animal.',
+            ], 422);
+        }
+
         $nextAppointment = DoctorAppointment::create([
             'doctor_id' => $appointment->doctor_id,
             'appointment_group_id' => (string) Str::uuid(),
@@ -890,6 +975,7 @@ class DoctorAppointmentController extends Controller
 
     protected function appointmentPayload(DoctorAppointment $appointment, bool $includeOtp = false): array
     {
+        $appointment->loadMissing('rating');
         $followupDueToday = $this->isFollowupDueToday($appointment);
         $effectiveStatus = $followupDueToday ? 'followup' : ($appointment->status ?? 'pending');
         $previousSelfHistories = $this->previousSelfTreatmentHistories($appointment);
@@ -936,6 +1022,8 @@ class DoctorAppointmentController extends Controller
         if ($farmerFullName === '') {
             $farmerFullName = (string) ($appointment->farmer_name ?? '');
         }
+
+        $rating = $appointment->rating;
 
         return [
             'id' => $appointment->id,
@@ -985,6 +1073,9 @@ class DoctorAppointmentController extends Controller
             'visit_otp' => $includeOtp ? ($appointment->otp_code ?? null) : null,
             'address' => $appointment->address ?? '',
             'notes' => $appointment->notes ?? '',
+            'rating' => $rating ? (int) $rating->rating : null,
+            'rating_id' => $rating ? (int) $rating->id : null,
+            'is_rated' => $rating !== null,
             'previous_histories' => $previousSelfHistories,
             'recent_milk_history' => $recentMilkHistory,
             'recent_feeding_history' => $recentFeedingHistory,
@@ -1115,6 +1206,28 @@ class DoctorAppointmentController extends Controller
         ]];
     }
 
+    protected function doctorHasActiveAppointmentCapacity(int $doctorId, ?int $excludeAppointmentId = null): bool
+    {
+        if ($doctorId <= 0) {
+            return false;
+        }
+
+        $query = DoctorAppointment::query()
+            ->where('doctor_id', $doctorId)
+            ->whereIn('status', $this->activeAcceptedAppointmentStatuses());
+
+        if ($excludeAppointmentId !== null && $excludeAppointmentId > 0) {
+            $query->whereKeyNot($excludeAppointmentId);
+        }
+
+        return $query->count() < self::MAX_ACTIVE_ACCEPTED_APPOINTMENTS_PER_DOCTOR;
+    }
+
+    protected function activeAcceptedAppointmentStatuses(): array
+    {
+        return ['approved', 'farmer_approved', 'scheduled', 'in_progress', 'accept', 'accepted'];
+    }
+
     protected function farmerStatusRank(DoctorAppointment $appointment): int
     {
         $status = strtolower((string) ($appointment->status ?? ''));
@@ -1137,6 +1250,13 @@ class DoctorAppointmentController extends Controller
     protected function notifyDoctor(DoctorAppointment $appointment, string $title, string $body, array $extraData = []): bool
     {
         $appointment->loadMissing(['doctor', 'farmer']);
+        $event = strtolower((string) ($extraData['event'] ?? ''));
+        if ($event === 'appointment_created' &&
+            ! $this->doctorHasActiveAppointmentCapacity((int) $appointment->doctor_id, (int) $appointment->id)
+        ) {
+            return false;
+        }
+
         $token = optional($appointment->doctor)->fcm_token;
         if (blank($token) && ! empty($appointment->doctor_id)) {
             $fallbackDoctor = Doctor::find((int) $appointment->doctor_id);

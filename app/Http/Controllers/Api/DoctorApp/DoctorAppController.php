@@ -707,6 +707,8 @@ class DoctorAppController extends Controller
     protected function doctorPayload(Doctor $doctor): array
     {
         $doctor->ensureReferralCode();
+        $averageRating = (float) ($doctor->ratings()->avg('rating') ?? 0);
+        $ratingsCount = (int) $doctor->ratings()->count();
 
         return [
             'id' => $doctor->id,
@@ -721,6 +723,8 @@ class DoctorAppController extends Controller
             'referred_by_doctor_id' => $doctor->referred_by_doctor_id,
             'referral_points' => (int) ($doctor->referral_points ?? 0),
             'referral_link' => $this->buildReferralLink((string) ($doctor->referral_code ?? '')),
+            'average_rating' => round($averageRating, 1),
+            'ratings_count' => $ratingsCount,
             'adhar_number' => $doctor->adhar_number,
             'pan_number' => $doctor->pan_number,
             'mmc_registration_number' => $doctor->mmc_registration_number,

@@ -117,6 +117,11 @@ class Doctor extends Model
         return $this->hasMany(DoctorAppointment::class);
     }
 
+    public function ratings()
+    {
+        return $this->hasMany(DoctorRating::class);
+    }
+
     public function referredBy()
     {
         return $this->belongsTo(self::class, 'referred_by_doctor_id');

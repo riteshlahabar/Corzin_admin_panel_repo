@@ -159,6 +159,14 @@ Schedule::call(function (): void {
                     return false;
                 }
 
+                $activeAcceptedCount = DoctorAppointment::query()
+                    ->where('doctor_id', $doctor->id)
+                    ->whereIn('status', ['approved', 'farmer_approved', 'scheduled', 'in_progress', 'accept', 'accepted'])
+                    ->count();
+                if ($activeAcceptedCount >= 2) {
+                    return false;
+                }
+
                 return true;
             })
             ->values();

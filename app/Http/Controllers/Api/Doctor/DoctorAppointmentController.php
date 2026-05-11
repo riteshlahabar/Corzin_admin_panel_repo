@@ -228,7 +228,9 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 'matched_count' => $doctors->count(),
             ]);
 
-            return $doctors;
+            return $doctors
+                ->filter(fn (Doctor $doctor) => $this->doctorHasActiveAppointmentCapacity((int) $doctor->id))
+                ->values();
         }
 
         if ($farmerOrigin !== null) {
@@ -260,7 +262,9 @@ class DoctorAppointmentController extends \App\Http\Controllers\Api\DoctorApp\Do
                 ])->values()->all(),
             ]);
 
-            return $doctors;
+            return $doctors
+                ->filter(fn (Doctor $doctor) => $this->doctorHasActiveAppointmentCapacity((int) $doctor->id))
+                ->values();
         }
 
         Log::warning('Appointment routing missing farmer origin', [

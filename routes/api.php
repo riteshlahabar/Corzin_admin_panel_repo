@@ -112,6 +112,7 @@ Route::prefix('doctor')->group(function () {
     Route::get('/appointments/farmer/{farmer}', [FarmerDoctorAppointmentController::class, 'indexByFarmer']);
     Route::get('/appointments/{doctor}', [FarmerDoctorAppointmentController::class, 'indexByDoctor']);
     Route::post('/appointments/{appointment}/farmer-approval', [FarmerDoctorAppointmentController::class, 'farmerApproval']);
+    Route::post('/appointments/{appointment}/rating', [FarmerDoctorAppointmentController::class, 'rate']);
     Route::get('/settings', [FarmerDoctorSettingController::class, 'show']);
     Route::get('/diseases', [FarmerDoctorSettingController::class, 'diseases']);
 
@@ -155,6 +156,7 @@ Route::prefix('doctor-app')->group(function () {
     Route::post('/appointments/{appointment}/complete', [DoctorAppAppointmentController::class, 'complete']);
     Route::post('/appointments/{appointment}/doctor-decision', [DoctorAppAppointmentController::class, 'doctorDecision']);
     Route::post('/appointments/{appointment}/farmer-approval', [DoctorAppAppointmentController::class, 'farmerApproval']);
+    Route::post('/appointments/{appointment}/rating', [DoctorAppAppointmentController::class, 'rate']);
     Route::post('/appointments/{appointment}/verify-otp', [DoctorAppAppointmentController::class, 'verifyOtp']);
     Route::post('/appointments/{appointment}/start-treatment', [DoctorAppAppointmentController::class, 'startTreatment']);
     Route::post('/appointments/{appointment}/treatment', [DoctorAppAppointmentController::class, 'updateTreatment']);

@@ -87,6 +87,11 @@ class DoctorAppointment extends Model
         return $this->belongsTo(Animal::class);
     }
 
+    public function rating()
+    {
+        return $this->hasOne(DoctorRating::class);
+    }
+
     public function getAnimalPhotoUrlAttribute(): ?string
     {
         if (blank($this->animal_photo)) {
