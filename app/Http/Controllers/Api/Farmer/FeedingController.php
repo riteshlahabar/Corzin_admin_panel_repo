@@ -192,16 +192,6 @@ class FeedingController extends Controller
             ], 422);
         }
 
-        $adminSubtypeCount = FeedSubtype::query()
-            ->where('feed_type_id', $baseType->id)
-            ->count();
-        if ($adminSubtypeCount > 0 && is_null($baseType->farmer_id)) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Admin has already configured subtypes for this feed type.',
-            ], 422);
-        }
-
         $targetType = $baseType;
 
         DB::transaction(function () use ($targetType, $subtypes) {
@@ -231,6 +221,120 @@ class FeedingController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Feed subtype saved successfully.',
+        ]);
+    }
+
+    public function updateSubtype(Request $request, $feedTypeId, $subtypeId)
+    {
+        $resolvedFeedTypeId = (int) ($feedTypeId ?? 0);
+        $resolvedSubtypeId = (int) ($subtypeId ?? 0);
+
+        $request->merge([
+            'feed_type_id' => $request->input('feed_type_id', $resolvedFeedTypeId),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'feed_type_id' => 'required|exists:feed_types,id',
+            'name' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $typeId = (int) $request->input('feed_type_id');
+        if ($resolvedFeedTypeId > 0 && $typeId !== $resolvedFeedTypeId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Feed type mismatch.',
+            ], 422);
+        }
+
+        $subtype = FeedSubtype::query()
+            ->where('id', $resolvedSubtypeId)
+            ->where('feed_type_id', $typeId)
+            ->first();
+
+        if (! $subtype) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Subtype not found.',
+            ], 404);
+        }
+
+        $name = trim((string) $request->input('name'));
+        $exists = FeedSubtype::query()
+            ->where('feed_type_id', $typeId)
+            ->where('id', '!=', $resolvedSubtypeId)
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->exists();
+        if ($exists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Subtype already exists.',
+            ], 422);
+        }
+
+        $subtype->update([
+            'name' => $name,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Feed subtype updated successfully.',
+        ]);
+    }
+
+    public function deleteSubtype(Request $request, $feedTypeId, $subtypeId)
+    {
+        $resolvedFeedTypeId = (int) ($feedTypeId ?? 0);
+        $resolvedSubtypeId = (int) ($subtypeId ?? 0);
+
+        $request->merge([
+            'feed_type_id' => $request->input('feed_type_id', $resolvedFeedTypeId),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'feed_type_id' => 'required|exists:feed_types,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $typeId = (int) $request->input('feed_type_id');
+        if ($resolvedFeedTypeId > 0 && $typeId !== $resolvedFeedTypeId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Feed type mismatch.',
+            ], 422);
+        }
+
+        $subtype = FeedSubtype::query()
+            ->where('id', $resolvedSubtypeId)
+            ->where('feed_type_id', $typeId)
+            ->first();
+
+        if (! $subtype) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Subtype not found.',
+            ], 404);
+        }
+
+        $subtype->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Feed subtype deleted successfully.',
         ]);
     }
 
@@ -362,6 +466,107 @@ class FeedingController extends Controller
                 'id' => $plan->id,
             ],
         ], 201);
+    }
+
+    public function updateDietPlan(Request $request, $planId)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'days_count' => 'required|integer|min:1|max:365',
+            'subtype_details' => 'required|array|min:1',
+            'subtype_details.*.name' => 'required|string|max:255',
+            'subtype_details.*.quantity' => 'required|numeric|min:0.01',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $plan = FeedDietPlan::query()->find((int) $planId);
+        if (! $plan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Diet plan not found.',
+            ], 404);
+        }
+
+        $farmerId = (int) $request->input('farmer_id');
+        if ((int) $plan->farmer_id !== $farmerId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not allowed to update this diet plan.',
+            ], 403);
+        }
+
+        $subtypes = collect($request->input('subtype_details', []))
+            ->map(fn ($item) => [
+                'subtype_id' => data_get($item, 'subtype_id'),
+                'name' => trim((string) data_get($item, 'name')),
+                'quantity' => (float) data_get($item, 'quantity', 0),
+            ])
+            ->filter(fn ($item) => $item['name'] !== '' && $item['quantity'] > 0)
+            ->values()
+            ->all();
+
+        if (empty($subtypes)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Please add at least one subtype with quantity.',
+            ], 422);
+        }
+
+        $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
+
+        $plan->update([
+            'days_count' => (int) $request->input('days_count'),
+            'plan_quantity' => round((float) $total, 2),
+            'remaining_quantity' => max(round((float) $total - (float) $plan->consumed_quantity, 2), 0),
+            'subtype_details' => $subtypes,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Diet plan updated successfully.',
+        ]);
+    }
+
+    public function deleteDietPlan(Request $request, $planId)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $plan = FeedDietPlan::query()->find((int) $planId);
+        if (! $plan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Diet plan not found.',
+            ], 404);
+        }
+
+        if ((int) $plan->farmer_id !== (int) $request->input('farmer_id')) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not allowed to delete this diet plan.',
+            ], 403);
+        }
+
+        $plan->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Diet plan deleted successfully.',
+        ]);
     }
 
     public function createType(Request $request)

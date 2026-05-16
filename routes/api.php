@@ -65,7 +65,11 @@ Route::prefix('feeding')->group(function () {
     Route::post('/types', [FeedingController::class, 'createType']);
     Route::post('/types/{feedTypeId}/update', [FeedingController::class, 'updateType']);
     Route::post('/types/{feedTypeId}/subtypes', [FeedingController::class, 'createSubtype']);
+    Route::post('/types/{feedTypeId}/subtypes/{subtypeId}/update', [FeedingController::class, 'updateSubtype']);
+    Route::post('/types/{feedTypeId}/subtypes/{subtypeId}/delete', [FeedingController::class, 'deleteSubtype']);
     Route::post('/diet-plans', [FeedingController::class, 'createDietPlan']);
+    Route::post('/diet-plans/{planId}/update', [FeedingController::class, 'updateDietPlan']);
+    Route::post('/diet-plans/{planId}/delete', [FeedingController::class, 'deleteDietPlan']);
     Route::get('/diet-plans/{farmer_id}', [FeedingController::class, 'dietPlans']);
     Route::get('/list/{farmer_id}', [FeedingController::class, 'list']);
     Route::get('/summary/{farmer_id}', [FeedingController::class, 'summary']);
