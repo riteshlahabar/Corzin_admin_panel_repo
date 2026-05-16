@@ -115,17 +115,8 @@ class FeedingController extends Controller
 
     public function types(Request $request)
     {
-        $farmerId = (int) $request->query('farmer_id', 0);
-
         $rows = FeedType::where('is_active', true)
-            ->where(function ($query) use ($farmerId) {
-                $query->whereNull('farmer_id');
-                if ($farmerId > 0) {
-                    $query->orWhere('farmer_id', $farmerId);
-                }
-            })
             ->with(['subtypes' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')->orderBy('name')])
-            ->orderByRaw('CASE WHEN farmer_id IS NULL THEN 1 ELSE 0 END')
             ->orderBy('name')
             ->get();
 
@@ -142,11 +133,7 @@ class FeedingController extends Controller
                 'id' => $type->id,
                 'name' => $type->name,
                 'default_unit' => $type->default_unit,
-                'package_quantity' => (float) ($type->package_quantity ?? 0),
-                'farmer_id' => $type->farmer_id,
-                'can_add_farmer_subtype' => is_null($type->farmer_id)
-                    ? $type->subtypes->whereNull('farmer_id')->isEmpty()
-                    : true,
+                'can_add_farmer_subtype' => $type->subtypes->isEmpty(),
                 'subtypes' => $type->subtypes->map(fn (FeedSubtype $subtype) => [
                     'id' => $subtype->id,
                     'name' => $subtype->name,
@@ -183,7 +170,6 @@ class FeedingController extends Controller
             ], 422);
         }
 
-        $farmerId = (int) $request->input('farmer_id');
         $typeId = (int) $request->input('feed_type_id');
         $baseType = FeedType::query()->find($typeId);
         if (! $baseType) {
@@ -217,12 +203,6 @@ class FeedingController extends Controller
         }
 
         $targetType = $baseType;
-        if (! is_null($baseType->farmer_id) && (int) $baseType->farmer_id !== $farmerId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'You are not allowed to add subtype in this feed type.',
-            ], 403);
-        }
 
         DB::transaction(function () use ($targetType, $subtypes) {
             $existingNames = FeedSubtype::query()

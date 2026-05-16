@@ -13,7 +13,6 @@ class FeedTypeController extends Controller
     public function index(Request $request)
     {
         $query = FeedType::query()
-            ->whereNull('farmer_id')
             ->with(['subtypes' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')])
             ->orderBy('name');
 
@@ -38,7 +37,6 @@ class FeedTypeController extends Controller
 
         $name = trim($data['name']);
         $exists = FeedType::query()
-            ->whereNull('farmer_id')
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
             ->exists();
         if ($exists) {
@@ -52,10 +50,8 @@ class FeedTypeController extends Controller
 
         DB::transaction(function () use ($data, $name, $subtypes) {
             $type = FeedType::create([
-                'farmer_id' => null,
                 'name' => $name,
                 'default_unit' => trim((string) $data['default_unit']),
-                'package_quantity' => 0,
                 'is_active' => (bool) ($data['is_active'] ?? true),
             ]);
 
@@ -87,7 +83,6 @@ class FeedTypeController extends Controller
 
         $name = trim($data['name']);
         $exists = FeedType::query()
-            ->whereNull('farmer_id')
             ->where('id', '!=', $feedType->id)
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
             ->exists();
@@ -104,7 +99,6 @@ class FeedTypeController extends Controller
             $feedType->update([
                 'name' => $name,
                 'default_unit' => trim((string) $data['default_unit']),
-                'package_quantity' => 0,
                 'is_active' => (bool) ($data['is_active'] ?? false),
             ]);
 
