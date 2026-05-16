@@ -160,8 +160,15 @@ class FeedingController extends Controller
         ]);
     }
 
-    public function createSubtype(Request $request)
+    public function createSubtype(Request $request, $feedTypeId = null)
     {
+        $routeFeedTypeId = (int) ($feedTypeId ?? $request->route('feedTypeId') ?? 0);
+        $bodyFeedTypeId = (int) $request->input('feed_type_id', 0);
+        $resolvedFeedTypeId = $bodyFeedTypeId > 0 ? $bodyFeedTypeId : $routeFeedTypeId;
+        if ($resolvedFeedTypeId > 0) {
+            $request->merge(['feed_type_id' => $resolvedFeedTypeId]);
+        }
+
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
             'feed_type_id' => 'required|exists:feed_types,id',
@@ -210,19 +217,7 @@ class FeedingController extends Controller
         }
 
         $targetType = $baseType;
-        if (is_null($baseType->farmer_id)) {
-            $targetType = FeedType::query()->firstOrCreate(
-                [
-                    'farmer_id' => $farmerId,
-                    'name' => $baseType->name,
-                ],
-                [
-                    'default_unit' => $baseType->default_unit ?: 'Kg',
-                    'package_quantity' => 0,
-                    'is_active' => true,
-                ],
-            );
-        } elseif ((int) $baseType->farmer_id !== $farmerId) {
+        if (! is_null($baseType->farmer_id) && (int) $baseType->farmer_id !== $farmerId) {
             return response()->json([
                 'status' => false,
                 'message' => 'You are not allowed to add subtype in this feed type.',
