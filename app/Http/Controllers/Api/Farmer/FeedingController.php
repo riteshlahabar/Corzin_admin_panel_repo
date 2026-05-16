@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Farmer\Animal;
+use App\Models\Farmer\FeedDietPlan;
 use App\Models\Farmer\FeedingRecord;
 use App\Models\Farmer\FeedType;
 use App\Models\Farmer\FeedSubtype;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,6 +22,7 @@ class FeedingController extends Controller
             'animal_id' => 'required|exists:animals,id',
             'feed_type' => 'nullable|string|max:255',
             'feed_type_id' => 'nullable|exists:feed_types,id',
+            'diet_plan_id' => 'nullable|exists:feed_diet_plans,id',
             'quantity' => 'required|numeric|min:0.01',
             'package_quantity' => 'nullable|numeric|min:0',
             'feeding_quantity' => 'nullable|numeric|min:0',
@@ -48,6 +52,20 @@ class FeedingController extends Controller
             ], 422);
         }
 
+        $dietPlan = null;
+        if ($request->filled('diet_plan_id')) {
+            $dietPlan = FeedDietPlan::query()
+                ->where('id', (int) $request->input('diet_plan_id'))
+                ->where('farmer_id', (int) $request->input('farmer_id'))
+                ->first();
+            if (! $dietPlan) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected diet plan not found.',
+                ], 422);
+            }
+        }
+
         $calculatedSubtypeTotal = collect($request->input('feed_subtype_details', []))
             ->sum(fn ($item) => (float) data_get($item, 'quantity', 0));
 
@@ -67,6 +85,7 @@ class FeedingController extends Controller
             'farmer_id' => $request->farmer_id,
             'animal_id' => $request->animal_id,
             'feed_type_id' => $feedType->id,
+            'diet_plan_id' => $dietPlan?->id,
             'feed_subtype_details' => $request->input('feed_subtype_details'),
             'quantity' => $feedingQuantity,
             'package_quantity' => $packageQuantity,
@@ -77,6 +96,15 @@ class FeedingController extends Controller
             'date' => $request->date,
             'notes' => $request->notes,
         ]);
+
+        if ($dietPlan) {
+            $consumed = (float) $dietPlan->consumed_quantity + $feedingQuantity;
+            $remaining = max((float) $dietPlan->plan_quantity - $consumed, 0);
+            $dietPlan->update([
+                'consumed_quantity' => round($consumed, 2),
+                'remaining_quantity' => round($remaining, 2),
+            ]);
+        }
 
         return response()->json([
             'status' => true,
@@ -89,7 +117,7 @@ class FeedingController extends Controller
     {
         $farmerId = (int) $request->query('farmer_id', 0);
 
-        $types = FeedType::where('is_active', true)
+        $rows = FeedType::where('is_active', true)
             ->where(function ($query) use ($farmerId) {
                 $query->whereNull('farmer_id');
                 if ($farmerId > 0) {
@@ -97,14 +125,28 @@ class FeedingController extends Controller
                 }
             })
             ->with(['subtypes' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')->orderBy('name')])
+            ->orderByRaw('CASE WHEN farmer_id IS NULL THEN 1 ELSE 0 END')
             ->orderBy('name')
-            ->get()
+            ->get();
+
+        $byName = [];
+        foreach ($rows as $type) {
+            $key = mb_strtolower(trim((string) $type->name));
+            if (! isset($byName[$key])) {
+                $byName[$key] = $type;
+            }
+        }
+
+        $types = collect(array_values($byName))
             ->map(fn (FeedType $type) => [
                 'id' => $type->id,
                 'name' => $type->name,
                 'default_unit' => $type->default_unit,
                 'package_quantity' => (float) ($type->package_quantity ?? 0),
                 'farmer_id' => $type->farmer_id,
+                'can_add_farmer_subtype' => is_null($type->farmer_id)
+                    ? $type->subtypes->whereNull('farmer_id')->isEmpty()
+                    : true,
                 'subtypes' => $type->subtypes->map(fn (FeedSubtype $subtype) => [
                     'id' => $subtype->id,
                     'name' => $subtype->name,
@@ -118,12 +160,11 @@ class FeedingController extends Controller
         ]);
     }
 
-    public function createType(Request $request)
+    public function createSubtype(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
-            'name' => 'required|string|max:255',
-            'default_unit' => 'required|string|max:30',
+            'feed_type_id' => 'required|exists:feed_types,id',
             'subtypes' => 'required|array|min:1',
             'subtypes.*.name' => 'required|string|max:255',
         ]);
@@ -135,118 +176,16 @@ class FeedingController extends Controller
             ], 422);
         }
 
-        $name = trim((string) $request->input('name'));
         $farmerId = (int) $request->input('farmer_id');
-
-        $exists = FeedType::where('farmer_id', $farmerId)
-            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-            ->exists();
-        if ($exists) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Feed type already exists for this farmer.',
-            ], 422);
-        }
-
-        $subtypes = collect($request->input('subtypes', []))
-            ->map(fn ($item) => trim((string) data_get($item, 'name', '')))
-            ->filter()
-            ->unique(fn ($value) => mb_strtolower($value))
-            ->values();
-
-        if ($subtypes->isEmpty()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'At least one valid subtype is required.',
-            ], 422);
-        }
-
-        $type = DB::transaction(function () use ($request, $name, $farmerId, $subtypes) {
-            $type = FeedType::create([
-                'farmer_id' => $farmerId,
-                'name' => $name,
-                'default_unit' => trim((string) $request->input('default_unit', 'Kg')),
-                'package_quantity' => 0,
-                'is_active' => true,
-            ]);
-
-            $rows = [];
-            foreach ($subtypes as $index => $subtypeName) {
-                $rows[] = [
-                    'feed_type_id' => $type->id,
-                    'name' => $subtypeName,
-                    'is_active' => true,
-                    'sort_order' => $index + 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            FeedSubtype::insert($rows);
-
-            return $type->fresh(['subtypes']);
-        });
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Feed type created successfully',
-            'data' => [
-                'id' => $type->id,
-                'name' => $type->name,
-                'default_unit' => $type->default_unit,
-                'package_quantity' => (float) $type->package_quantity,
-                'subtypes' => $type->subtypes->map(fn (FeedSubtype $subtype) => [
-                    'id' => $subtype->id,
-                    'name' => $subtype->name,
-                ])->values(),
-            ],
-        ], 201);
-    }
-
-    public function updateType(Request $request, $feedTypeId)
-    {
-        $validator = Validator::make($request->all(), [
-            'farmer_id' => 'required|exists:farmers,id',
-            'name' => 'required|string|max:255',
-            'default_unit' => 'required|string|max:30',
-            'subtypes' => 'required|array|min:1',
-            'subtypes.*.name' => 'required|string|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => $validator->errors(),
-            ], 422);
-        }
-
-        $type = FeedType::find($feedTypeId);
-        if (! $type) {
+        $typeId = (int) $request->input('feed_type_id');
+        $baseType = FeedType::query()->find($typeId);
+        if (! $baseType) {
             return response()->json([
                 'status' => false,
                 'message' => 'Feed type not found.',
             ], 404);
         }
 
-        $farmerId = (int) $request->input('farmer_id');
-        if ((int) ($type->farmer_id ?? 0) !== $farmerId) {
-            return response()->json([
-                'status' => false,
-                'message' => 'You are not allowed to update this feed type.',
-            ], 403);
-        }
-
-        $name = trim((string) $request->input('name'));
-        $exists = FeedType::where('farmer_id', $farmerId)
-            ->where('id', '!=', $type->id)
-            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-            ->exists();
-        if ($exists) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Feed type already exists for this farmer.',
-            ], 422);
-        }
-
         $subtypes = collect($request->input('subtypes', []))
             ->map(fn ($item) => trim((string) data_get($item, 'name', '')))
             ->filter()
@@ -260,44 +199,210 @@ class FeedingController extends Controller
             ], 422);
         }
 
-        $type = DB::transaction(function () use ($request, $type, $name, $subtypes) {
-            $type->update([
-                'name' => $name,
-                'default_unit' => trim((string) $request->input('default_unit', 'Kg')),
-                'package_quantity' => 0,
-            ]);
+        $adminSubtypeCount = FeedSubtype::query()
+            ->where('feed_type_id', $baseType->id)
+            ->count();
+        if ($adminSubtypeCount > 0 && is_null($baseType->farmer_id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Admin has already configured subtypes for this feed type.',
+            ], 422);
+        }
 
-            FeedSubtype::where('feed_type_id', $type->id)->delete();
-            $rows = [];
-            foreach ($subtypes as $index => $subtypeName) {
-                $rows[] = [
-                    'feed_type_id' => $type->id,
+        $targetType = $baseType;
+        if (is_null($baseType->farmer_id)) {
+            $targetType = FeedType::query()->firstOrCreate(
+                [
+                    'farmer_id' => $farmerId,
+                    'name' => $baseType->name,
+                ],
+                [
+                    'default_unit' => $baseType->default_unit ?: 'Kg',
+                    'package_quantity' => 0,
+                    'is_active' => true,
+                ],
+            );
+        } elseif ((int) $baseType->farmer_id !== $farmerId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'You are not allowed to add subtype in this feed type.',
+            ], 403);
+        }
+
+        DB::transaction(function () use ($targetType, $subtypes) {
+            $existingNames = FeedSubtype::query()
+                ->where('feed_type_id', $targetType->id)
+                ->pluck('name')
+                ->map(fn ($name) => mb_strtolower(trim((string) $name)))
+                ->all();
+            $existingMap = array_flip($existingNames);
+            $nextSort = ((int) FeedSubtype::query()->where('feed_type_id', $targetType->id)->max('sort_order')) + 1;
+
+            foreach ($subtypes as $subtypeName) {
+                $key = mb_strtolower($subtypeName);
+                if (isset($existingMap[$key])) {
+                    continue;
+                }
+                FeedSubtype::create([
+                    'feed_type_id' => $targetType->id,
                     'name' => $subtypeName,
                     'is_active' => true,
-                    'sort_order' => $index + 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                    'sort_order' => $nextSort++,
+                ]);
+                $existingMap[$key] = true;
             }
-            FeedSubtype::insert($rows);
-
-            return $type->fresh(['subtypes']);
         });
 
         return response()->json([
             'status' => true,
-            'message' => 'Feed type updated successfully',
-            'data' => [
-                'id' => $type->id,
-                'name' => $type->name,
-                'default_unit' => $type->default_unit,
-                'package_quantity' => (float) $type->package_quantity,
-                'subtypes' => $type->subtypes->map(fn (FeedSubtype $subtype) => [
-                    'id' => $subtype->id,
-                    'name' => $subtype->name,
-                ])->values(),
-            ],
+            'message' => 'Feed subtype saved successfully.',
         ]);
+    }
+
+    public function dietPlans(Request $request, $farmer_id)
+    {
+        $animalId = (int) $request->query('animal_id', 0);
+        $panId = (int) $request->query('pan_id', 0);
+        $feedTypeId = (int) $request->query('feed_type_id', 0);
+
+        $query = FeedDietPlan::query()
+            ->with(['animal', 'feedType'])
+            ->where('farmer_id', (int) $farmer_id)
+            ->where('is_active', true)
+            ->latest('id');
+
+        if ($animalId > 0) {
+            $query->where('animal_id', $animalId);
+        } elseif ($panId > 0) {
+            $panAnimalIds = Animal::query()
+                ->where('farmer_id', (int) $farmer_id)
+                ->where('pan_id', $panId)
+                ->pluck('id')
+                ->all();
+            $query->whereIn('animal_id', $panAnimalIds ?: [0]);
+        }
+
+        if ($feedTypeId > 0) {
+            $query->where('feed_type_id', $feedTypeId);
+        }
+
+        $rows = $query->get()->map(function (FeedDietPlan $plan) {
+            $daysUsed = $plan->created_at
+                ? max(0, (int) Carbon::parse($plan->created_at)->startOfDay()->diffInDays(now()->startOfDay()))
+                : 0;
+            $daysRemaining = max((int) $plan->days_count - $daysUsed, 0);
+
+            return [
+                'id' => $plan->id,
+                'animal_id' => $plan->animal_id,
+                'animal_name' => $plan->animal->animal_name ?? '-',
+                'tag_number' => $plan->animal->tag_number ?? '-',
+                'feed_type_id' => $plan->feed_type_id,
+                'feed_type' => $plan->feedType->name ?? '-',
+                'unit' => $plan->unit,
+                'days_count' => (int) $plan->days_count,
+                'days_remaining' => $daysRemaining,
+                'plan_quantity' => round((float) $plan->plan_quantity, 2),
+                'consumed_quantity' => round((float) $plan->consumed_quantity, 2),
+                'remaining_quantity' => round((float) $plan->remaining_quantity, 2),
+                'subtype_details' => $plan->subtype_details ?? [],
+                'created_at' => optional($plan->created_at)->toDateString(),
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Diet plans fetched successfully',
+            'data' => $rows,
+        ]);
+    }
+
+    public function createDietPlan(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'animal_id' => 'required|exists:animals,id',
+            'feed_type_id' => 'required|exists:feed_types,id',
+            'days_count' => 'required|integer|min:1|max:365',
+            'unit' => 'required|string|max:30',
+            'subtype_details' => 'required|array|min:1',
+            'subtype_details.*.name' => 'required|string|max:255',
+            'subtype_details.*.quantity' => 'required|numeric|min:0.01',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $farmerId = (int) $request->input('farmer_id');
+        $animal = Animal::query()
+            ->where('id', (int) $request->input('animal_id'))
+            ->where('farmer_id', $farmerId)
+            ->first();
+        if (! $animal) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Selected animal is not valid for this farmer.',
+            ], 422);
+        }
+
+        $subtypes = collect($request->input('subtype_details', []))
+            ->map(fn ($item) => [
+                'subtype_id' => data_get($item, 'subtype_id'),
+                'name' => trim((string) data_get($item, 'name')),
+                'quantity' => (float) data_get($item, 'quantity', 0),
+            ])
+            ->filter(fn ($item) => $item['name'] !== '' && $item['quantity'] > 0)
+            ->values()
+            ->all();
+        if (empty($subtypes)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Please add at least one subtype with quantity.',
+            ], 422);
+        }
+
+        $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
+
+        $plan = FeedDietPlan::create([
+            'farmer_id' => $farmerId,
+            'animal_id' => (int) $request->input('animal_id'),
+            'feed_type_id' => (int) $request->input('feed_type_id'),
+            'days_count' => (int) $request->input('days_count'),
+            'plan_quantity' => round((float) $total, 2),
+            'consumed_quantity' => 0,
+            'remaining_quantity' => round((float) $total, 2),
+            'unit' => trim((string) $request->input('unit')),
+            'subtype_details' => $subtypes,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Diet plan created successfully.',
+            'data' => [
+                'id' => $plan->id,
+            ],
+        ], 201);
+    }
+
+    public function createType(Request $request)
+    {
+        return response()->json([
+            'status' => false,
+            'message' => 'Feed type can be created only by admin.',
+        ], 403);
+    }
+
+    public function updateType(Request $request, $feedTypeId)
+    {
+        return response()->json([
+            'status' => false,
+            'message' => 'Feed type can be updated only by admin.',
+        ], 403);
     }
 
     public function list($farmer_id)
@@ -333,6 +438,7 @@ class FeedingController extends Controller
             'date' => 'required|date',
             'notes' => 'nullable|string',
             'feed_type_id' => 'nullable|exists:feed_types,id',
+            'diet_plan_id' => 'nullable|exists:feed_diet_plans,id',
         ]);
 
         if ($validator->fails()) {
@@ -366,6 +472,9 @@ class FeedingController extends Controller
             'feed_type_id' => $request->filled('feed_type_id')
                 ? $request->feed_type_id
                 : $record->feed_type_id,
+            'diet_plan_id' => $request->filled('diet_plan_id')
+                ? $request->diet_plan_id
+                : $record->diet_plan_id,
             'feed_subtype_details' => $request->input('feed_subtype_details', $record->feed_subtype_details),
             'package_quantity' => $request->filled('package_quantity')
                 ? $request->package_quantity
@@ -427,6 +536,7 @@ class FeedingController extends Controller
             'animal_name' => $record->animal->animal_name ?? '-',
             'tag_number' => $record->animal->tag_number ?? '-',
             'feed_type_id' => $record->feed_type_id,
+            'diet_plan_id' => $record->diet_plan_id,
             'feed_type' => $record->feedType->name ?? '-',
             'quantity' => (float) $record->quantity,
             'package_quantity' => (float) ($record->package_quantity ?? 0),

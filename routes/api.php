@@ -64,6 +64,9 @@ Route::prefix('feeding')->group(function () {
     Route::get('/types', [FeedingController::class, 'types']);
     Route::post('/types', [FeedingController::class, 'createType']);
     Route::post('/types/{feedTypeId}/update', [FeedingController::class, 'updateType']);
+    Route::post('/types/{feedTypeId}/subtypes', [FeedingController::class, 'createSubtype']);
+    Route::post('/diet-plans', [FeedingController::class, 'createDietPlan']);
+    Route::get('/diet-plans/{farmer_id}', [FeedingController::class, 'dietPlans']);
     Route::get('/list/{farmer_id}', [FeedingController::class, 'list']);
     Route::get('/summary/{farmer_id}', [FeedingController::class, 'summary']);
 });

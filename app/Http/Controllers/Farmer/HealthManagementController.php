@@ -91,7 +91,10 @@ class HealthManagementController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $requiredDmi = round(($data['body_weight'] * 0.02) + ($data['total_milk'] * 0.33), 2);
+        $isMilking = (float) $data['total_milk'] > 0;
+        $requiredDmi = $isMilking
+            ? round(($data['body_weight'] * 0.02) + ($data['total_milk'] * 0.33), 2)
+            : round($data['body_weight'] * 0.025, 2);
         $difference = round($data['actual_dmi'] - $requiredDmi, 2);
         $status = abs($difference) <= 0.5 ? 'Balanced' : ($difference < 0 ? 'Low' : 'High');
 

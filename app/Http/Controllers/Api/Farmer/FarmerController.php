@@ -17,8 +17,8 @@ class FarmerController extends Controller
         $request->validate([
             'mobile' => 'required|digits:10',
             'first_name' => 'required|string',
-            'middle_name' => 'nullable|string',
-            'last_name' => 'nullable|string',
+            'middle_name' => 'required|string',
+            'last_name' => 'required|string',
             'village' => 'nullable|string',
             'city' => 'nullable|string',
             'taluka' => 'nullable|string',

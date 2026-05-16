@@ -10,6 +10,7 @@ class FeedingRecord extends Model
         'farmer_id',
         'animal_id',
         'feed_type_id',
+        'diet_plan_id',
         'feed_subtype_details',
         'quantity',
         'package_quantity',
@@ -43,5 +44,10 @@ class FeedingRecord extends Model
     public function feedType()
     {
         return $this->belongsTo(FeedType::class);
+    }
+
+    public function dietPlan()
+    {
+        return $this->belongsTo(FeedDietPlan::class, 'diet_plan_id');
     }
 }
