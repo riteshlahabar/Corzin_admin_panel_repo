@@ -9,6 +9,7 @@ class FarmerPan extends Model
     protected $fillable = [
         'farmer_id',
         'name',
+        'pan_type',
         'milk_shifts',
     ];
 

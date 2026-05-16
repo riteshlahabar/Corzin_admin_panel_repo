@@ -165,10 +165,15 @@ class AnimalController extends Controller
             'status' => true,
             'message' => 'Farmer PAN list fetched successfully.',
             'data' => $pans->map(function (FarmerPan $pan) {
+                $panType = $this->normalizePanType($pan->pan_type);
                 return [
                     'id' => $pan->id,
                     'name' => $pan->name,
-                    'milk_shifts' => $this->normalizeMilkShifts($pan->milk_shifts),
+                    'pan_type' => $panType,
+                    'milk_shifts' => $this->normalizeMilkShifts(
+                        $pan->milk_shifts,
+                        allowEmpty: $panType === 'non_milking'
+                    ),
                     'animals_count' => $pan->animals->count(),
                     'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
                     'created_at' => optional($pan->created_at)->toDateTimeString(),
@@ -184,6 +189,7 @@ class AnimalController extends Controller
             'name' => 'required|string|max:255',
             'animal_ids' => 'required|array|min:1',
             'animal_ids.*' => 'integer|exists:animals,id',
+            'pan_type' => 'nullable|string|in:milking,non_milking',
             'milk_shifts' => 'nullable|array|min:1',
             'milk_shifts.*' => 'string|in:Morning,Afternoon,Evening',
         ]);
@@ -200,13 +206,24 @@ class AnimalController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
-        $milkShifts = $this->normalizeMilkShifts($request->input('milk_shifts', []));
+        $panType = $this->normalizePanType($request->input('pan_type', 'milking'));
+        $milkShifts = $this->normalizeMilkShifts(
+            $request->input('milk_shifts', []),
+            allowEmpty: $panType === 'non_milking'
+        );
+        if ($panType === 'milking' && empty($milkShifts)) {
+            return response()->json([
+                'status' => false,
+                'message' => ['milk_shifts' => ['Milk shifts are required for Milking PAN.']],
+            ], 422);
+        }
 
         try {
             $pan = DB::transaction(function () use ($request, $farmerId, $animalIds, $milkShifts) {
                 $pan = FarmerPan::create([
                     'farmer_id' => $farmerId,
                     'name' => trim((string) $request->name),
+                    'pan_type' => $panType,
                     'milk_shifts' => $milkShifts,
                 ]);
 
@@ -242,7 +259,11 @@ class AnimalController extends Controller
                 'data' => [
                     'id' => $pan->id,
                     'name' => $pan->name,
-                    'milk_shifts' => $this->normalizeMilkShifts($pan->milk_shifts),
+                    'pan_type' => $this->normalizePanType($pan->pan_type),
+                    'milk_shifts' => $this->normalizeMilkShifts(
+                        $pan->milk_shifts,
+                        allowEmpty: $this->normalizePanType($pan->pan_type) === 'non_milking'
+                    ),
                     'animals_count' => $pan->animals->count(),
                     'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
                 ],
@@ -263,6 +284,7 @@ class AnimalController extends Controller
             'name' => 'required|string|max:255',
             'animal_ids' => 'nullable|array',
             'animal_ids.*' => 'integer|exists:animals,id',
+            'pan_type' => 'nullable|string|in:milking,non_milking',
             'milk_shifts' => 'nullable|array|min:1',
             'milk_shifts.*' => 'string|in:Morning,Afternoon,Evening',
         ]);
@@ -291,12 +313,23 @@ class AnimalController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
-        $milkShifts = $this->normalizeMilkShifts($request->input('milk_shifts', []));
+        $panType = $this->normalizePanType($request->input('pan_type', $pan->pan_type ?? 'milking'));
+        $milkShifts = $this->normalizeMilkShifts(
+            $request->input('milk_shifts', []),
+            allowEmpty: $panType === 'non_milking'
+        );
+        if ($panType === 'milking' && empty($milkShifts)) {
+            return response()->json([
+                'status' => false,
+                'message' => ['milk_shifts' => ['Milk shifts are required for Milking PAN.']],
+            ], 422);
+        }
 
         try {
             DB::transaction(function () use ($request, $pan, $farmerId, $targetIds, $milkShifts) {
                 $pan->update([
                     'name' => trim((string) $request->name),
+                    'pan_type' => $panType,
                     'milk_shifts' => $milkShifts,
                 ]);
 
@@ -340,7 +373,11 @@ class AnimalController extends Controller
                 'data' => [
                     'id' => $pan->id,
                     'name' => $pan->name,
-                    'milk_shifts' => $this->normalizeMilkShifts($pan->milk_shifts),
+                    'pan_type' => $this->normalizePanType($pan->pan_type),
+                    'milk_shifts' => $this->normalizeMilkShifts(
+                        $pan->milk_shifts,
+                        allowEmpty: $this->normalizePanType($pan->pan_type) === 'non_milking'
+                    ),
                     'animals_count' => $pan->animals->count(),
                     'animals' => $pan->animals->map(fn ($animal) => $this->transformAnimal($animal))->values(),
                 ],
@@ -737,7 +774,10 @@ class AnimalController extends Controller
             'animal_type_name' => optional($animal->animalType)->name,
             'pan_id' => $animal->pan_id,
             'pan_name' => optional($animal->pan)->name,
-            'pan_milk_shifts' => $this->normalizeMilkShifts(optional($animal->pan)->milk_shifts ?? []),
+            'pan_milk_shifts' => $this->normalizeMilkShifts(
+                optional($animal->pan)->milk_shifts ?? [],
+                allowEmpty: $this->normalizePanType(optional($animal->pan)->pan_type) === 'non_milking'
+            ),
             'mother_animal_id' => $animal->mother_animal_id,
             'mother_animal_name' => optional($animal->motherAnimal)->animal_name,
             'mother_tag_number' => optional($animal->motherAnimal)->tag_number,
@@ -756,7 +796,7 @@ class AnimalController extends Controller
         ];
     }
 
-    private function normalizeMilkShifts($value): array
+    private function normalizeMilkShifts($value, bool $allowEmpty = false): array
     {
         $allowed = ['Morning', 'Afternoon', 'Evening'];
         $items = is_array($value) ? $value : [];
@@ -767,7 +807,16 @@ class AnimalController extends Controller
             ->values()
             ->all();
 
-        return empty($normalized) ? $allowed : array_values(array_intersect($allowed, $normalized));
+        if (empty($normalized)) {
+            return $allowEmpty ? [] : $allowed;
+        }
+        return array_values(array_intersect($allowed, $normalized));
+    }
+
+    private function normalizePanType($value): string
+    {
+        $type = strtolower(trim((string) $value));
+        return $type === 'non_milking' ? 'non_milking' : 'milking';
     }
 }
 
