@@ -431,15 +431,7 @@ class FeedingController extends Controller
             ], 422);
         }
 
-        $subtypes = collect($request->input('subtype_details', []))
-            ->map(fn ($item) => [
-                'subtype_id' => data_get($item, 'subtype_id'),
-                'name' => trim((string) data_get($item, 'name')),
-                'quantity' => (float) data_get($item, 'quantity', 0),
-            ])
-            ->filter(fn ($item) => $item['name'] !== '' && $item['quantity'] > 0)
-            ->values()
-            ->all();
+        $subtypes = $this->normalizeSubtypeDetails($request->input('subtype_details', []));
         if (empty($subtypes)) {
             return response()->json([
                 'status' => false,
@@ -448,6 +440,56 @@ class FeedingController extends Controller
         }
 
         $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
+        $incomingSignature = $this->subtypeSignature($subtypes);
+
+        $candidateAnimalIds = [(int) $animal->id];
+        $animalPanId = (int) ($animal->pan_id ?? 0);
+        if ($animalPanId > 0) {
+            $panAnimalIds = Animal::query()
+                ->where('farmer_id', $farmerId)
+                ->where('pan_id', $animalPanId)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            if (! empty($panAnimalIds)) {
+                $candidateAnimalIds = array_values(array_unique(array_merge($candidateAnimalIds, $panAnimalIds)));
+            }
+        }
+
+        $existingPlan = FeedDietPlan::query()
+            ->where('farmer_id', $farmerId)
+            ->where('feed_type_id', (int) $request->input('feed_type_id'))
+            ->where('is_active', true)
+            ->whereIn('animal_id', $candidateAnimalIds)
+            ->latest('id')
+            ->get()
+            ->first(function (FeedDietPlan $plan) use ($incomingSignature) {
+                $existingSubtypes = $this->normalizeSubtypeDetails((array) ($plan->subtype_details ?? []));
+                return $this->subtypeSignature($existingSubtypes) === $incomingSignature;
+            });
+
+        if ($existingPlan) {
+            $existingSubtypes = $this->normalizeSubtypeDetails((array) ($existingPlan->subtype_details ?? []));
+            $mergedSubtypes = $this->mergeSubtypeDetails($existingSubtypes, $subtypes);
+            $addedTotal = collect($subtypes)->sum(fn ($item) => (float) ($item['quantity'] ?? 0));
+
+            $existingPlan->update([
+                'plan_quantity' => round((float) $existingPlan->plan_quantity + (float) $addedTotal, 2),
+                'remaining_quantity' => round((float) $existingPlan->remaining_quantity + (float) $addedTotal, 2),
+                'unit' => trim((string) $request->input('unit')) ?: $existingPlan->unit,
+                'subtype_details' => $mergedSubtypes,
+                'is_active' => true,
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Diet plan merged into existing plan successfully.',
+                'data' => [
+                    'id' => $existingPlan->id,
+                    'merged' => true,
+                ],
+            ], 200);
+        }
 
         $daysCount = $request->filled('days_count')
             ? (int) $request->input('days_count')
@@ -718,6 +760,57 @@ class FeedingController extends Controller
         }
 
         return null;
+    }
+
+    private function normalizeSubtypeDetails(array $subtypes): array
+    {
+        $bucket = [];
+        foreach ($subtypes as $item) {
+            $name = trim((string) data_get($item, 'name', ''));
+            $qty = (float) data_get($item, 'quantity', 0);
+            if ($name === '' || $qty <= 0) {
+                continue;
+            }
+            $subtypeId = (int) data_get($item, 'subtype_id', 0);
+            $key = $subtypeId > 0 ? "id:$subtypeId" : 'name:' . mb_strtolower($name);
+            if (! isset($bucket[$key])) {
+                $bucket[$key] = [
+                    'subtype_id' => $subtypeId > 0 ? $subtypeId : null,
+                    'name' => $name,
+                    'quantity' => 0,
+                ];
+            }
+            $bucket[$key]['quantity'] += $qty;
+        }
+
+        return collect($bucket)
+            ->map(function ($item) {
+                $item['quantity'] = round((float) $item['quantity'], 2);
+                return $item;
+            })
+            ->values()
+            ->all();
+    }
+
+    private function subtypeSignature(array $subtypes): string
+    {
+        $keys = collect($subtypes)
+            ->map(function ($item) {
+                $id = (int) data_get($item, 'subtype_id', 0);
+                $name = mb_strtolower(trim((string) data_get($item, 'name', '')));
+                return $id > 0 ? "id:$id" : "name:$name";
+            })
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return implode('|', $keys);
+    }
+
+    private function mergeSubtypeDetails(array $existing, array $incoming): array
+    {
+        return $this->normalizeSubtypeDetails(array_merge($existing, $incoming));
     }
 
     private function transformRecord(FeedingRecord $record): array
