@@ -366,10 +366,13 @@ class FeedingController extends Controller
         }
 
         $rows = $query->get()->map(function (FeedDietPlan $plan) {
+            $daysCount = $plan->days_count !== null ? (int) $plan->days_count : null;
             $daysUsed = $plan->created_at
                 ? max(0, (int) Carbon::parse($plan->created_at)->startOfDay()->diffInDays(now()->startOfDay()))
                 : 0;
-            $daysRemaining = max((int) $plan->days_count - $daysUsed, 0);
+            $daysRemaining = $daysCount !== null
+                ? max($daysCount - $daysUsed, 0)
+                : null;
 
             return [
                 'id' => $plan->id,
@@ -379,7 +382,7 @@ class FeedingController extends Controller
                 'feed_type_id' => $plan->feed_type_id,
                 'feed_type' => $plan->feedType->name ?? '-',
                 'unit' => $plan->unit,
-                'days_count' => (int) $plan->days_count,
+                'days_count' => $daysCount,
                 'days_remaining' => $daysRemaining,
                 'plan_quantity' => round((float) $plan->plan_quantity, 2),
                 'consumed_quantity' => round((float) $plan->consumed_quantity, 2),
@@ -402,7 +405,7 @@ class FeedingController extends Controller
             'farmer_id' => 'required|exists:farmers,id',
             'animal_id' => 'required|exists:animals,id',
             'feed_type_id' => 'required|exists:feed_types,id',
-            'days_count' => 'required|integer|min:1|max:365',
+            'days_count' => 'nullable|integer|min:1|max:365',
             'unit' => 'required|string|max:30',
             'subtype_details' => 'required|array|min:1',
             'subtype_details.*.name' => 'required|string|max:255',
@@ -446,11 +449,15 @@ class FeedingController extends Controller
 
         $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
 
+        $daysCount = $request->filled('days_count')
+            ? (int) $request->input('days_count')
+            : null;
+
         $plan = FeedDietPlan::create([
             'farmer_id' => $farmerId,
             'animal_id' => (int) $request->input('animal_id'),
             'feed_type_id' => (int) $request->input('feed_type_id'),
-            'days_count' => (int) $request->input('days_count'),
+            'days_count' => $daysCount,
             'plan_quantity' => round((float) $total, 2),
             'consumed_quantity' => 0,
             'remaining_quantity' => round((float) $total, 2),
@@ -472,7 +479,7 @@ class FeedingController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
-            'days_count' => 'required|integer|min:1|max:365',
+            'days_count' => 'nullable|integer|min:1|max:365',
             'subtype_details' => 'required|array|min:1',
             'subtype_details.*.name' => 'required|string|max:255',
             'subtype_details.*.quantity' => 'required|numeric|min:0.01',
@@ -520,12 +527,18 @@ class FeedingController extends Controller
 
         $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
 
-        $plan->update([
-            'days_count' => (int) $request->input('days_count'),
+        $updatePayload = [
             'plan_quantity' => round((float) $total, 2),
             'remaining_quantity' => max(round((float) $total - (float) $plan->consumed_quantity, 2), 0),
             'subtype_details' => $subtypes,
-        ]);
+        ];
+        if ($request->exists('days_count')) {
+            $updatePayload['days_count'] = $request->filled('days_count')
+                ? (int) $request->input('days_count')
+                : null;
+        }
+
+        $plan->update($updatePayload);
 
         return response()->json([
             'status' => true,
