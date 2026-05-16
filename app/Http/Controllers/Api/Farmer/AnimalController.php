@@ -31,10 +31,11 @@ class AnimalController extends Controller
             'lactation_number' => 'nullable|integer|min:0',
             'ai_date' => 'nullable|date_format:d/m/Y',
             'breed_name' => 'nullable|string|max:255',
-            'birth_date' => 'required|date_format:d/m/Y',
+            'birth_date' => 'nullable|date_format:d/m/Y',
+            'age' => 'required|integer|min:0',
             'gender' => 'required|string',
-            'weight' => 'nullable|numeric',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,jfif|max:5120'
+            'weight' => 'required|numeric|min:0.01',
+            'image' => 'required|image|mimes:jpg,jpeg,png,webp,jfif|max:5120'
         ]);
 
         if ($validator->fails()) {
@@ -57,12 +58,14 @@ class AnimalController extends Controller
             }
         }
 
-        $birthDateObj = Carbon::createFromFormat('d/m/Y', $request->birth_date);
-        $birthDate = $birthDateObj->format('Y-m-d');
+        $birthDateObj = $request->filled('birth_date')
+            ? Carbon::createFromFormat('d/m/Y', $request->birth_date)
+            : null;
+        $birthDate = $birthDateObj?->format('Y-m-d');
         $aiDate = $request->filled('ai_date')
             ? Carbon::createFromFormat('d/m/Y', $request->ai_date)->format('Y-m-d')
             : null;
-        $age = max($birthDateObj->age, 0);
+        $age = $birthDateObj ? max($birthDateObj->age, 0) : max((int) $request->age, 0);
         $imagePath = null;
 
         if ($request->hasFile('image')) {
