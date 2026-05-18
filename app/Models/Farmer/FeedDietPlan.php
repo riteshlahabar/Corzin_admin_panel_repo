@@ -9,6 +9,7 @@ class FeedDietPlan extends Model
     protected $fillable = [
         'farmer_id',
         'animal_id',
+        'diet_plan_name',
         'feed_type_id',
         'days_count',
         'plan_quantity',
@@ -43,4 +44,3 @@ class FeedDietPlan extends Model
         return $this->belongsTo(FeedType::class, 'feed_type_id');
     }
 }
-

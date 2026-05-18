@@ -109,7 +109,7 @@ class FeedingController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Feeding entry saved successfully',
-            'data' => $this->transformRecord($record->load(['animal', 'feedType'])),
+            'data' => $this->transformRecord($record->load(['animal', 'feedType', 'dietPlan'])),
         ], 201);
     }
 
@@ -379,6 +379,7 @@ class FeedingController extends Controller
                 'animal_id' => $plan->animal_id,
                 'animal_name' => $plan->animal->animal_name ?? '-',
                 'tag_number' => $plan->animal->tag_number ?? '-',
+                'diet_plan_name' => (string) ($plan->diet_plan_name ?? ''),
                 'feed_type_id' => $plan->feed_type_id,
                 'feed_type' => $plan->feedType->name ?? '-',
                 'unit' => $plan->unit,
@@ -404,6 +405,7 @@ class FeedingController extends Controller
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
             'animal_id' => 'required|exists:animals,id',
+            'diet_plan_name' => 'required|string|max:255',
             'feed_type_id' => 'required|exists:feed_types,id',
             'days_count' => 'nullable|integer|min:1|max:365',
             'unit' => 'required|string|max:30',
@@ -438,6 +440,7 @@ class FeedingController extends Controller
                 'message' => 'Please add at least one subtype with quantity.',
             ], 422);
         }
+        $dietPlanName = trim((string) $request->input('diet_plan_name'));
 
         $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
         $incomingSignature = $this->subtypeSignature($subtypes);
@@ -474,6 +477,7 @@ class FeedingController extends Controller
             $addedTotal = collect($subtypes)->sum(fn ($item) => (float) ($item['quantity'] ?? 0));
 
             $existingPlan->update([
+                'diet_plan_name' => $dietPlanName,
                 'plan_quantity' => round((float) $existingPlan->plan_quantity + (float) $addedTotal, 2),
                 'remaining_quantity' => round((float) $existingPlan->remaining_quantity + (float) $addedTotal, 2),
                 'unit' => trim((string) $request->input('unit')) ?: $existingPlan->unit,
@@ -498,6 +502,7 @@ class FeedingController extends Controller
         $plan = FeedDietPlan::create([
             'farmer_id' => $farmerId,
             'animal_id' => (int) $request->input('animal_id'),
+            'diet_plan_name' => $dietPlanName,
             'feed_type_id' => (int) $request->input('feed_type_id'),
             'days_count' => $daysCount,
             'plan_quantity' => round((float) $total, 2),
@@ -642,7 +647,7 @@ class FeedingController extends Controller
 
     public function list($farmer_id)
     {
-        $records = FeedingRecord::with(['animal', 'feedType'])
+        $records = FeedingRecord::with(['animal', 'feedType', 'dietPlan'])
             ->where('farmer_id', $farmer_id)
             ->latest('date')
             ->latest('id')
@@ -725,7 +730,7 @@ class FeedingController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Feeding entry updated successfully',
-            'data' => $this->transformRecord($record->load(['animal', 'feedType'])),
+            'data' => $this->transformRecord($record->load(['animal', 'feedType', 'dietPlan'])),
         ]);
     }
 
@@ -823,6 +828,7 @@ class FeedingController extends Controller
             'tag_number' => $record->animal->tag_number ?? '-',
             'feed_type_id' => $record->feed_type_id,
             'diet_plan_id' => $record->diet_plan_id,
+            'diet_plan_name' => (string) optional($record->dietPlan)->diet_plan_name,
             'feed_type' => $record->feedType->name ?? '-',
             'quantity' => (float) $record->quantity,
             'package_quantity' => (float) ($record->package_quantity ?? 0),
