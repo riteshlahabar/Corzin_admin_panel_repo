@@ -219,7 +219,7 @@ class AnimalController extends Controller
         }
 
         try {
-            $pan = DB::transaction(function () use ($request, $farmerId, $animalIds, $milkShifts) {
+            $pan = DB::transaction(function () use ($request, $farmerId, $animalIds, $panType, $milkShifts) {
                 $pan = FarmerPan::create([
                     'farmer_id' => $farmerId,
                     'name' => trim((string) $request->name),
@@ -326,7 +326,7 @@ class AnimalController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($request, $pan, $farmerId, $targetIds, $milkShifts) {
+            DB::transaction(function () use ($request, $pan, $farmerId, $targetIds, $panType, $milkShifts) {
                 $pan->update([
                     'name' => trim((string) $request->name),
                     'pan_type' => $panType,
