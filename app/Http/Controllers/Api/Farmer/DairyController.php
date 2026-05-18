@@ -169,6 +169,17 @@ class DairyController extends Controller
         }
 
         $paymentDate = Carbon::parse($request->input('payment_date', now()->toDateString()))->toDateString();
+        $payableContext = $this->calculatePayableForDate($farmerId, $dairyId, $paymentDate);
+        $totalAmount = round((float) ($payableContext['total_amount'] ?? 0), 2);
+        $paidAmount = round((float) $request->input('paid_amount', 0), 2);
+        if ($paidAmount > $totalAmount) {
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'paid_amount' => ['Paid amount cannot be greater than total balance amount.'],
+                ],
+            ], 422);
+        }
 
         $entry = DairyPaymentEntry::query()->updateOrCreate(
             [
@@ -177,8 +188,8 @@ class DairyController extends Controller
                 'payment_date' => $paymentDate,
             ],
             [
-                'total_amount' => round((float) $request->input('total_amount', 0), 2),
-                'paid_amount' => round((float) $request->input('paid_amount', 0), 2),
+                'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
                 'notes' => trim((string) $request->input('notes', '')),
             ]
         );
@@ -193,6 +204,9 @@ class DairyController extends Controller
                 'payment_date' => optional($entry->payment_date)->toDateString() ?? $paymentDate,
                 'total_amount' => round((float) $entry->total_amount, 2),
                 'paid_amount' => round((float) $entry->paid_amount, 2),
+                'previous_balance' => round((float) ($payableContext['previous_balance'] ?? 0), 2),
+                'day_total_amount' => round((float) ($payableContext['day_total_amount'] ?? 0), 2),
+                'balance_amount' => round((float) ($totalAmount - $paidAmount), 2),
                 'notes' => (string) ($entry->notes ?? ''),
             ],
         ]);
@@ -265,6 +279,64 @@ class DairyController extends Controller
             'state' => $dairy->state,
             'pincode' => $dairy->pincode,
             'is_active' => $dairy->is_active,
+        ];
+    }
+
+    private function calculatePayableForDate(int $farmerId, int $dairyId, string $paymentDate): array
+    {
+        $milkByDay = MilkProduction::query()
+            ->selectRaw('DATE(`date`) as entry_date, COALESCE(SUM(total_milk * COALESCE(rate, 0)), 0) as day_total_amount')
+            ->where('dairy_id', $dairyId)
+            ->groupBy('entry_date')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                return [
+                    (string) $row->entry_date => round((float) ($row->day_total_amount ?? 0), 2),
+                ];
+            });
+
+        $manualByDate = DairyPaymentEntry::query()
+            ->where('farmer_id', $farmerId)
+            ->where('dairy_id', $dairyId)
+            ->orderBy('payment_date')
+            ->get()
+            ->mapWithKeys(function (DairyPaymentEntry $entry) {
+                $date = optional($entry->payment_date)->toDateString();
+                return $date ? [$date => $entry] : [];
+            });
+
+        $dateSet = collect()
+            ->merge($milkByDay->keys())
+            ->merge($manualByDate->keys())
+            ->push($paymentDate)
+            ->filter(fn ($date) => is_string($date) && trim($date) !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        $runningBalance = 0.0;
+        foreach ($dateSet as $date) {
+            $dayTotalAmount = (float) ($milkByDay->get($date) ?? 0);
+            $totalAmount = $runningBalance + $dayTotalAmount;
+
+            if ($date === $paymentDate) {
+                return [
+                    'previous_balance' => round($runningBalance, 2),
+                    'day_total_amount' => round($dayTotalAmount, 2),
+                    'total_amount' => round($totalAmount, 2),
+                ];
+            }
+
+            /** @var DairyPaymentEntry|null $manualEntry */
+            $manualEntry = $manualByDate->get($date);
+            $paidAmount = (float) ($manualEntry->paid_amount ?? 0);
+            $runningBalance = $totalAmount - $paidAmount;
+        }
+
+        return [
+            'previous_balance' => 0.0,
+            'day_total_amount' => 0.0,
+            'total_amount' => 0.0,
         ];
     }
 }
