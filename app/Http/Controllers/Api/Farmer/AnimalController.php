@@ -206,6 +206,26 @@ class AnimalController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+        $eligibleAnimalIds = Animal::query()
+            ->where('farmer_id', $farmerId)
+            ->whereIn('id', $animalIds)
+            ->where(function ($query) {
+                $query->whereNull('pan_id')->orWhere('pan_id', 0);
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+        $blockedAnimalIds = $animalIds->diff($eligibleAnimalIds)->values();
+        if ($blockedAnimalIds->isNotEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'animal_ids' => [
+                        'Some selected animals already belong to another PAN. Please use PAN transfer.',
+                    ],
+                ],
+            ], 422);
+        }
         $panType = $this->normalizePanType($request->input('pan_type', 'milking'));
         $milkShifts = $this->normalizeMilkShifts(
             $request->input('milk_shifts', []),
@@ -229,7 +249,7 @@ class AnimalController extends Controller
 
                 $animals = Animal::query()
                     ->where('farmer_id', $farmerId)
-                    ->whereIn('id', $animalIds)
+                    ->whereIn('id', $eligibleAnimalIds)
                     ->get();
 
                 foreach ($animals as $animal) {
@@ -313,6 +333,28 @@ class AnimalController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+        $eligibleTargetIds = Animal::query()
+            ->where('farmer_id', $farmerId)
+            ->whereIn('id', $targetIds)
+            ->where(function ($query) use ($pan) {
+                $query->whereNull('pan_id')
+                    ->orWhere('pan_id', 0)
+                    ->orWhere('pan_id', $pan->id);
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+        $blockedTargetIds = $targetIds->diff($eligibleTargetIds)->values();
+        if ($blockedTargetIds->isNotEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'animal_ids' => [
+                        'Some selected animals already belong to another PAN. Please use PAN transfer.',
+                    ],
+                ],
+            ], 422);
+        }
         $panType = $this->normalizePanType($request->input('pan_type', $pan->pan_type ?? 'milking'));
         $milkShifts = $this->normalizeMilkShifts(
             $request->input('milk_shifts', []),
@@ -340,12 +382,12 @@ class AnimalController extends Controller
                 Animal::query()
                     ->where('farmer_id', $farmerId)
                     ->where('pan_id', $pan->id)
-                    ->whereNotIn('id', $targetIds)
+                    ->whereNotIn('id', $eligibleTargetIds)
                     ->update(['pan_id' => null]);
 
                 $animals = Animal::query()
                     ->where('farmer_id', $farmerId)
-                    ->whereIn('id', $targetIds)
+                    ->whereIn('id', $eligibleTargetIds)
                     ->get();
 
                 foreach ($animals as $animal) {
