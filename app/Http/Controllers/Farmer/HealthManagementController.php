@@ -8,6 +8,8 @@ use App\Models\Farmer\DmiRecord;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\MastitisRecord;
 use App\Models\Farmer\MedicalRecord;
+use App\Models\Farmer\MilkProduction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class HealthManagementController extends Controller
@@ -70,12 +72,42 @@ class HealthManagementController extends Controller
 
     public function dmi()
     {
-        $rows = DmiRecord::with(['farmer', 'animal'])->latest('date')->get();
+        $rows = Animal::query()
+            ->with(['farmer', 'animalType'])
+            ->where('is_active', true)
+            ->latest('id')
+            ->get()
+            ->map(function (Animal $animal) {
+                $latestMilk = MilkProduction::query()
+                    ->where('animal_id', $animal->id)
+                    ->orderByDesc('date')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $bodyWeight = (float) ($animal->weight ?? 0);
+                $totalMilk = (float) ($latestMilk->total_milk ?? 0);
+                $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
+                $isMilking = (str_contains($typeName, 'milking') && ! str_contains($typeName, 'non'))
+                    || ($typeName === '' && $totalMilk > 0);
+                $requiredDmi = $isMilking
+                    ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
+                    : round(($bodyWeight * 0.025), 2);
+
+                return (object) [
+                    'farmer' => $animal->farmer,
+                    'animal' => $animal,
+                    'body_weight' => round($bodyWeight, 2),
+                    'total_milk' => round($totalMilk, 2),
+                    'required_dmi' => $requiredDmi,
+                    'actual_dmi' => $requiredDmi,
+                    'alert_status' => 'Auto Calculated',
+                    'date' => ! empty($latestMilk?->date) ? Carbon::parse($latestMilk->date) : now(),
+                ];
+            });
+
         return view('health.dmi', [
             'title' => 'DMI Calculator',
             'rows' => $rows,
-            'farmers' => Farmer::orderBy('first_name')->get(),
-            'animals' => Animal::with('farmer')->orderBy('animal_name')->get(),
         ]);
     }
 

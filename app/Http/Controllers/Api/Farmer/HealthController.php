@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Farmer\Animal;
 use App\Models\Farmer\DmiRecord;
 use App\Models\Farmer\MastitisRecord;
 use App\Models\Farmer\MedicalRecord;
+use App\Models\Farmer\MilkProduction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -95,23 +98,49 @@ class HealthController extends Controller
 
     public function dmiList($farmerId)
     {
-        $rows = DmiRecord::with('animal')
+        $rows = Animal::query()
+            ->with(['animalType', 'farmer'])
             ->where('farmer_id', $farmerId)
-            ->latest('date')
+            ->where('is_active', true)
+            ->latest('id')
             ->get()
-            ->map(fn ($row) => [
-                'id' => $row->id,
-                'animal_id' => $row->animal_id,
-                'animal_name' => $row->animal->animal_name ?? '-',
-                'tag_number' => $row->animal->tag_number ?? '-',
-                'body_weight' => $row->body_weight,
-                'total_milk' => $row->total_milk,
-                'required_dmi' => $row->required_dmi,
-                'actual_dmi' => $row->actual_dmi,
-                'alert_status' => $row->alert_status,
-                'date' => optional($row->date)->format('d/m/Y'),
-                'notes' => $row->notes,
-            ]);
+            ->map(function ($animal) {
+                $latestMilk = MilkProduction::query()
+                    ->where('animal_id', $animal->id)
+                    ->orderByDesc('date')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $bodyWeight = (float) ($animal->weight ?? 0);
+                $totalMilk = (float) ($latestMilk->total_milk ?? 0);
+                $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
+                $isMilking = (str_contains($typeName, 'milking') && ! str_contains($typeName, 'non'))
+                    || ($typeName === '' && $totalMilk > 0);
+
+                $requiredDmi = $isMilking
+                    ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
+                    : round(($bodyWeight * 0.025), 2);
+                $displayDate = (! empty($latestMilk?->date))
+                    ? Carbon::parse($latestMilk->date)->format('d/m/Y')
+                    : now()->format('d/m/Y');
+
+                return [
+                    'id' => (int) $animal->id,
+                    'animal_id' => (int) $animal->id,
+                    'animal_name' => $animal->animal_name ?? '-',
+                    'tag_number' => $animal->tag_number ?? '-',
+                    'animal_type_name' => $animal->animalType->name ?? '-',
+                    'dmi_type' => $isMilking ? 'Milking Cow' : 'Non Milking Cow',
+                    'body_weight' => round($bodyWeight, 2),
+                    'total_milk' => round($totalMilk, 2),
+                    'required_dmi' => $requiredDmi,
+                    'actual_dmi' => $requiredDmi,
+                    'alert_status' => 'Auto Calculated',
+                    'date' => $displayDate,
+                    'notes' => '',
+                ];
+            })
+            ->values();
 
         return response()->json(['status' => true, 'message' => 'DMI records fetched successfully', 'data' => $rows]);
     }
