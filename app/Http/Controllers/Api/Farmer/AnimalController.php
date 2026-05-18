@@ -475,6 +475,18 @@ class AnimalController extends Controller
             ], 404);
         }
 
+        if (
+            $this->normalizePanType($toPan->pan_type) === 'milking' &&
+            ! $this->isMilkingAnimalType(optional($animal->animalType)->name)
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'animal_id' => ['Only milking cows can be transferred to a Milking PAN.'],
+                ],
+            ], 422);
+        }
+
         $fromPanId = $animal->pan_id;
         if ($fromPanId === $toPan->id) {
             return response()->json([
@@ -859,6 +871,16 @@ class AnimalController extends Controller
     {
         $type = strtolower(trim((string) $value));
         return $type === 'non_milking' ? 'non_milking' : 'milking';
+    }
+
+    private function isMilkingAnimalType($typeName): bool
+    {
+        $type = strtolower(trim((string) $typeName));
+        $hasMilking = str_contains($type, 'milking') || str_contains($type, 'milk');
+        $hasNonMilking = str_contains($type, 'non-milking') ||
+            str_contains($type, 'non milking') ||
+            str_contains($type, 'dry');
+        return $hasMilking && ! $hasNonMilking;
     }
 }
 
