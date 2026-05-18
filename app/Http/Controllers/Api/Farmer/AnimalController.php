@@ -190,7 +190,7 @@ class AnimalController extends Controller
             'animal_ids' => 'required|array|min:1',
             'animal_ids.*' => 'integer|exists:animals,id',
             'pan_type' => 'nullable|string|in:milking,non_milking',
-            'milk_shifts' => 'nullable|array|min:1',
+            'milk_shifts' => 'nullable|array',
             'milk_shifts.*' => 'string|in:Morning,Afternoon,Evening',
         ]);
 
@@ -285,7 +285,7 @@ class AnimalController extends Controller
             'animal_ids' => 'nullable|array',
             'animal_ids.*' => 'integer|exists:animals,id',
             'pan_type' => 'nullable|string|in:milking,non_milking',
-            'milk_shifts' => 'nullable|array|min:1',
+            'milk_shifts' => 'nullable|array',
             'milk_shifts.*' => 'string|in:Morning,Afternoon,Evening',
         ]);
 
