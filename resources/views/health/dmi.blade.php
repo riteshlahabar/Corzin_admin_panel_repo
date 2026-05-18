@@ -94,7 +94,6 @@
                             <th>Total Milk</th>
                             <th>Required DMI</th>
                             <th>Actual DMI</th>
-                            <th>Status</th>
                             <th>Date</th>
                         </tr>
                     </thead>
@@ -120,16 +119,11 @@
                                 <td>{{ $row->total_milk }} L</td>
                                 <td>{{ $row->required_dmi }} Kg</td>
                                 <td>{{ $row->actual_dmi }} Kg</td>
-                                <td>
-                                    <span class="badge {{ $isBalanced ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' }}">
-                                        {{ $row->alert_status }}
-                                    </span>
-                                </td>
                                 <td>{{ optional($row->date)->format('d-m-Y') }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted py-4">No DMI records found</td>
+                                <td colspan="9" class="text-center text-muted py-4">No DMI records found</td>
                             </tr>
                         @endforelse
                     </tbody>
