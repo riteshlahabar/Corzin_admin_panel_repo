@@ -8,6 +8,7 @@ use App\Models\Farmer\FeedDietPlan;
 use App\Models\Farmer\FeedingRecord;
 use App\Models\Farmer\FeedType;
 use App\Models\Farmer\FeedSubtype;
+use App\Models\Farmer\MilkProduction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -373,22 +374,43 @@ class FeedingController extends Controller
             $daysRemaining = $daysCount !== null
                 ? max($daysCount - $daysUsed, 0)
                 : null;
+            $normalizedSubtypes = $this->normalizeSubtypeDetails((array) ($plan->subtype_details ?? []), true);
+            $planDryMatter = round(
+                collect($normalizedSubtypes)->sum(fn ($item) => (float) data_get($item, 'dry_matter_quantity', 0)),
+                2
+            );
+            $remainingDryMatter = (float) $plan->plan_quantity > 0
+                ? round(((float) $plan->remaining_quantity / (float) $plan->plan_quantity) * $planDryMatter, 2)
+                : 0.0;
 
             return [
                 'id' => $plan->id,
                 'animal_id' => $plan->animal_id,
+                'pan_id' => (int) ($plan->pan_id ?? 0),
                 'animal_name' => $plan->animal->animal_name ?? '-',
                 'tag_number' => $plan->animal->tag_number ?? '-',
                 'diet_plan_name' => (string) ($plan->diet_plan_name ?? ''),
                 'feed_type_id' => $plan->feed_type_id,
                 'feed_type' => $plan->feedType->name ?? '-',
+                'reference_date' => $plan->reference_date ? Carbon::parse($plan->reference_date)->toDateString() : null,
+                'body_weight' => round((float) ($plan->body_weight ?? 0), 2),
+                'milk_production' => round((float) ($plan->milk_production ?? 0), 2),
+                'target_dmi' => round((float) ($plan->target_dmi ?? 0), 2),
                 'unit' => $plan->unit,
                 'days_count' => $daysCount,
                 'days_remaining' => $daysRemaining,
                 'plan_quantity' => round((float) $plan->plan_quantity, 2),
                 'consumed_quantity' => round((float) $plan->consumed_quantity, 2),
                 'remaining_quantity' => round((float) $plan->remaining_quantity, 2),
-                'subtype_details' => $plan->subtype_details ?? [],
+                'plan_dry_matter_quantity' => round((float) ($plan->planned_dry_matter ?? $planDryMatter), 2),
+                'remaining_dry_matter_quantity' => $remainingDryMatter,
+                'dmi_gap' => round(
+                    $plan->dmi_gap !== null
+                        ? (float) $plan->dmi_gap
+                        : ($planDryMatter - (float) ($plan->target_dmi ?? 0)),
+                    2
+                ),
+                'subtype_details' => $normalizedSubtypes,
                 'created_at' => optional($plan->created_at)->toDateString(),
             ];
         })->values();
@@ -405,13 +427,16 @@ class FeedingController extends Controller
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
             'animal_id' => 'required|exists:animals,id',
+            'pan_id' => 'nullable|exists:farmer_pans,id',
             'diet_plan_name' => 'required|string|max:255',
             'feed_type_id' => 'required|exists:feed_types,id',
+            'reference_date' => 'nullable|date',
             'days_count' => 'nullable|integer|min:1|max:365',
             'unit' => 'required|string|max:30',
             'subtype_details' => 'required|array|min:1',
             'subtype_details.*.name' => 'required|string|max:255',
             'subtype_details.*.quantity' => 'required|numeric|min:0.01',
+            'subtype_details.*.dm_percent' => 'required|numeric|min:0.01|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -441,9 +466,25 @@ class FeedingController extends Controller
             ], 422);
         }
         $dietPlanName = trim((string) $request->input('diet_plan_name'));
+        $referenceDate = $request->filled('reference_date')
+            ? Carbon::parse((string) $request->input('reference_date'))->toDateString()
+            : now()->toDateString();
+        $selectedPanId = (int) $request->input('pan_id', 0);
 
         $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
+        $plannedDryMatter = round(
+            collect($subtypes)->sum(fn ($item) => (float) data_get($item, 'dry_matter_quantity', 0)),
+            2
+        );
         $incomingSignature = $this->subtypeSignature($subtypes);
+        $metrics = $this->resolveDietMetricsValues(
+            farmerId: $farmerId,
+            animalId: (int) $request->input('animal_id'),
+            panId: $selectedPanId,
+            forDate: $referenceDate
+        );
+        $targetDmi = $metrics['target_dmi'];
+        $dmiGap = round($plannedDryMatter - $targetDmi, 2);
 
         $candidateAnimalIds = [(int) $animal->id];
         $animalPanId = (int) ($animal->pan_id ?? 0);
@@ -467,21 +508,29 @@ class FeedingController extends Controller
             ->latest('id')
             ->get()
             ->first(function (FeedDietPlan $plan) use ($incomingSignature) {
-                $existingSubtypes = $this->normalizeSubtypeDetails((array) ($plan->subtype_details ?? []));
+                $existingSubtypes = $this->normalizeSubtypeDetails((array) ($plan->subtype_details ?? []), true);
                 return $this->subtypeSignature($existingSubtypes) === $incomingSignature;
             });
 
         if ($existingPlan) {
-            $existingSubtypes = $this->normalizeSubtypeDetails((array) ($existingPlan->subtype_details ?? []));
+            $existingSubtypes = $this->normalizeSubtypeDetails((array) ($existingPlan->subtype_details ?? []), true);
             $mergedSubtypes = $this->mergeSubtypeDetails($existingSubtypes, $subtypes);
             $addedTotal = collect($subtypes)->sum(fn ($item) => (float) ($item['quantity'] ?? 0));
+            $existingPlannedDryMatter = (float) ($existingPlan->planned_dry_matter ?? 0);
 
             $existingPlan->update([
+                'pan_id' => $selectedPanId > 0 ? $selectedPanId : $existingPlan->pan_id,
                 'diet_plan_name' => $dietPlanName,
                 'plan_quantity' => round((float) $existingPlan->plan_quantity + (float) $addedTotal, 2),
                 'remaining_quantity' => round((float) $existingPlan->remaining_quantity + (float) $addedTotal, 2),
                 'unit' => trim((string) $request->input('unit')) ?: $existingPlan->unit,
                 'subtype_details' => $mergedSubtypes,
+                'reference_date' => $referenceDate,
+                'body_weight' => $metrics['body_weight'],
+                'milk_production' => $metrics['milk_production'],
+                'target_dmi' => $targetDmi,
+                'planned_dry_matter' => round($existingPlannedDryMatter + $plannedDryMatter, 2),
+                'dmi_gap' => round(($existingPlannedDryMatter + $plannedDryMatter) - $targetDmi, 2),
                 'is_active' => true,
             ]);
 
@@ -502,8 +551,15 @@ class FeedingController extends Controller
         $plan = FeedDietPlan::create([
             'farmer_id' => $farmerId,
             'animal_id' => (int) $request->input('animal_id'),
+            'pan_id' => $selectedPanId > 0 ? $selectedPanId : null,
             'diet_plan_name' => $dietPlanName,
             'feed_type_id' => (int) $request->input('feed_type_id'),
+            'reference_date' => $referenceDate,
+            'body_weight' => $metrics['body_weight'],
+            'milk_production' => $metrics['milk_production'],
+            'target_dmi' => $targetDmi,
+            'planned_dry_matter' => $plannedDryMatter,
+            'dmi_gap' => $dmiGap,
             'days_count' => $daysCount,
             'plan_quantity' => round((float) $total, 2),
             'consumed_quantity' => 0,
@@ -526,10 +582,13 @@ class FeedingController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
+            'pan_id' => 'nullable|exists:farmer_pans,id',
+            'reference_date' => 'nullable|date',
             'days_count' => 'nullable|integer|min:1|max:365',
             'subtype_details' => 'required|array|min:1',
             'subtype_details.*.name' => 'required|string|max:255',
             'subtype_details.*.quantity' => 'required|numeric|min:0.01',
+            'subtype_details.*.dm_percent' => 'required|numeric|min:0.01|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -555,15 +614,7 @@ class FeedingController extends Controller
             ], 403);
         }
 
-        $subtypes = collect($request->input('subtype_details', []))
-            ->map(fn ($item) => [
-                'subtype_id' => data_get($item, 'subtype_id'),
-                'name' => trim((string) data_get($item, 'name')),
-                'quantity' => (float) data_get($item, 'quantity', 0),
-            ])
-            ->filter(fn ($item) => $item['name'] !== '' && $item['quantity'] > 0)
-            ->values()
-            ->all();
+        $subtypes = $this->normalizeSubtypeDetails($request->input('subtype_details', []));
 
         if (empty($subtypes)) {
             return response()->json([
@@ -573,11 +624,35 @@ class FeedingController extends Controller
         }
 
         $total = collect($subtypes)->sum(fn ($item) => (float) $item['quantity']);
+        $plannedDryMatter = round(
+            collect($subtypes)->sum(fn ($item) => (float) data_get($item, 'dry_matter_quantity', 0)),
+            2
+        );
+        $referenceDate = $request->filled('reference_date')
+            ? Carbon::parse((string) $request->input('reference_date'))->toDateString()
+            : ($plan->reference_date ? Carbon::parse($plan->reference_date)->toDateString() : now()->toDateString());
+        $selectedPanId = $request->filled('pan_id')
+            ? (int) $request->input('pan_id')
+            : (int) ($plan->pan_id ?? 0);
+        $metrics = $this->resolveDietMetricsValues(
+            farmerId: $farmerId,
+            animalId: (int) $plan->animal_id,
+            panId: $selectedPanId,
+            forDate: $referenceDate
+        );
+        $targetDmi = $metrics['target_dmi'];
 
         $updatePayload = [
             'plan_quantity' => round((float) $total, 2),
             'remaining_quantity' => max(round((float) $total - (float) $plan->consumed_quantity, 2), 0),
             'subtype_details' => $subtypes,
+            'pan_id' => $selectedPanId > 0 ? $selectedPanId : null,
+            'reference_date' => $referenceDate,
+            'body_weight' => $metrics['body_weight'],
+            'milk_production' => $metrics['milk_production'],
+            'target_dmi' => $targetDmi,
+            'planned_dry_matter' => $plannedDryMatter,
+            'dmi_gap' => round($plannedDryMatter - $targetDmi, 2),
         ];
         if ($request->exists('days_count')) {
             $updatePayload['days_count'] = $request->filled('days_count')
@@ -590,6 +665,38 @@ class FeedingController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Diet plan updated successfully.',
+        ]);
+    }
+
+    public function dietMetrics(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'animal_id' => 'required|exists:animals,id',
+            'pan_id' => 'nullable|exists:farmer_pans,id',
+            'date' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $metrics = $this->resolveDietMetricsValues(
+            farmerId: (int) $request->input('farmer_id'),
+            animalId: (int) $request->input('animal_id'),
+            panId: (int) $request->input('pan_id', 0),
+            forDate: $request->filled('date')
+                ? Carbon::parse((string) $request->input('date'))->toDateString()
+                : now()->toDateString()
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Diet metrics fetched successfully.',
+            'data' => $metrics,
         ]);
     }
 
@@ -767,13 +874,18 @@ class FeedingController extends Controller
         return null;
     }
 
-    private function normalizeSubtypeDetails(array $subtypes): array
+    private function normalizeSubtypeDetails(array $subtypes, bool $allowMissingDmPercent = false): array
     {
         $bucket = [];
         foreach ($subtypes as $item) {
             $name = trim((string) data_get($item, 'name', ''));
             $qty = (float) data_get($item, 'quantity', 0);
-            if ($name === '' || $qty <= 0) {
+            $dmPercent = (float) data_get($item, 'dm_percent', 0);
+            if ($allowMissingDmPercent && $dmPercent <= 0) {
+                $dmPercent = 100;
+            }
+
+            if ($name === '' || $qty <= 0 || $dmPercent <= 0 || $dmPercent > 100) {
                 continue;
             }
             $subtypeId = (int) data_get($item, 'subtype_id', 0);
@@ -783,14 +895,29 @@ class FeedingController extends Controller
                     'subtype_id' => $subtypeId > 0 ? $subtypeId : null,
                     'name' => $name,
                     'quantity' => 0,
+                    'dm_percent' => 0,
                 ];
             }
+
+            $existingQty = (float) $bucket[$key]['quantity'];
+            $existingDm = (float) $bucket[$key]['dm_percent'];
+            $combinedQty = $existingQty + $qty;
+            $weightedDm = $combinedQty > 0
+                ? ((($existingDm * $existingQty) + ($dmPercent * $qty)) / $combinedQty)
+                : $dmPercent;
+
             $bucket[$key]['quantity'] += $qty;
+            $bucket[$key]['dm_percent'] = $weightedDm;
         }
 
         return collect($bucket)
             ->map(function ($item) {
                 $item['quantity'] = round((float) $item['quantity'], 2);
+                $item['dm_percent'] = round((float) $item['dm_percent'], 2);
+                $item['dry_matter_quantity'] = round(
+                    ((float) $item['quantity'] * (float) $item['dm_percent']) / 100,
+                    2
+                );
                 return $item;
             })
             ->values()
@@ -815,7 +942,7 @@ class FeedingController extends Controller
 
     private function mergeSubtypeDetails(array $existing, array $incoming): array
     {
-        return $this->normalizeSubtypeDetails(array_merge($existing, $incoming));
+        return $this->normalizeSubtypeDetails(array_merge($existing, $incoming), true);
     }
 
     private function transformRecord(FeedingRecord $record): array
@@ -840,5 +967,62 @@ class FeedingController extends Controller
             'date' => optional($record->date)->format('Y-m-d'),
             'notes' => $record->notes,
         ];
+    }
+
+    private function resolveDietMetricsValues(int $farmerId, int $animalId, int $panId, string $forDate): array
+    {
+        $date = Carbon::parse($forDate)->toDateString();
+        $selectedAnimal = Animal::query()
+            ->where('id', $animalId)
+            ->where('farmer_id', $farmerId)
+            ->first();
+
+        if (! $selectedAnimal) {
+            return [
+                'date' => $date,
+                'body_weight' => 0.0,
+                'milk_production' => 0.0,
+                'target_dmi' => 0.0,
+            ];
+        }
+
+        $animalIds = [$selectedAnimal->id];
+        if ($panId > 0) {
+            $panAnimalIds = Animal::query()
+                ->where('farmer_id', $farmerId)
+                ->where('pan_id', $panId)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->values()
+                ->all();
+            if (! empty($panAnimalIds)) {
+                $animalIds = $panAnimalIds;
+            }
+        }
+
+        $bodyWeight = (float) Animal::query()
+            ->whereIn('id', $animalIds)
+            ->sum('weight');
+        $milkProduction = (float) MilkProduction::query()
+            ->whereDate('date', $date)
+            ->whereIn('animal_id', $animalIds)
+            ->sum('total_milk');
+        $targetDmi = $this->computeTargetDmi($bodyWeight, $milkProduction);
+
+        return [
+            'date' => $date,
+            'body_weight' => round($bodyWeight, 2),
+            'milk_production' => round($milkProduction, 2),
+            'target_dmi' => round($targetDmi, 2),
+        ];
+    }
+
+    private function computeTargetDmi(float $bodyWeight, float $milkProduction): float
+    {
+        if ($bodyWeight <= 0) {
+            return 0;
+        }
+        return ($bodyWeight * 0.02) + ($milkProduction * 0.33);
     }
 }

@@ -31,8 +31,9 @@ class AnimalController extends Controller
             'lactation_number' => 'nullable|integer|min:0',
             'ai_date' => 'nullable|date_format:d/m/Y',
             'breed_name' => 'nullable|string|max:255',
-            'birth_date' => 'nullable|date_format:d/m/Y',
-            'age' => 'required|integer|min:0',
+            'birth_date' => 'required|date_format:d/m/Y',
+            'purchase_date' => 'nullable|date_format:d/m/Y',
+            'age' => 'nullable|integer|min:0',
             'gender' => 'required|string',
             'weight' => 'required|numeric|min:0.01',
             'image' => 'required|image|mimes:jpg,jpeg,png,webp,jfif|max:5120'
@@ -58,14 +59,15 @@ class AnimalController extends Controller
             }
         }
 
-        $birthDateObj = $request->filled('birth_date')
-            ? Carbon::createFromFormat('d/m/Y', $request->birth_date)
+        $birthDateObj = Carbon::createFromFormat('d/m/Y', $request->birth_date);
+        $birthDate = $birthDateObj->format('Y-m-d');
+        $purchaseDate = $request->filled('purchase_date')
+            ? Carbon::createFromFormat('d/m/Y', $request->purchase_date)->format('Y-m-d')
             : null;
-        $birthDate = $birthDateObj?->format('Y-m-d');
         $aiDate = $request->filled('ai_date')
             ? Carbon::createFromFormat('d/m/Y', $request->ai_date)->format('Y-m-d')
             : null;
-        $age = $birthDateObj ? max($birthDateObj->age, 0) : max((int) $request->age, 0);
+        $age = max($birthDateObj->age, 0);
         $imagePath = null;
 
         if ($request->hasFile('image')) {
@@ -98,6 +100,7 @@ class AnimalController extends Controller
             'breed_name' => $request->filled('breed_name') ? trim((string) $request->breed_name) : null,
             'age' => $age,
             'birth_date' => $birthDate,
+            'purchase_date' => $purchaseDate,
             'gender' => $request->gender,
             'weight' => $request->weight,
             'image' => $imagePath,
@@ -536,6 +539,7 @@ class AnimalController extends Controller
             'ai_date' => 'nullable|date_format:d/m/Y',
             'breed_name' => 'nullable|string|max:255',
             'birth_date' => 'required|date_format:d/m/Y',
+            'purchase_date' => 'nullable|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,jfif|max:5120',
@@ -574,6 +578,9 @@ class AnimalController extends Controller
 
         $birthDateObj = Carbon::createFromFormat('d/m/Y', $request->birth_date);
         $birthDate = $birthDateObj->format('Y-m-d');
+        $purchaseDate = $request->filled('purchase_date')
+            ? Carbon::createFromFormat('d/m/Y', $request->purchase_date)->format('Y-m-d')
+            : ($request->has('purchase_date') ? null : $animal->purchase_date);
         $aiDate = $request->filled('ai_date')
             ? Carbon::createFromFormat('d/m/Y', $request->ai_date)->format('Y-m-d')
             : null;
@@ -601,6 +608,7 @@ class AnimalController extends Controller
             'breed_name' => $request->filled('breed_name') ? trim((string) $request->breed_name) : null,
             'age' => $age,
             'birth_date' => $birthDate,
+            'purchase_date' => $purchaseDate,
             'gender' => $request->gender,
             'weight' => $request->weight,
             'image' => $imagePath,
@@ -839,7 +847,9 @@ class AnimalController extends Controller
             'ai_date' => $animal->ai_date ? Carbon::parse($animal->ai_date)->format('d/m/Y') : null,
             'breed_name' => $animal->breed_name,
             'age' => $animal->calculated_age,
+            'age_display' => $animal->formatted_age,
             'birth_date' => $animal->birth_date ? Carbon::parse($animal->birth_date)->format('d/m/Y') : null,
+            'purchase_date' => $animal->purchase_date ? Carbon::parse($animal->purchase_date)->format('d/m/Y') : null,
             'gender' => $animal->gender,
             'weight' => $animal->weight,
             'lifecycle_status' => $animal->lifecycle_status ?? 'active',

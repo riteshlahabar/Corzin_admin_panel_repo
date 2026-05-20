@@ -71,6 +71,7 @@ Route::prefix('feeding')->group(function () {
     Route::post('/diet-plans/{planId}/update', [FeedingController::class, 'updateDietPlan']);
     Route::post('/diet-plans/{planId}/delete', [FeedingController::class, 'deleteDietPlan']);
     Route::get('/diet-plans/{farmer_id}', [FeedingController::class, 'dietPlans']);
+    Route::get('/diet-metrics', [FeedingController::class, 'dietMetrics']);
     Route::get('/list/{farmer_id}', [FeedingController::class, 'list']);
     Route::get('/summary/{farmer_id}', [FeedingController::class, 'summary']);
 });

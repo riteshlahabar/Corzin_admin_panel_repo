@@ -20,6 +20,7 @@ class Animal extends Model
         'breed_name',
         'age',
         'birth_date',
+        'purchase_date',
         'gender',
         'weight',
         'image',
@@ -35,6 +36,8 @@ class Animal extends Model
         'is_active' => 'boolean',
         'is_for_sale' => 'boolean',
         'ai_date' => 'date',
+        'birth_date' => 'date',
+        'purchase_date' => 'date',
         'listed_for_sale_at' => 'datetime',
         'sold_at' => 'datetime',
         'death_at' => 'datetime',
@@ -77,6 +80,22 @@ class Animal extends Model
         }
 
         return $this->age;
+    }
+
+    public function getFormattedAgeAttribute(): ?string
+    {
+        if (empty($this->birth_date)) {
+            return $this->age !== null ? ((int) $this->age) . ' years 0 month 0 days' : null;
+        }
+
+        $birthDate = Carbon::parse($this->birth_date)->startOfDay();
+        $today = Carbon::now()->startOfDay();
+        if ($birthDate->greaterThan($today)) {
+            return null;
+        }
+
+        $diff = $birthDate->diff($today);
+        return sprintf('%d years %d month %d days', (int) $diff->y, (int) $diff->m, (int) $diff->d);
     }
 
     public function getImageUrlAttribute(): ?string
