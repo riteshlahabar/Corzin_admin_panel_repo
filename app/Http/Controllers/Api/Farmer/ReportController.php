@@ -42,6 +42,39 @@ class ReportController extends Controller
                 ->groupBy(DB::raw('DATE(f.date)'), 'p.id', 'p.name')
                 ->selectRaw('DATE(f.date) as entry_date, p.id as target_id, p.name as target_name, COALESCE(SUM(COALESCE(f.feeding_quantity, f.quantity, 0)),0) as feeding_quantity')
                 ->get();
+
+            $lifecycleRows = DB::table('animal_lifecycle_histories as h')
+                ->join('animals as a', 'a.id', '=', 'h.animal_id')
+                ->leftJoin('farmer_pans as p_from', 'p_from.id', '=', 'h.from_pan_id')
+                ->leftJoin('farmer_pans as p_to', 'p_to.id', '=', 'h.to_pan_id')
+                ->where('a.farmer_id', $farmerId)
+                ->whereBetween(DB::raw('DATE(h.changed_at)'), [$from->toDateString(), $to->toDateString()])
+                ->when($targetId > 0, function ($query) use ($targetId) {
+                    $query->where(function ($nested) use ($targetId) {
+                        $nested->where('h.to_pan_id', $targetId)
+                            ->orWhere('h.from_pan_id', $targetId)
+                            ->orWhere(function ($none) use ($targetId) {
+                                $none->whereNull('h.to_pan_id')
+                                    ->whereNull('h.from_pan_id')
+                                    ->where('a.pan_id', $targetId);
+                            });
+                    });
+                })
+                ->groupBy(
+                    DB::raw('DATE(h.changed_at)'),
+                    DB::raw('COALESCE(h.to_pan_id, h.from_pan_id, a.pan_id)'),
+                    DB::raw("COALESCE(p_to.name, p_from.name, 'Unassigned PAN')")
+                )
+                ->selectRaw(
+                    "DATE(h.changed_at) as entry_date,
+                    COALESCE(h.to_pan_id, h.from_pan_id, a.pan_id) as target_id,
+                    COALESCE(p_to.name, p_from.name, 'Unassigned PAN') as target_name,
+                    COUNT(*) as lifecycle_events,
+                    SUM(CASE WHEN LOWER(COALESCE(h.to_status,'')) = 'sold' THEN 1 ELSE 0 END) as lifecycle_sold,
+                    SUM(CASE WHEN LOWER(COALESCE(h.to_status,'')) = 'death' THEN 1 ELSE 0 END) as lifecycle_death,
+                    SUM(CASE WHEN LOWER(COALESCE(h.action_type,'')) = 'transfer' THEN 1 ELSE 0 END) as lifecycle_transfer"
+                )
+                ->get();
         } else {
             $milkRows = DB::table('milk_productions as m')
                 ->join('animals as a', 'a.id', '=', 'm.animal_id')
@@ -59,6 +92,23 @@ class ReportController extends Controller
                 ->when($targetId > 0, fn ($query) => $query->where('a.id', $targetId))
                 ->groupBy(DB::raw('DATE(f.date)'), 'a.id', 'a.animal_name', 'a.tag_number')
                 ->selectRaw("DATE(f.date) as entry_date, a.id as target_id, CONCAT(a.animal_name, CASE WHEN COALESCE(a.tag_number,'') = '' THEN '' ELSE CONCAT(' (',a.tag_number,')') END) as target_name, COALESCE(SUM(COALESCE(f.feeding_quantity, f.quantity, 0)),0) as feeding_quantity")
+                ->get();
+
+            $lifecycleRows = DB::table('animal_lifecycle_histories as h')
+                ->join('animals as a', 'a.id', '=', 'h.animal_id')
+                ->where('a.farmer_id', $farmerId)
+                ->whereBetween(DB::raw('DATE(h.changed_at)'), [$from->toDateString(), $to->toDateString()])
+                ->when($targetId > 0, fn ($query) => $query->where('a.id', $targetId))
+                ->groupBy(DB::raw('DATE(h.changed_at)'), 'a.id', 'a.animal_name', 'a.tag_number')
+                ->selectRaw(
+                    "DATE(h.changed_at) as entry_date,
+                    a.id as target_id,
+                    CONCAT(a.animal_name, CASE WHEN COALESCE(a.tag_number,'') = '' THEN '' ELSE CONCAT(' (',a.tag_number,')') END) as target_name,
+                    COUNT(*) as lifecycle_events,
+                    SUM(CASE WHEN LOWER(COALESCE(h.to_status,'')) = 'sold' THEN 1 ELSE 0 END) as lifecycle_sold,
+                    SUM(CASE WHEN LOWER(COALESCE(h.to_status,'')) = 'death' THEN 1 ELSE 0 END) as lifecycle_death,
+                    SUM(CASE WHEN LOWER(COALESCE(h.action_type,'')) = 'transfer' THEN 1 ELSE 0 END) as lifecycle_transfer"
+                )
                 ->get();
         }
 
@@ -79,6 +129,21 @@ class ReportController extends Controller
             $rowsMap[$key]['feeding_quantity'] = round((float) $row->feeding_quantity, 2);
         }
 
+        foreach ($lifecycleRows as $row) {
+            $targetIdValue = (int) ($row->target_id ?? 0);
+            if ($targetIdValue <= 0) {
+                continue;
+            }
+            $key = $this->rowKey($row->entry_date, $targetIdValue);
+            if (! isset($rowsMap[$key])) {
+                $rowsMap[$key] = $this->baseRow($row->entry_date, $targetIdValue, (string) $row->target_name);
+            }
+            $rowsMap[$key]['lifecycle_events'] = (int) ($row->lifecycle_events ?? 0);
+            $rowsMap[$key]['lifecycle_sold'] = (int) ($row->lifecycle_sold ?? 0);
+            $rowsMap[$key]['lifecycle_death'] = (int) ($row->lifecycle_death ?? 0);
+            $rowsMap[$key]['lifecycle_transfer'] = (int) ($row->lifecycle_transfer ?? 0);
+        }
+
         $rows = array_values($rowsMap);
         usort($rows, function (array $first, array $second): int {
             if ($first['date_key'] === $second['date_key']) {
@@ -91,16 +156,28 @@ class ReportController extends Controller
             'milk_quantity' => 0.0,
             'milk_amount' => 0.0,
             'feeding_quantity' => 0.0,
+            'lifecycle_events' => 0,
+            'lifecycle_sold' => 0,
+            'lifecycle_death' => 0,
+            'lifecycle_transfer' => 0,
         ];
         foreach ($rows as $row) {
             $totals['milk_quantity'] += (float) ($row['milk_quantity'] ?? 0);
             $totals['milk_amount'] += (float) ($row['milk_amount'] ?? 0);
             $totals['feeding_quantity'] += (float) ($row['feeding_quantity'] ?? 0);
+            $totals['lifecycle_events'] += (int) ($row['lifecycle_events'] ?? 0);
+            $totals['lifecycle_sold'] += (int) ($row['lifecycle_sold'] ?? 0);
+            $totals['lifecycle_death'] += (int) ($row['lifecycle_death'] ?? 0);
+            $totals['lifecycle_transfer'] += (int) ($row['lifecycle_transfer'] ?? 0);
         }
         $totals = [
             'milk_quantity' => round($totals['milk_quantity'], 2),
             'milk_amount' => round($totals['milk_amount'], 2),
             'feeding_quantity' => round($totals['feeding_quantity'], 2),
+            'lifecycle_events' => (int) $totals['lifecycle_events'],
+            'lifecycle_sold' => (int) $totals['lifecycle_sold'],
+            'lifecycle_death' => (int) $totals['lifecycle_death'],
+            'lifecycle_transfer' => (int) $totals['lifecycle_transfer'],
         ];
 
         return response()->json([
@@ -212,6 +289,10 @@ class ReportController extends Controller
             'milk_quantity' => 0.0,
             'milk_amount' => 0.0,
             'feeding_quantity' => 0.0,
+            'lifecycle_events' => 0,
+            'lifecycle_sold' => 0,
+            'lifecycle_death' => 0,
+            'lifecycle_transfer' => 0,
         ];
     }
 }
