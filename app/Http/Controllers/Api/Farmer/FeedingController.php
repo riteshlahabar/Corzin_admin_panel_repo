@@ -351,15 +351,15 @@ class FeedingController extends Controller
             ->where('is_active', true)
             ->latest('id');
 
-        if ($animalId > 0) {
-            $query->where('animal_id', $animalId);
-        } elseif ($panId > 0) {
-            $panAnimalIds = Animal::query()
-                ->where('farmer_id', (int) $farmer_id)
-                ->where('pan_id', $panId)
-                ->pluck('id')
-                ->all();
-            $query->whereIn('animal_id', $panAnimalIds ?: [0]);
+        if ($panId > 0) {
+            // PAN selection should show only PAN-wise diet plans.
+            $query->where('pan_id', $panId);
+        } elseif ($animalId > 0) {
+            // Animal selection should show only animal-wise plans.
+            $query->where('animal_id', $animalId)
+                ->where(function ($nested) {
+                    $nested->whereNull('pan_id')->orWhere('pan_id', 0);
+                });
         }
 
         if ($feedTypeId > 0) {
@@ -486,25 +486,24 @@ class FeedingController extends Controller
         $targetDmi = $metrics['target_dmi'];
         $dmiGap = round($plannedDryMatter - $targetDmi, 2);
 
-        $candidateAnimalIds = [(int) $animal->id];
-        $animalPanId = (int) ($animal->pan_id ?? 0);
-        if ($animalPanId > 0) {
-            $panAnimalIds = Animal::query()
-                ->where('farmer_id', $farmerId)
-                ->where('pan_id', $animalPanId)
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-            if (! empty($panAnimalIds)) {
-                $candidateAnimalIds = array_values(array_unique(array_merge($candidateAnimalIds, $panAnimalIds)));
-            }
-        }
-
-        $existingPlan = FeedDietPlan::query()
+        $existingPlanQuery = FeedDietPlan::query()
             ->where('farmer_id', $farmerId)
             ->where('feed_type_id', (int) $request->input('feed_type_id'))
-            ->where('is_active', true)
-            ->whereIn('animal_id', $candidateAnimalIds)
+            ->where('is_active', true);
+
+        if ($selectedPanId > 0) {
+            // PAN-wise diet plan must merge only within the same PAN.
+            $existingPlanQuery->where('pan_id', $selectedPanId);
+        } else {
+            // Animal-wise diet plan must merge only within the same animal scope.
+            $existingPlanQuery
+                ->where('animal_id', (int) $animal->id)
+                ->where(function ($nested) {
+                    $nested->whereNull('pan_id')->orWhere('pan_id', 0);
+                });
+        }
+
+        $existingPlan = $existingPlanQuery
             ->latest('id')
             ->get()
             ->first(function (FeedDietPlan $plan) use ($incomingSignature) {
