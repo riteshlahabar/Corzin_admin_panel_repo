@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Farmer\AnimalTypeController;
 use App\Http\Controllers\Api\Farmer\DairyController;
 use App\Http\Controllers\Api\Farmer\FeedingController;
 use App\Http\Controllers\Api\Farmer\HealthController;
+use App\Http\Controllers\Api\Farmer\ReportController;
 use App\Http\Controllers\Api\Farmer\SubscriptionController;
 use App\Http\Controllers\Api\Farmer\FarmerSettingController as ApiFarmerSettingController;
 use App\Http\Controllers\Api\Doctor\DoctorController as FarmerDoctorController;
@@ -90,6 +91,11 @@ Route::prefix('health')->group(function () {
     Route::post('/mastitis', [HealthController::class, 'storeMastitis']);
     Route::get('/dmi/{farmer_id}', [HealthController::class, 'dmiList']);
     Route::post('/dmi', [HealthController::class, 'storeDmi']);
+});
+
+Route::prefix('reports')->group(function () {
+    Route::get('/livestock/{farmer_id}', [ReportController::class, 'livestock']);
+    Route::get('/profit-loss/{farmer_id}', [ReportController::class, 'profitLoss']);
 });
 
 Route::prefix('doctor')->group(function () {
