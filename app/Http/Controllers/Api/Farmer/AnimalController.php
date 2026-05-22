@@ -691,6 +691,51 @@ class AnimalController extends Controller
         ], 200);
     }
 
+    public function cancelForSale(Request $request, $animalId)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $animal = Animal::query()
+            ->where('id', $animalId)
+            ->where('farmer_id', $request->farmer_id)
+            ->first();
+
+        if (! $animal) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Animal not found.',
+            ], 404);
+        }
+
+        if (! (bool) $animal->is_for_sale) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Animal is not listed for sale.',
+                'data' => $this->transformAnimal($animal->load(['animalType', 'pan', 'motherAnimal'])),
+            ], 200);
+        }
+
+        $animal->update([
+            'is_for_sale' => false,
+            'listed_for_sale_at' => null,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Animal selling cancelled successfully.',
+            'data' => $this->transformAnimal($animal->fresh()->load(['animalType', 'pan', 'motherAnimal'])),
+        ], 200);
+    }
+
     public function forSaleList()
     {
         $animals = Animal::query()
@@ -734,12 +779,16 @@ class AnimalController extends Controller
             $animal->update([
                 'lifecycle_status' => 'sold',
                 'is_active' => false,
+                'is_for_sale' => false,
+                'listed_for_sale_at' => null,
                 'sold_at' => $now,
             ]);
         } elseif ($action === 'death') {
             $animal->update([
                 'lifecycle_status' => 'death',
                 'is_active' => false,
+                'is_for_sale' => false,
+                'listed_for_sale_at' => null,
                 'death_at' => $now,
             ]);
         } elseif ($action === 'active') {
