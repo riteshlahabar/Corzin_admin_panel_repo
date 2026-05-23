@@ -28,6 +28,8 @@ class FeedingController extends Controller
             'package_quantity' => 'nullable|numeric|min:0',
             'feeding_quantity' => 'nullable|numeric|min:0',
             'balance_quantity' => 'nullable|numeric|min:0',
+            'rate_per_unit' => 'required|numeric|min:0',
+            'feeding_cost' => 'nullable|numeric|min:0',
             'feed_subtype_details' => 'nullable|array',
             'feed_subtype_details.*.subtype_id' => 'nullable|integer',
             'feed_subtype_details.*.name' => 'required_with:feed_subtype_details|string|max:255',
@@ -75,6 +77,10 @@ class FeedingController extends Controller
             : ((float) $request->input('quantity', 0) > 0
                 ? (float) $request->input('quantity')
                 : (float) $calculatedSubtypeTotal);
+        $ratePerUnit = (float) $request->input('rate_per_unit', 0);
+        $feedingCost = $request->filled('feeding_cost')
+            ? (float) $request->input('feeding_cost')
+            : ($feedingQuantity * $ratePerUnit);
 
         $packageQuantity = (float) $calculatedSubtypeTotal;
 
@@ -92,6 +98,8 @@ class FeedingController extends Controller
             'package_quantity' => $packageQuantity,
             'feeding_quantity' => $feedingQuantity,
             'balance_quantity' => $balanceQuantity,
+            'rate_per_unit' => round($ratePerUnit, 2),
+            'feeding_cost' => round($feedingCost, 2),
             'unit' => $request->unit,
             'feeding_time' => $request->feeding_time ?: 'Morning',
             'date' => $request->date,
@@ -775,6 +783,8 @@ class FeedingController extends Controller
             'package_quantity' => 'nullable|numeric|min:0',
             'feeding_quantity' => 'nullable|numeric|min:0',
             'balance_quantity' => 'nullable|numeric|min:0',
+            'rate_per_unit' => 'nullable|numeric|min:0',
+            'feeding_cost' => 'nullable|numeric|min:0',
             'feed_subtype_details' => 'nullable|array',
             'feed_subtype_details.*.subtype_id' => 'nullable|integer',
             'feed_subtype_details.*.name' => 'required_with:feed_subtype_details|string|max:255',
@@ -808,9 +818,20 @@ class FeedingController extends Controller
                 'message' => 'You are not allowed to update this record.',
             ], 403);
         }
+        $updatedFeedingQuantity = $request->filled('feeding_quantity')
+            ? (float) $request->input('feeding_quantity')
+            : ($request->filled('quantity')
+                ? (float) $request->input('quantity')
+                : (float) ($record->feeding_quantity ?? $record->quantity ?? 0));
+        $updatedRatePerUnit = $request->filled('rate_per_unit')
+            ? (float) $request->input('rate_per_unit')
+            : (float) ($record->rate_per_unit ?? 0);
+        $updatedFeedingCost = $request->filled('feeding_cost')
+            ? (float) $request->input('feeding_cost')
+            : ($updatedFeedingQuantity * $updatedRatePerUnit);
 
         $record->update([
-            'quantity' => $request->quantity,
+            'quantity' => round($updatedFeedingQuantity, 2),
             'unit' => $request->unit,
             'feeding_time' => $request->feeding_time ?: $record->feeding_time,
             'date' => $request->date,
@@ -831,6 +852,8 @@ class FeedingController extends Controller
             'balance_quantity' => $request->filled('balance_quantity')
                 ? $request->balance_quantity
                 : $record->balance_quantity,
+            'rate_per_unit' => round($updatedRatePerUnit, 2),
+            'feeding_cost' => round($updatedFeedingCost, 2),
         ]);
 
         return response()->json([
@@ -960,6 +983,8 @@ class FeedingController extends Controller
             'package_quantity' => (float) ($record->package_quantity ?? 0),
             'feeding_quantity' => (float) ($record->feeding_quantity ?? $record->quantity),
             'balance_quantity' => (float) ($record->balance_quantity ?? 0),
+            'rate_per_unit' => (float) ($record->rate_per_unit ?? 0),
+            'feeding_cost' => (float) ($record->feeding_cost ?? 0),
             'feed_subtype_details' => $record->feed_subtype_details ?? [],
             'unit' => $record->unit,
             'feeding_time' => $record->feeding_time,

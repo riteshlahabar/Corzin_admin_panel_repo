@@ -16,6 +16,8 @@ class FeedingRecord extends Model
         'package_quantity',
         'feeding_quantity',
         'balance_quantity',
+        'rate_per_unit',
+        'feeding_cost',
         'unit',
         'feeding_time',
         'date',
@@ -28,6 +30,8 @@ class FeedingRecord extends Model
         'package_quantity' => 'decimal:2',
         'feeding_quantity' => 'decimal:2',
         'balance_quantity' => 'decimal:2',
+        'rate_per_unit' => 'decimal:2',
+        'feeding_cost' => 'decimal:2',
         'feed_subtype_details' => 'array',
     ];
 

@@ -40,7 +40,7 @@ class ReportController extends Controller
                 ->whereBetween(DB::raw('DATE(f.date)'), [$from->toDateString(), $to->toDateString()])
                 ->when($targetId > 0, fn ($query) => $query->where('p.id', $targetId))
                 ->groupBy(DB::raw('DATE(f.date)'), 'p.id', 'p.name')
-                ->selectRaw('DATE(f.date) as entry_date, p.id as target_id, p.name as target_name, COALESCE(SUM(COALESCE(f.feeding_quantity, f.quantity, 0)),0) as feeding_quantity')
+                ->selectRaw('DATE(f.date) as entry_date, p.id as target_id, p.name as target_name, COALESCE(SUM(COALESCE(f.feeding_quantity, f.quantity, 0)),0) as feeding_quantity, COALESCE(SUM(COALESCE(f.feeding_cost, 0)),0) as feeding_cost')
                 ->get();
 
             $lifecycleRows = DB::table('animal_lifecycle_histories as h')
@@ -91,7 +91,7 @@ class ReportController extends Controller
                 ->whereBetween(DB::raw('DATE(f.date)'), [$from->toDateString(), $to->toDateString()])
                 ->when($targetId > 0, fn ($query) => $query->where('a.id', $targetId))
                 ->groupBy(DB::raw('DATE(f.date)'), 'a.id', 'a.animal_name', 'a.tag_number')
-                ->selectRaw("DATE(f.date) as entry_date, a.id as target_id, CONCAT(a.animal_name, CASE WHEN COALESCE(a.tag_number,'') = '' THEN '' ELSE CONCAT(' (',a.tag_number,')') END) as target_name, COALESCE(SUM(COALESCE(f.feeding_quantity, f.quantity, 0)),0) as feeding_quantity")
+                ->selectRaw("DATE(f.date) as entry_date, a.id as target_id, CONCAT(a.animal_name, CASE WHEN COALESCE(a.tag_number,'') = '' THEN '' ELSE CONCAT(' (',a.tag_number,')') END) as target_name, COALESCE(SUM(COALESCE(f.feeding_quantity, f.quantity, 0)),0) as feeding_quantity, COALESCE(SUM(COALESCE(f.feeding_cost, 0)),0) as feeding_cost")
                 ->get();
 
             $lifecycleRows = DB::table('animal_lifecycle_histories as h')
@@ -127,6 +127,7 @@ class ReportController extends Controller
                 $rowsMap[$key] = $this->baseRow($row->entry_date, $row->target_id, (string) $row->target_name);
             }
             $rowsMap[$key]['feeding_quantity'] = round((float) $row->feeding_quantity, 2);
+            $rowsMap[$key]['feeding_cost'] = round((float) ($row->feeding_cost ?? 0), 2);
         }
 
         foreach ($lifecycleRows as $row) {
@@ -156,6 +157,7 @@ class ReportController extends Controller
             'milk_quantity' => 0.0,
             'milk_amount' => 0.0,
             'feeding_quantity' => 0.0,
+            'feeding_cost' => 0.0,
             'lifecycle_events' => 0,
             'lifecycle_sold' => 0,
             'lifecycle_death' => 0,
@@ -165,6 +167,7 @@ class ReportController extends Controller
             $totals['milk_quantity'] += (float) ($row['milk_quantity'] ?? 0);
             $totals['milk_amount'] += (float) ($row['milk_amount'] ?? 0);
             $totals['feeding_quantity'] += (float) ($row['feeding_quantity'] ?? 0);
+            $totals['feeding_cost'] += (float) ($row['feeding_cost'] ?? 0);
             $totals['lifecycle_events'] += (int) ($row['lifecycle_events'] ?? 0);
             $totals['lifecycle_sold'] += (int) ($row['lifecycle_sold'] ?? 0);
             $totals['lifecycle_death'] += (int) ($row['lifecycle_death'] ?? 0);
@@ -174,6 +177,7 @@ class ReportController extends Controller
             'milk_quantity' => round($totals['milk_quantity'], 2),
             'milk_amount' => round($totals['milk_amount'], 2),
             'feeding_quantity' => round($totals['feeding_quantity'], 2),
+            'feeding_cost' => round($totals['feeding_cost'], 2),
             'lifecycle_events' => (int) $totals['lifecycle_events'],
             'lifecycle_sold' => (int) $totals['lifecycle_sold'],
             'lifecycle_death' => (int) $totals['lifecycle_death'],
@@ -204,6 +208,11 @@ class ReportController extends Controller
             ->where('a.farmer_id', $farmerId)
             ->whereBetween(DB::raw('DATE(m.date)'), [$from->toDateString(), $to->toDateString()])
             ->sum(DB::raw('m.total_milk * COALESCE(m.rate,0)'));
+        $feedingCost = (float) DB::table('feeding_records as f')
+            ->join('animals as a', 'a.id', '=', 'f.animal_id')
+            ->where('a.farmer_id', $farmerId)
+            ->whereBetween(DB::raw('DATE(f.date)'), [$from->toDateString(), $to->toDateString()])
+            ->sum(DB::raw('COALESCE(f.feeding_cost, 0)'));
 
         $appointments = DoctorAppointment::query()
             ->where('farmer_id', $farmerId)
@@ -223,7 +232,7 @@ class ReportController extends Controller
             $medicineCost += (float) ($appointment->on_site_medicine_charges ?? 0);
         }
 
-        $totalExpenses = $doctorCost + $medicineCost;
+        $totalExpenses = $doctorCost + $medicineCost + $feedingCost;
         $netProfit = $milkEarning - $totalExpenses;
 
         return response()->json([
@@ -235,6 +244,7 @@ class ReportController extends Controller
                 'milk_earning' => round($milkEarning, 2),
                 'doctor_cost' => round($doctorCost, 2),
                 'medicine_cost' => round($medicineCost, 2),
+                'feeding_cost' => round($feedingCost, 2),
                 'total_expenses' => round($totalExpenses, 2),
                 'net_profit' => round($netProfit, 2),
                 'appointment_count' => $appointments->count(),
@@ -289,6 +299,7 @@ class ReportController extends Controller
             'milk_quantity' => 0.0,
             'milk_amount' => 0.0,
             'feeding_quantity' => 0.0,
+            'feeding_cost' => 0.0,
             'lifecycle_events' => 0,
             'lifecycle_sold' => 0,
             'lifecycle_death' => 0,
