@@ -77,20 +77,12 @@ class DairyController extends Controller
         $dairies = Dairy::where('farmer_id', $farmer_id)->latest()->get();
         $dairyIds = $dairies->pluck('id')->values();
         $today = now()->toDateString();
-
-        $milkByDay = MilkProduction::query()
-            ->selectRaw('dairy_id, DATE(`date`) as entry_date, COALESCE(SUM(total_milk * COALESCE(rate, 0)), 0) as day_total_amount')
+        $milkRowsByDairy = MilkProduction::query()
+            ->with(['animal:id,animal_name,tag_number'])
             ->whereIn('dairy_id', $dairyIds)
-            ->groupBy('dairy_id', 'entry_date')
+            ->orderBy('date')
             ->get()
-            ->groupBy('dairy_id')
-            ->map(function ($rows) {
-                return collect($rows)->mapWithKeys(function ($row) {
-                    return [
-                        (string) $row->entry_date => round((float) ($row->day_total_amount ?? 0), 2),
-                    ];
-                });
-            });
+            ->groupBy('dairy_id');
 
         $milkQuantityByDairy = MilkProduction::query()
             ->selectRaw(
@@ -109,10 +101,10 @@ class DairyController extends Controller
             ->get()
             ->groupBy('dairy_id');
 
-        $data = $dairies->map(function (Dairy $dairy) use ($milkByDay, $paymentEntriesByDairy, $milkQuantityByDairy) {
+        $data = $dairies->map(function (Dairy $dairy) use ($milkRowsByDairy, $paymentEntriesByDairy, $milkQuantityByDairy) {
             $ledger = $this->buildLedgerForDairy(
                 $dairy,
-                $milkByDay->get($dairy->id, collect()),
+                $milkRowsByDairy->get($dairy->id, collect()),
                 $paymentEntriesByDairy->get($dairy->id, collect())
             );
             $latest = $ledger['history']->first();
@@ -209,28 +201,89 @@ class DairyController extends Controller
                 'total_amount' => round((float) $entry->total_amount, 2),
                 'paid_amount' => round((float) $entry->paid_amount, 2),
                 'previous_balance' => $previousBalance,
+                'today_balance' => $dayTotalAmount,
                 'day_total_amount' => $dayTotalAmount,
                 'paid_amount_before' => $paidBefore,
+                'paid_date' => optional($entry->payment_date)->format('d/m/Y') ?? '',
                 'opening_balance' => round((float) $entry->opening_balance, 2),
                 'closing_balance' => round((float) $entry->closing_balance, 2),
+                'total_balance' => $closingBalance,
                 'balance_amount' => $closingBalance,
                 'notes' => (string) ($entry->notes ?? ''),
             ],
         ]);
     }
 
-    private function buildLedgerForDairy(Dairy $dairy, $milkByDay, Collection $entries)
+    private function buildLedgerForDairy(Dairy $dairy, Collection $milkRows, Collection $entries)
     {
+        $milkByDate = $milkRows
+            ->groupBy(function (MilkProduction $milk) {
+                $rawDate = trim((string) ($milk->date ?? ''));
+                if ($rawDate === '') {
+                    return '';
+                }
+                return Carbon::parse($rawDate)->toDateString();
+            })
+            ->mapWithKeys(function (Collection $rows, $date) {
+                if (! is_string($date) || trim($date) === '') {
+                    return [];
+                }
+
+                $animalRows = $rows
+                    ->groupBy('animal_id')
+                    ->map(function (Collection $animalMilkRows) {
+                        /** @var MilkProduction $firstRow */
+                        $firstRow = $animalMilkRows->first();
+                        $animalName = (string) optional($firstRow->animal)->animal_name;
+                        $tagNumber = (string) optional($firstRow->animal)->tag_number;
+                        $morning = round((float) $animalMilkRows->sum('morning_milk'), 2);
+                        $afternoon = round((float) $animalMilkRows->sum('afternoon_milk'), 2);
+                        $evening = round((float) $animalMilkRows->sum('evening_milk'), 2);
+                        $totalMilk = round((float) $animalMilkRows->sum('total_milk'), 2);
+
+                        return [
+                            'animal_name' => trim($animalName) !== '' ? $animalName : '-',
+                            'tag_number' => trim($tagNumber),
+                            'morning_milk' => $morning,
+                            'afternoon_milk' => $afternoon,
+                            'evening_milk' => $evening,
+                            'total_milk' => $totalMilk,
+                        ];
+                    })
+                    ->values();
+
+                $dateTotalMilk = round((float) $animalRows->sum('total_milk'), 2);
+                $dayTotalAmount = round(
+                    (float) $rows->sum(function (MilkProduction $row) {
+                        return ((float) ($row->total_milk ?? 0)) * ((float) ($row->rate ?? 0));
+                    }),
+                    2
+                );
+                $effectiveRate = $dateTotalMilk > 0
+                    ? round($dayTotalAmount / $dateTotalMilk, 2)
+                    : round((float) ($rows->first()->rate ?? 0), 2);
+
+                return [
+                    $date => [
+                        'animals' => $animalRows,
+                        'total_milk' => $dateTotalMilk,
+                        'day_total_amount' => $dayTotalAmount,
+                        'rate' => $effectiveRate,
+                    ],
+                ];
+            });
+
         $manualByDate = collect($entries)
             ->groupBy(function (DairyPaymentEntry $entry) {
                 return optional($entry->payment_date)->toDateString();
             })
-            ->map(function (Collection $rows) {
+            ->map(function (Collection $rows, $date) {
                 $paidAmount = round((float) $rows->sum('paid_amount'), 2);
                 $note = (string) ($rows->sortByDesc('id')->first()->notes ?? '');
                 return [
                     'paid_amount' => $paidAmount,
                     'notes' => $note,
+                    'paid_date' => $paidAmount > 0 ? Carbon::parse((string) $date)->format('d/m/Y') : '',
                 ];
             })
             ->mapWithKeys(function ($entry, $date) {
@@ -241,7 +294,7 @@ class DairyController extends Controller
             });
 
         $dateSet = collect()
-            ->merge($milkByDay->keys())
+            ->merge($milkByDate->keys())
             ->merge($manualByDate->keys())
             ->filter(fn ($date) => is_string($date) && trim($date) !== '')
             ->unique()
@@ -252,25 +305,41 @@ class DairyController extends Controller
         $rows = [];
 
         foreach ($dateSet as $date) {
-            $manualEntry = $manualByDate->get($date, ['paid_amount' => 0, 'notes' => '']);
-            $milkDayTotal = (float) ($milkByDay->get($date) ?? 0);
-            $dayTotalAmount = $milkDayTotal;
+            $milkEntry = $milkByDate->get($date, [
+                'animals' => collect(),
+                'total_milk' => 0,
+                'day_total_amount' => 0,
+                'rate' => 0,
+            ]);
+            $manualEntry = $manualByDate->get($date, [
+                'paid_amount' => 0,
+                'notes' => '',
+                'paid_date' => '',
+            ]);
+
+            $previousBalance = round($runningBalance, 2);
+            $todayBalance = round((float) ($milkEntry['day_total_amount'] ?? 0), 2);
+            $totalAmount = round($previousBalance + $todayBalance, 2);
             $paidAmount = round((float) ($manualEntry['paid_amount'] ?? 0), 2);
-            $previousBalance = $runningBalance;
-            $totalAmount = $previousBalance + $dayTotalAmount;
-            $balance = $totalAmount - $paidAmount;
-            $runningBalance = $balance;
+            $totalBalance = round($totalAmount - $paidAmount, 2);
+            $runningBalance = $totalBalance;
 
             $rows[] = [
                 'date' => Carbon::parse($date)->format('d/m/Y'),
                 'date_key' => $date,
                 'dairy_id' => $dairy->id,
                 'dairy_name' => $dairy->dairy_name,
-                'previous_balance' => round($previousBalance, 2),
-                'day_total_amount' => round($dayTotalAmount, 2),
-                'total_amount' => round($totalAmount, 2),
-                'paid_amount' => round($paidAmount, 2),
-                'balance_amount' => round($balance, 2),
+                'animals' => $milkEntry['animals'],
+                'total_milk' => round((float) ($milkEntry['total_milk'] ?? 0), 2),
+                'rate' => round((float) ($milkEntry['rate'] ?? 0), 2),
+                'previous_balance' => $previousBalance,
+                'today_balance' => $todayBalance,
+                'day_total_amount' => $todayBalance,
+                'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
+                'paid_date' => (string) ($manualEntry['paid_date'] ?? ''),
+                'total_balance' => $totalBalance,
+                'balance_amount' => $totalBalance,
                 'notes' => (string) ($manualEntry['notes'] ?? ''),
             ];
         }
