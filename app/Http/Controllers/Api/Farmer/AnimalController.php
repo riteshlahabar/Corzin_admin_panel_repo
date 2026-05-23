@@ -625,6 +625,7 @@ class AnimalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
+            'selling_price' => 'required|numeric|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -656,6 +657,7 @@ class AnimalController extends Controller
 
         $animal->update([
             'is_for_sale' => true,
+            'selling_price' => round((float) $request->selling_price, 2),
             'listed_for_sale_at' => now(),
         ]);
 
@@ -678,6 +680,7 @@ class AnimalController extends Controller
                             'animal_name' => (string) ($animal->animal_name ?? ''),
                             'tag_number' => (string) ($animal->tag_number ?? ''),
                             'animal_type' => (string) $animalType,
+                            'selling_price' => (string) ($animal->selling_price ?? ''),
                             'image' => (string) ($animal->image_url ?? ''),
                         ]
                     );
@@ -726,6 +729,7 @@ class AnimalController extends Controller
 
         $animal->update([
             'is_for_sale' => false,
+            'selling_price' => null,
             'listed_for_sale_at' => null,
         ]);
 
@@ -780,6 +784,7 @@ class AnimalController extends Controller
                 'lifecycle_status' => 'sold',
                 'is_active' => false,
                 'is_for_sale' => false,
+                'selling_price' => null,
                 'listed_for_sale_at' => null,
                 'sold_at' => $now,
             ]);
@@ -788,6 +793,7 @@ class AnimalController extends Controller
                 'lifecycle_status' => 'death',
                 'is_active' => false,
                 'is_for_sale' => false,
+                'selling_price' => null,
                 'listed_for_sale_at' => null,
                 'death_at' => $now,
             ]);
@@ -904,7 +910,12 @@ class AnimalController extends Controller
             'lifecycle_status' => $animal->lifecycle_status ?? 'active',
             'is_active' => (bool) $animal->is_active,
             'is_for_sale' => (bool) ($animal->is_for_sale ?? false),
+            'selling_price' => $animal->selling_price !== null ? (float) $animal->selling_price : null,
             'listed_for_sale_at' => optional($animal->listed_for_sale_at)->toDateTimeString(),
+            'daily_milk_production' => $animal->milkProductions()
+                ->latest('date')
+                ->latest('id')
+                ->value('total_milk'),
             'image' => $animal->image_url,
         ];
     }

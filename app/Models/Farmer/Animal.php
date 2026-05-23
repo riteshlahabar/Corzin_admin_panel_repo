@@ -27,6 +27,7 @@ class Animal extends Model
         'lifecycle_status',
         'is_active',
         'is_for_sale',
+        'selling_price',
         'listed_for_sale_at',
         'sold_at',
         'death_at',
@@ -35,6 +36,7 @@ class Animal extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'is_for_sale' => 'boolean',
+        'selling_price' => 'decimal:2',
         'ai_date' => 'date',
         'birth_date' => 'date',
         'purchase_date' => 'date',
