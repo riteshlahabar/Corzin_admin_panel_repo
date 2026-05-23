@@ -36,6 +36,7 @@ class AnimalController extends Controller
             'age' => 'nullable|integer|min:0',
             'gender' => 'required|string',
             'weight' => 'required|numeric|min:0.01',
+            'default_milk_per_session' => 'nullable|numeric|min:0',
             'image' => 'required|image|mimes:jpg,jpeg,png,webp,jfif|max:5120'
         ]);
 
@@ -103,6 +104,7 @@ class AnimalController extends Controller
             'purchase_date' => $purchaseDate,
             'gender' => $request->gender,
             'weight' => $request->weight,
+            'default_milk_per_session' => $request->filled('default_milk_per_session') ? $request->default_milk_per_session : null,
             'image' => $imagePath,
             'lifecycle_status' => 'active',
             'is_active' => true,
@@ -542,6 +544,7 @@ class AnimalController extends Controller
             'purchase_date' => 'nullable|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
+            'default_milk_per_session' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,jfif|max:5120',
         ]);
 
@@ -611,6 +614,7 @@ class AnimalController extends Controller
             'purchase_date' => $purchaseDate,
             'gender' => $request->gender,
             'weight' => $request->weight,
+            'default_milk_per_session' => $request->filled('default_milk_per_session') ? $request->default_milk_per_session : null,
             'image' => $imagePath,
         ]);
 
@@ -907,6 +911,7 @@ class AnimalController extends Controller
             'purchase_date' => $animal->purchase_date ? Carbon::parse($animal->purchase_date)->format('d/m/Y') : null,
             'gender' => $animal->gender,
             'weight' => $animal->weight,
+            'default_milk_per_session' => $animal->default_milk_per_session,
             'lifecycle_status' => $animal->lifecycle_status ?? 'active',
             'is_active' => (bool) $animal->is_active,
             'is_for_sale' => (bool) ($animal->is_for_sale ?? false),

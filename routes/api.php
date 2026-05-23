@@ -56,6 +56,7 @@ Route::prefix('animal')->group(function () {
 
 Route::prefix('milk')->group(function () {
     Route::post('/', [MilkProductionController::class, 'store']);
+    Route::post('/pan', [MilkProductionController::class, 'storePan']);
     Route::get('/animal/{animal_id}', [MilkProductionController::class, 'index']);
     Route::get('/list/{farmer_id}', [MilkProductionController::class, 'listByFarmer']);
     Route::post('/update/{milk_id}', [MilkProductionController::class, 'update']);
