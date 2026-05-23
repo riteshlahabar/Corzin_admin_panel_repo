@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Farmer\AnimalTypeController;
 use App\Http\Controllers\Api\Farmer\DairyController;
 use App\Http\Controllers\Api\Farmer\FeedingController;
 use App\Http\Controllers\Api\Farmer\HealthController;
+use App\Http\Controllers\Api\Farmer\PregnancyController;
 use App\Http\Controllers\Api\Farmer\ReportController;
 use App\Http\Controllers\Api\Farmer\SubscriptionController;
 use App\Http\Controllers\Api\Farmer\FarmerSettingController as ApiFarmerSettingController;
@@ -76,6 +77,14 @@ Route::prefix('feeding')->group(function () {
     Route::get('/diet-metrics', [FeedingController::class, 'dietMetrics']);
     Route::get('/list/{farmer_id}', [FeedingController::class, 'list']);
     Route::get('/summary/{farmer_id}', [FeedingController::class, 'summary']);
+});
+
+Route::prefix('pregnancy')->group(function () {
+    Route::get('/list/{farmer_id}', [PregnancyController::class, 'index']);
+    Route::post('/', [PregnancyController::class, 'store']);
+    Route::post('/update/{id}', [PregnancyController::class, 'update']);
+    Route::post('/status/{id}', [PregnancyController::class, 'status']);
+    Route::post('/delete/{id}', [PregnancyController::class, 'destroy']);
 });
 
 Route::prefix('dairy')->group(function () {

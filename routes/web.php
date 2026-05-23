@@ -8,6 +8,7 @@ use App\Http\Controllers\Farmer\FarmerListController;
 use App\Http\Controllers\Farmer\AnimalListController;
 use App\Http\Controllers\Farmer\MilkProduceListController;
 use App\Http\Controllers\Farmer\FeedingListController;
+use App\Http\Controllers\Farmer\PregnancyListController;
 use App\Http\Controllers\Farmer\DairyListController;
 use App\Http\Controllers\Farmer\AnimalLifecycleController;
 use App\Http\Controllers\Farmer\HealthManagementController;
@@ -59,6 +60,7 @@ Route::prefix('farmer')->group(function () {
     Route::get('/milk-production', [MilkProduceListController::class, 'index'])->name('farmer.milk');
     Route::get('/feeding', [FeedingListController::class, 'index'])->name('farmer.feeding');
     Route::post('/feeding', [FeedingListController::class, 'store'])->name('farmer.feeding.store');
+    Route::get('/pregnancy', [PregnancyListController::class, 'index'])->name('farmer.pregnancy');
     Route::get('/dairy', [DairyListController::class, 'index'])->name('farmer.dairy');
     Route::post('/dairy', [DairyListController::class, 'store'])->name('farmer.dairy.store');
     Route::get('/settings', [FarmerSettingController::class, 'index'])->name('farmer.settings');

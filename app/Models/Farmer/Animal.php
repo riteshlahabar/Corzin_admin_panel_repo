@@ -75,6 +75,11 @@ class Animal extends Model
         return $this->hasMany(AnimalLifecycleHistory::class)->latest('changed_at');
     }
 
+    public function pregnancies()
+    {
+        return $this->hasMany(AnimalPregnancy::class)->latest('pregnancy_no')->latest('service_no');
+    }
+
     public function getCalculatedAgeAttribute(): ?int
     {
         if (! empty($this->birth_date)) {

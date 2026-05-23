@@ -33,6 +33,7 @@
                 <li class="menu-item"><a href="{{ route('farmer.pans') }}" class="nav-link"><i class="iconoir-list me-2"></i> PAN List</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.milk') }}" class="nav-link"><i class="iconoir-droplet me-2"></i> Milk Production</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.feeding') }}" class="nav-link"><i class="iconoir-leaf me-2"></i> Feeding</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.pregnancy') }}" class="nav-link"><i class="iconoir-healthcare me-2"></i> Pregnancy</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.dairy') }}" class="nav-link"><i class="iconoir-building me-2"></i> Dairy</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.settings') }}" class="nav-link {{ request()->routeIs('farmer.settings*') ? 'active' : '' }}"><i class="iconoir-settings me-2"></i> Settings</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.plan.index') }}" class="nav-link"><i class="iconoir-coins me-2"></i> Farmer Plan</a></li>
