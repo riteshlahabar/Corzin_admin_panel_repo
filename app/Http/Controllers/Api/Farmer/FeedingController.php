@@ -903,6 +903,8 @@ class FeedingController extends Controller
             $name = trim((string) data_get($item, 'name', ''));
             $qty = (float) data_get($item, 'quantity', 0);
             $dmPercent = (float) data_get($item, 'dm_percent', 0);
+            $feedTypeId = (int) data_get($item, 'feed_type_id', 0);
+            $feedTypeName = trim((string) data_get($item, 'feed_type_name', data_get($item, 'feed_type', '')));
             if ($allowMissingDmPercent && $dmPercent <= 0) {
                 $dmPercent = 100;
             }
@@ -911,10 +913,17 @@ class FeedingController extends Controller
                 continue;
             }
             $subtypeId = (int) data_get($item, 'subtype_id', 0);
-            $key = $subtypeId > 0 ? "id:$subtypeId" : 'name:' . mb_strtolower($name);
+            $typeKey = $feedTypeId > 0
+                ? "type:$feedTypeId"
+                : ($feedTypeName !== '' ? 'type_name:' . mb_strtolower($feedTypeName) : 'type:any');
+            $key = $subtypeId > 0
+                ? "$typeKey|id:$subtypeId"
+                : "$typeKey|name:" . mb_strtolower($name);
             if (! isset($bucket[$key])) {
                 $bucket[$key] = [
                     'subtype_id' => $subtypeId > 0 ? $subtypeId : null,
+                    'feed_type_id' => $feedTypeId > 0 ? $feedTypeId : null,
+                    'feed_type_name' => $feedTypeName !== '' ? $feedTypeName : null,
                     'name' => $name,
                     'quantity' => 0,
                     'dm_percent' => 0,
@@ -930,6 +939,12 @@ class FeedingController extends Controller
 
             $bucket[$key]['quantity'] += $qty;
             $bucket[$key]['dm_percent'] = $weightedDm;
+            if (! $bucket[$key]['feed_type_id'] && $feedTypeId > 0) {
+                $bucket[$key]['feed_type_id'] = $feedTypeId;
+            }
+            if (($bucket[$key]['feed_type_name'] ?? null) === null && $feedTypeName !== '') {
+                $bucket[$key]['feed_type_name'] = $feedTypeName;
+            }
         }
 
         return collect($bucket)
@@ -951,8 +966,11 @@ class FeedingController extends Controller
         $keys = collect($subtypes)
             ->map(function ($item) {
                 $id = (int) data_get($item, 'subtype_id', 0);
+                $feedTypeId = (int) data_get($item, 'feed_type_id', 0);
+                $feedTypeName = mb_strtolower(trim((string) data_get($item, 'feed_type_name', data_get($item, 'feed_type', ''))));
+                $typeKey = $feedTypeId > 0 ? "type:$feedTypeId" : ($feedTypeName !== '' ? "type_name:$feedTypeName" : 'type:any');
                 $name = mb_strtolower(trim((string) data_get($item, 'name', '')));
-                return $id > 0 ? "id:$id" : "name:$name";
+                return $id > 0 ? "$typeKey|id:$id" : "$typeKey|name:$name";
             })
             ->unique()
             ->sort()
