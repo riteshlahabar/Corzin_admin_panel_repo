@@ -69,7 +69,12 @@ class HealthController extends Controller
                 'test_result' => $row->test_result,
                 'treatment' => $row->treatment,
                 'recovery_status' => $row->recovery_status,
+                'quarter' => $row->quarter,
+                'clinical_type' => $row->clinical_type,
+                'cmt_score' => $row->cmt_score,
+                'scc_count' => $row->scc_count !== null ? (float) $row->scc_count : null,
                 'date' => optional($row->date)->format('d/m/Y'),
+                'follow_up_date' => optional($row->follow_up_date)->format('d/m/Y'),
                 'notes' => $row->notes,
             ]);
 
@@ -84,7 +89,12 @@ class HealthController extends Controller
             'test_result' => 'required|string|max:255',
             'treatment' => 'required|string|max:255',
             'recovery_status' => 'required|string|max:255',
+            'quarter' => 'nullable|string|max:50',
+            'clinical_type' => 'nullable|string|max:50',
+            'cmt_score' => 'nullable|string|max:20',
+            'scc_count' => 'nullable|numeric|min:0',
             'date' => 'required|date',
+            'follow_up_date' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
 

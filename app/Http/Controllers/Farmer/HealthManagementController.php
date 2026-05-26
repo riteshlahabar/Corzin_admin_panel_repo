@@ -61,7 +61,12 @@ class HealthManagementController extends Controller
             'test_result' => 'required|string|max:255',
             'treatment' => 'required|string|max:255',
             'recovery_status' => 'required|string|max:255',
+            'quarter' => 'nullable|string|max:50',
+            'clinical_type' => 'nullable|string|max:50',
+            'cmt_score' => 'nullable|string|max:20',
+            'scc_count' => 'nullable|numeric|min:0',
             'date' => 'required|date',
+            'follow_up_date' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
 
