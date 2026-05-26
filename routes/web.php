@@ -64,6 +64,7 @@ Route::prefix('farmer')->group(function () {
     Route::get('/dairy', [DairyListController::class, 'index'])->name('farmer.dairy');
     Route::post('/dairy', [DairyListController::class, 'store'])->name('farmer.dairy.store');
     Route::get('/settings', [FarmerSettingController::class, 'index'])->name('farmer.settings');
+    Route::post('/settings/support-contact', [FarmerSettingController::class, 'updateSupportContact'])->name('farmer.settings.support-contact.update');
     Route::post('/settings/banner', [FarmerSettingController::class, 'uploadBanner'])->name('farmer.settings.banner.upload');
     Route::delete('/settings/banner/{farmerBanner}', [FarmerSettingController::class, 'destroyBanner'])->name('farmer.settings.banner.destroy');
     Route::get('/plan', [FarmerPlanController::class, 'index'])->name('farmer.plan.index');

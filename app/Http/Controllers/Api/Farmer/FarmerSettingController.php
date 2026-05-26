@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\FarmerBanner;
+use App\Models\Farmer\FarmerSetting;
 
 class FarmerSettingController extends Controller
 {
     public function show()
     {
+        $setting = FarmerSetting::query()->first();
         $banners = FarmerBanner::query()
             ->where('is_active', true)
             ->orderBy('sort_order')
@@ -30,6 +32,10 @@ class FarmerSettingController extends Controller
             'message' => 'Farmer settings fetched successfully.',
             'data' => [
                 'banners' => $banners,
+                'admin_contact' => [
+                    'name' => $setting->admin_contact_name ?? 'Corzin Admin',
+                    'number' => $setting->admin_contact_number ?? '',
+                ],
             ],
         ]);
     }

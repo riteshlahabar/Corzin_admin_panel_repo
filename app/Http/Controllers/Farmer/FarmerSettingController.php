@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\FarmerBanner;
+use App\Models\Farmer\FarmerSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -12,12 +13,40 @@ class FarmerSettingController extends Controller
 {
     public function index()
     {
+        $setting = FarmerSetting::query()->first();
+        if (! $setting) {
+            $setting = FarmerSetting::create([
+                'admin_contact_name' => 'Corzin Admin',
+                'admin_contact_number' => null,
+            ]);
+        }
+
         $banners = FarmerBanner::query()
             ->orderBy('sort_order')
             ->latest('id')
             ->get();
 
-        return view('farmer.settings', compact('banners'));
+        return view('farmer.settings', compact('banners', 'setting'));
+    }
+
+    public function updateSupportContact(Request $request)
+    {
+        $data = $request->validate([
+            'admin_contact_name' => ['required', 'string', 'max:120'],
+            'admin_contact_number' => ['required', 'digits:10'],
+        ]);
+
+        $setting = FarmerSetting::query()->first();
+        if (! $setting) {
+            $setting = new FarmerSetting();
+        }
+
+        $setting->fill($data);
+        $setting->save();
+
+        return redirect()
+            ->route('farmer.settings')
+            ->with('success', 'Admin support contact saved successfully.');
     }
 
     public function uploadBanner(Request $request)

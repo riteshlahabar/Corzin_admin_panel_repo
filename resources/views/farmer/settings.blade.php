@@ -19,6 +19,11 @@
                         Banner
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="support-contact-tab" data-bs-toggle="tab" data-bs-target="#support-contact-pane" type="button" role="tab" aria-controls="support-contact-pane" aria-selected="false">
+                        Admin Support Contact
+                    </button>
+                </li>
             </ul>
         </div>
         <div class="card-body">
@@ -80,6 +85,46 @@
                                 <div class="alert alert-light border mb-0">No banner uploaded yet.</div>
                             </div>
                         @endforelse
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="support-contact-pane" role="tabpanel" aria-labelledby="support-contact-tab" tabindex="0">
+                    <form method="POST" action="{{ route('farmer.settings.support-contact.update') }}" class="row g-3">
+                        @csrf
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Contact Person Name</label>
+                            <input
+                                type="text"
+                                name="admin_contact_name"
+                                class="form-control @error('admin_contact_name') is-invalid @enderror"
+                                value="{{ old('admin_contact_name', $setting->admin_contact_name ?? '') }}"
+                                placeholder="Enter admin/support name"
+                                required
+                            >
+                            @error('admin_contact_name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Contact Number</label>
+                            <input
+                                type="text"
+                                name="admin_contact_number"
+                                class="form-control @error('admin_contact_number') is-invalid @enderror"
+                                value="{{ old('admin_contact_number', $setting->admin_contact_number ?? '') }}"
+                                placeholder="10 digit mobile number"
+                                maxlength="10"
+                                required
+                            >
+                            @error('admin_contact_number')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn farmer-settings-btn w-100">Save Contact</button>
+                        </div>
+                    </form>
+                    <div class="alert alert-light border mt-3 mb-0">
+                        This number is used in the farmer app for Buy Animal and Upgrade Plan support calls.
                     </div>
                 </div>
             </div>
