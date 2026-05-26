@@ -36,7 +36,7 @@ class AnimalController extends Controller
             'age' => 'nullable|integer|min:0',
             'gender' => 'required|string',
             'weight' => 'required|numeric|min:0.01',
-            'default_milk_per_session' => 'nullable|numeric|min:0',
+            'default_milk_per_session' => 'required|numeric|min:0',
             'image' => 'required|image|mimes:jpg,jpeg,png,webp,jfif|max:5120'
         ]);
 
@@ -104,7 +104,7 @@ class AnimalController extends Controller
             'purchase_date' => $purchaseDate,
             'gender' => $request->gender,
             'weight' => $request->weight,
-            'default_milk_per_session' => $request->filled('default_milk_per_session') ? $request->default_milk_per_session : null,
+            'default_milk_per_session' => $request->default_milk_per_session,
             'image' => $imagePath,
             'lifecycle_status' => 'active',
             'is_active' => true,
@@ -544,7 +544,7 @@ class AnimalController extends Controller
             'purchase_date' => 'nullable|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
-            'default_milk_per_session' => 'nullable|numeric|min:0',
+            'default_milk_per_session' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,jfif|max:5120',
         ]);
 
@@ -614,7 +614,7 @@ class AnimalController extends Controller
             'purchase_date' => $purchaseDate,
             'gender' => $request->gender,
             'weight' => $request->weight,
-            'default_milk_per_session' => $request->filled('default_milk_per_session') ? $request->default_milk_per_session : null,
+            'default_milk_per_session' => $request->default_milk_per_session,
             'image' => $imagePath,
         ]);
 
