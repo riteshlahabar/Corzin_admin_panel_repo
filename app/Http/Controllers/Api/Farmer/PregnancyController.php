@@ -59,6 +59,8 @@ class PregnancyController extends Controller
             ], 404);
         }
 
+        $this->syncAnimalLactationNumber($animal, $request);
+
         $payload = $this->payload($request, $animal);
         $this->closeOtherCurrentRecords($animal->id);
 
@@ -89,6 +91,8 @@ class PregnancyController extends Controller
                 'message' => 'Animal not found.',
             ], 404);
         }
+
+        $this->syncAnimalLactationNumber($animal, $request);
 
         $payload = $this->payload($request, $animal);
         if ((bool) $payload['is_current']) {
@@ -176,6 +180,7 @@ class PregnancyController extends Controller
             'bull_name' => 'nullable|string|max:120',
             'semen_no' => 'nullable|string|max:120',
             'doctor_name' => 'nullable|string|max:120',
+            'lactation_number' => 'nullable|integer|min:0',
             'pregnancy_check_due_date' => 'nullable|date',
             'pregnancy_check_date' => 'nullable|date',
             'pregnancy_result' => 'nullable|in:pending,pregnant,not_pregnant',
@@ -262,6 +267,23 @@ class PregnancyController extends Controller
             'not_pregnant', 'repeat_heat' => 'not_pregnant',
             default => $fallback ?: 'pending',
         };
+    }
+
+    private function syncAnimalLactationNumber(Animal $animal, Request $request): void
+    {
+        if (! $request->filled('lactation_number')) {
+            return;
+        }
+
+        $lactationNumber = (int) $request->input('lactation_number');
+        if ($lactationNumber < 0) {
+            return;
+        }
+
+        if ((int) $animal->lactation_number !== $lactationNumber) {
+            $animal->lactation_number = $lactationNumber;
+            $animal->save();
+        }
     }
 
     private function transform(AnimalPregnancy $record): array
