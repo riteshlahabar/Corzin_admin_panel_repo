@@ -124,7 +124,9 @@ class AnimalController extends Controller
             $query = Animal::with(['animalType', 'motherAnimal', 'pan'])->where('farmer_id', $farmer_id);
 
             if (! $request->boolean('include_inactive')) {
-                $query->where('is_active', true);
+                $query
+                    ->where('is_active', true)
+                    ->whereNotIn('lifecycle_status', ['sold', 'death']);
             }
 
             if ($request->filled('status') && $request->status !== 'all') {
@@ -159,7 +161,11 @@ class AnimalController extends Controller
         $pans = FarmerPan::query()
             ->with([
                 'animals' => function ($query) {
-                    $query->with(['animalType', 'motherAnimal', 'pan'])->latest();
+                    $query
+                        ->with(['animalType', 'motherAnimal', 'pan'])
+                        ->where('is_active', true)
+                        ->whereNotIn('lifecycle_status', ['sold', 'death'])
+                        ->latest();
                 },
             ])
             ->where('farmer_id', (int) $farmerId)
@@ -214,6 +220,8 @@ class AnimalController extends Controller
         $eligibleAnimalIds = Animal::query()
             ->where('farmer_id', $farmerId)
             ->whereIn('id', $animalIds)
+            ->where('is_active', true)
+            ->whereNotIn('lifecycle_status', ['sold', 'death'])
             ->where(function ($query) {
                 $query->whereNull('pan_id')->orWhere('pan_id', 0);
             })
@@ -341,6 +349,8 @@ class AnimalController extends Controller
         $eligibleTargetIds = Animal::query()
             ->where('farmer_id', $farmerId)
             ->whereIn('id', $targetIds)
+            ->where('is_active', true)
+            ->whereNotIn('lifecycle_status', ['sold', 'death'])
             ->where(function ($query) use ($pan) {
                 $query->whereNull('pan_id')
                     ->orWhere('pan_id', 0)
@@ -466,6 +476,15 @@ class AnimalController extends Controller
                 'status' => false,
                 'message' => 'Animal not found.',
             ], 404);
+        }
+
+        if (! (bool) $animal->is_active || in_array(strtolower((string) $animal->lifecycle_status), ['sold', 'death'], true)) {
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'animal_id' => ['Sold or dead animals cannot be transferred.'],
+                ],
+            ], 422);
         }
 
         $toPan = FarmerPan::query()
