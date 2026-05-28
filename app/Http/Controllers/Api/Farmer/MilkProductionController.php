@@ -7,6 +7,7 @@ use App\Models\Farmer\Animal;
 use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\MilkProduction;
 use App\Models\Farmer\PanMilkEntry;
+use App\Services\FarmerReminderNotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,10 @@ use Illuminate\Support\Facades\Validator;
 
 class MilkProductionController extends Controller
 {
+    public function __construct(protected FarmerReminderNotificationService $reminderNotifications)
+    {
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -66,6 +71,14 @@ class MilkProductionController extends Controller
             'snf' => $request->snf,
             'rate' => $request->rate,
         ]);
+
+        $milk->load('animal.farmer');
+        $this->reminderNotifications->sendMilkTrendAlert(
+            $milk->animal,
+            $date,
+            $request->shift,
+            $quantity
+        );
 
         return response()->json([
             'status' => true,
@@ -235,6 +248,16 @@ class MilkProductionController extends Controller
 
             return $panMilkEntry->load(['pan', 'dairy', 'details.animal']);
         });
+
+        foreach ($entry->details as $detail) {
+            $detail->loadMissing('animal.farmer');
+            $this->reminderNotifications->sendMilkTrendAlert(
+                $detail->animal,
+                $dateObject->format('Y-m-d'),
+                $request->shift,
+                (float) $detail->final_milk_qty
+            );
+        }
 
         return response()->json([
             'status' => true,

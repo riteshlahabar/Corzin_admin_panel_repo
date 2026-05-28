@@ -2,6 +2,7 @@
 
 use App\Models\Doctor\DoctorAppointment;
 use App\Services\FirebaseService;
+use App\Services\FarmerReminderNotificationService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -195,3 +196,7 @@ Schedule::call(function (): void {
         }
     }
 })->name('appointments:radius-escalation')->everyMinute()->withoutOverlapping();
+
+Schedule::call(function (): void {
+    app(FarmerReminderNotificationService::class)->sendScheduledReminders();
+})->name('farmer:reminder-notifications')->everyTenMinutes()->withoutOverlapping();
