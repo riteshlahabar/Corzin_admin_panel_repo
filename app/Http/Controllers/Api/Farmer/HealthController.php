@@ -106,6 +106,40 @@ class HealthController extends Controller
         return response()->json(['status' => true, 'message' => 'Mastitis record saved successfully', 'data' => $row], 201);
     }
 
+    public function updateMastitis(Request $request, MastitisRecord $record)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'animal_id' => 'required|exists:animals,id',
+            'test_result' => 'required|string|max:255',
+            'treatment' => 'required|string|max:255',
+            'recovery_status' => 'required|string|max:255',
+            'quarter' => 'nullable|string|max:50',
+            'clinical_type' => 'nullable|string|max:50',
+            'cmt_score' => 'nullable|string|max:20',
+            'scc_count' => 'nullable|numeric|min:0',
+            'date' => 'required|date',
+            'follow_up_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        }
+
+        if ((int) $record->farmer_id !== (int) $request->farmer_id) {
+            return response()->json(['status' => false, 'message' => 'Mastitis record not found for this farmer.'], 404);
+        }
+
+        $record->update($validator->validated());
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Mastitis record updated successfully',
+            'data' => $record->fresh(),
+        ]);
+    }
+
     public function dmiList($farmerId)
     {
         $rows = Animal::query()

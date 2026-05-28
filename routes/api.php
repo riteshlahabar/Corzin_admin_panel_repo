@@ -100,6 +100,7 @@ Route::prefix('health')->group(function () {
     Route::post('/medical', [HealthController::class, 'storeMedical']);
     Route::get('/mastitis/{farmer_id}', [HealthController::class, 'mastitisList']);
     Route::post('/mastitis', [HealthController::class, 'storeMastitis']);
+    Route::post('/mastitis/update/{record}', [HealthController::class, 'updateMastitis']);
     Route::get('/dmi/{farmer_id}', [HealthController::class, 'dmiList']);
     Route::post('/dmi', [HealthController::class, 'storeDmi']);
 });
