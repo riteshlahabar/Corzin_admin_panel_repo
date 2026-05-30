@@ -140,49 +140,70 @@ class HealthController extends Controller
         ]);
     }
 
-    public function dmiList($farmerId)
+    public function dmiList(Request $request, $farmerId)
     {
+        try {
+            $fromDate = $request->filled('from_date')
+                ? Carbon::parse($request->query('from_date'))->startOfDay()
+                : now()->startOfDay();
+            $toDate = $request->filled('to_date')
+                ? Carbon::parse($request->query('to_date'))->startOfDay()
+                : $fromDate->copy();
+        } catch (\Throwable $e) {
+            $fromDate = now()->startOfDay();
+            $toDate = now()->startOfDay();
+        }
+
+        if ($fromDate->greaterThan($toDate)) {
+            $toDate = $fromDate->copy();
+        }
+
         $rows = Animal::query()
             ->with(['animalType', 'farmer'])
             ->where('farmer_id', $farmerId)
             ->where('is_active', true)
             ->latest('id')
             ->get()
-            ->map(function ($animal) {
-                $latestMilk = MilkProduction::query()
-                    ->where('animal_id', $animal->id)
-                    ->orderByDesc('date')
-                    ->orderByDesc('id')
-                    ->first();
+            ->flatMap(function ($animal) use ($fromDate, $toDate) {
+                $animalRows = [];
 
-                $bodyWeight = (float) ($animal->weight ?? 0);
-                $totalMilk = (float) ($latestMilk->total_milk ?? 0);
-                $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
-                $isMilking = (str_contains($typeName, 'milking') && ! str_contains($typeName, 'non'))
-                    || ($typeName === '' && $totalMilk > 0);
+                for ($date = $fromDate->copy(); $date->lte($toDate); $date->addDay()) {
+                    $bodyWeight = (float) ($animal->weight ?? 0);
+                    $totalMilk = (float) MilkProduction::query()
+                        ->where('animal_id', $animal->id)
+                        ->whereDate('date', $date->toDateString())
+                        ->sum('total_milk');
 
-                $requiredDmi = $isMilking
-                    ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
-                    : round(($bodyWeight * 0.025), 2);
-                $displayDate = (! empty($latestMilk?->date))
-                    ? Carbon::parse($latestMilk->date)->format('d/m/Y')
-                    : now()->format('d/m/Y');
+                    $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
+                    $isNonMilkingType = str_contains($typeName, 'non')
+                        || str_contains($typeName, 'dry')
+                        || str_contains($typeName, 'heifer')
+                        || str_contains($typeName, 'calf');
+                    $isMilking = ! $isNonMilkingType
+                        && (str_contains($typeName, 'milking') || $totalMilk > 0);
 
-                return [
-                    'id' => (int) $animal->id,
-                    'animal_id' => (int) $animal->id,
-                    'animal_name' => $animal->animal_name ?? '-',
-                    'tag_number' => $animal->tag_number ?? '-',
-                    'animal_type_name' => $animal->animalType->name ?? '-',
-                    'dmi_type' => $isMilking ? 'Milking Cow' : 'Non Milking Cow',
-                    'body_weight' => round($bodyWeight, 2),
-                    'total_milk' => round($totalMilk, 2),
-                    'required_dmi' => $requiredDmi,
-                    'actual_dmi' => $requiredDmi,
-                    'alert_status' => 'Auto Calculated',
-                    'date' => $displayDate,
-                    'notes' => '',
-                ];
+                    $requiredDmi = $isMilking
+                        ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
+                        : round(($bodyWeight * 0.025), 2);
+
+                    $animalRows[] = [
+                        'id' => (int) $animal->id,
+                        'animal_id' => (int) $animal->id,
+                        'animal_name' => $animal->animal_name ?? '-',
+                        'tag_number' => $animal->tag_number ?? '-',
+                        'animal_type_name' => $animal->animalType->name ?? '-',
+                        'dmi_type' => $isMilking ? 'Milking Cow' : 'Non Milking Cow',
+                        'body_weight' => round($bodyWeight, 2),
+                        'total_milk' => round($totalMilk, 2),
+                        'required_dmi' => $requiredDmi,
+                        'actual_dmi' => $requiredDmi,
+                        'alert_status' => 'Auto Calculated',
+                        'date' => $date->format('d/m/Y'),
+                        'notes' => '',
+                    ];
+                }
+
+                return $animalRows;
             })
             ->values();
 

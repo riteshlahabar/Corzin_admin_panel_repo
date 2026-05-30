@@ -75,40 +75,67 @@ class HealthManagementController extends Controller
         return redirect()->route('health.mastitis')->with('success', 'Mastitis record added successfully.');
     }
 
-    public function dmi()
+    public function dmi(Request $request)
     {
+        try {
+            $fromDate = $request->filled('from_date')
+                ? Carbon::parse($request->query('from_date'))->startOfDay()
+                : now()->startOfDay();
+            $toDate = $request->filled('to_date')
+                ? Carbon::parse($request->query('to_date'))->startOfDay()
+                : $fromDate->copy();
+        } catch (\Throwable $e) {
+            $fromDate = now()->startOfDay();
+            $toDate = now()->startOfDay();
+        }
+
+        if ($fromDate->greaterThan($toDate)) {
+            $toDate = $fromDate->copy();
+        }
+
         $rows = Animal::query()
             ->with(['farmer', 'animalType'])
             ->where('is_active', true)
             ->latest('id')
             ->get()
-            ->map(function (Animal $animal) {
-                $latestMilk = MilkProduction::query()
-                    ->where('animal_id', $animal->id)
-                    ->orderByDesc('date')
-                    ->orderByDesc('id')
-                    ->first();
+            ->flatMap(function (Animal $animal) use ($fromDate, $toDate) {
+                $animalRows = [];
 
-                $bodyWeight = (float) ($animal->weight ?? 0);
-                $totalMilk = (float) ($latestMilk->total_milk ?? 0);
-                $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
-                $isMilking = (str_contains($typeName, 'milking') && ! str_contains($typeName, 'non'))
-                    || ($typeName === '' && $totalMilk > 0);
-                $requiredDmi = $isMilking
-                    ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
-                    : round(($bodyWeight * 0.025), 2);
+                for ($date = $fromDate->copy(); $date->lte($toDate); $date->addDay()) {
+                    $bodyWeight = (float) ($animal->weight ?? 0);
+                    $totalMilk = (float) MilkProduction::query()
+                        ->where('animal_id', $animal->id)
+                        ->whereDate('date', $date->toDateString())
+                        ->sum('total_milk');
 
-                return (object) [
-                    'farmer' => $animal->farmer,
-                    'animal' => $animal,
-                    'body_weight' => round($bodyWeight, 2),
-                    'total_milk' => round($totalMilk, 2),
-                    'required_dmi' => $requiredDmi,
-                    'actual_dmi' => $requiredDmi,
-                    'alert_status' => 'Auto Calculated',
-                    'date' => ! empty($latestMilk?->date) ? Carbon::parse($latestMilk->date) : now(),
-                ];
-            });
+                    $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
+                    $isNonMilkingType = str_contains($typeName, 'non')
+                        || str_contains($typeName, 'dry')
+                        || str_contains($typeName, 'heifer')
+                        || str_contains($typeName, 'calf');
+                    $isMilking = ! $isNonMilkingType
+                        && (str_contains($typeName, 'milking') || $totalMilk > 0);
+
+                    $requiredDmi = $isMilking
+                        ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
+                        : round(($bodyWeight * 0.025), 2);
+
+                    $animalRows[] = (object) [
+                        'farmer' => $animal->farmer,
+                        'animal' => $animal,
+                        'dmi_type' => $isMilking ? 'Milking Cow' : 'Non Milking Cow',
+                        'body_weight' => round($bodyWeight, 2),
+                        'total_milk' => round($totalMilk, 2),
+                        'required_dmi' => $requiredDmi,
+                        'actual_dmi' => $requiredDmi,
+                        'alert_status' => 'Auto Calculated',
+                        'date' => $date->copy(),
+                    ];
+                }
+
+                return $animalRows;
+            })
+            ->values();
 
         return view('health.dmi', [
             'title' => 'DMI Calculator',
