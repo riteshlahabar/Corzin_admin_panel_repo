@@ -36,9 +36,19 @@ class AnimalController extends Controller
             'age' => 'nullable|integer|min:0',
             'gender' => 'required|string',
             'weight' => 'required|numeric|min:0.01',
-            'default_milk_per_session' => 'required|numeric|min:0',
+            'default_milk_per_session' => 'nullable|numeric|min:0',
             'image' => 'required|image|mimes:jpg,jpeg,png,webp,jfif|max:5120'
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            $animalType = AnimalType::find($request->animal_type_id);
+            if ($this->isMilkingAnimalType(optional($animalType)->name) && ! $request->filled('default_milk_per_session')) {
+                $validator->errors()->add(
+                    'default_milk_per_session',
+                    'Expected milk yield per shift is required for milking cows.'
+                );
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json([
@@ -88,6 +98,7 @@ class AnimalController extends Controller
         $lastAnimal = Animal::where('unique_id', 'LIKE', "$prefix/%")->orderBy('id', 'desc')->first();
         $nextNumber = $lastAnimal ? str_pad(((int) substr($lastAnimal->unique_id, -3)) + 1, 3, '0', STR_PAD_LEFT) : '001';
         $uniqueId = "$prefix/$nextNumber";
+        $gender = $this->isMilkingAnimalType($animalTypeName) ? 'Female' : $request->gender;
 
         $animal = Animal::create([
             'farmer_id' => $request->farmer_id,
@@ -102,9 +113,9 @@ class AnimalController extends Controller
             'age' => $age,
             'birth_date' => $birthDate,
             'purchase_date' => $purchaseDate,
-            'gender' => $request->gender,
+            'gender' => $gender,
             'weight' => $request->weight,
-            'default_milk_per_session' => $request->default_milk_per_session,
+            'default_milk_per_session' => $request->filled('default_milk_per_session') ? $request->default_milk_per_session : null,
             'image' => $imagePath,
             'lifecycle_status' => 'active',
             'is_active' => true,
@@ -563,9 +574,19 @@ class AnimalController extends Controller
             'purchase_date' => 'nullable|date_format:d/m/Y',
             'gender' => 'required|string',
             'weight' => 'nullable|numeric',
-            'default_milk_per_session' => 'required|numeric|min:0',
+            'default_milk_per_session' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,jfif|max:5120',
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            $animalType = AnimalType::find($request->animal_type_id);
+            if ($this->isMilkingAnimalType(optional($animalType)->name) && ! $request->filled('default_milk_per_session')) {
+                $validator->errors()->add(
+                    'default_milk_per_session',
+                    'Expected milk yield per shift is required for milking cows.'
+                );
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json([
@@ -620,6 +641,9 @@ class AnimalController extends Controller
             $imagePath = 'assets/animal_images/' . $filename;
         }
 
+        $animalTypeName = optional(AnimalType::find($request->animal_type_id))->name ?? '';
+        $gender = $this->isMilkingAnimalType($animalTypeName) ? 'Female' : $request->gender;
+
         $animal->update([
             'animal_name' => $request->animal_name,
             'tag_number' => $request->tag_number,
@@ -631,9 +655,9 @@ class AnimalController extends Controller
             'age' => $age,
             'birth_date' => $birthDate,
             'purchase_date' => $purchaseDate,
-            'gender' => $request->gender,
+            'gender' => $gender,
             'weight' => $request->weight,
-            'default_milk_per_session' => $request->default_milk_per_session,
+            'default_milk_per_session' => $request->filled('default_milk_per_session') ? $request->default_milk_per_session : null,
             'image' => $imagePath,
         ]);
 
