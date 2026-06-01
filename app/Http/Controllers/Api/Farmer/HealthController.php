@@ -20,8 +20,9 @@ class HealthController extends Controller
             ->where('farmer_id', $farmerId)
             ->latest('date')
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn($row) => [
                 'id' => $row->id,
+                'case_id' => $row->case_id ?: $row->id,
                 'animal_id' => $row->animal_id,
                 'animal_name' => $row->animal->animal_name ?? '-',
                 'tag_number' => $row->animal->tag_number ?? '-',
@@ -56,34 +57,37 @@ class HealthController extends Controller
     }
 
     public function mastitisList($farmerId)
-    {
-        $rows = MastitisRecord::with(['animal.animalType'])
-            ->where('farmer_id', $farmerId)
-            ->latest('date')
-            ->latest('id')
-            ->get()
-            ->map(fn ($row) => [
-                'id' => $row->id,
-                'animal_id' => $row->animal_id,
-                'animal_name' => $row->animal->animal_name ?? '-',
-                'tag_number' => $row->animal->tag_number ?? '-',
-                'animal_type_name' => optional(optional($row->animal)->animalType)->name ?? '',
-                'test_result' => $row->test_result,
-                'treatment' => $row->treatment,
-                'recovery_status' => $row->recovery_status,
-                'quarter' => $row->quarter,
-                'clinical_type' => $row->clinical_type,
-                'cmt_score' => $row->cmt_score,
-                'scc_count' => $row->scc_count !== null ? (float) $row->scc_count : null,
-                'date' => optional($row->date)->format('d/m/Y'),
-                'follow_up_date' => optional($row->follow_up_date)->format('d/m/Y'),
-                'notes' => $row->notes,
-            ]);
+{
+    $rows = MastitisRecord::with(['animal.animalType'])
+        ->where('farmer_id', $farmerId)
+        ->latest('date')
+        ->latest('id')
+        ->get()
+        ->map(fn ($row) => [
+            'id' => $row->id,
+            'case_id' => $row->case_id ?: $row->id,
+            'animal_id' => $row->animal_id,
+            'animal_name' => $row->animal->animal_name ?? '-',
+            'tag_number' => $row->animal->tag_number ?? '-',
+            'animal_type_name' => optional(optional($row->animal)->animalType)->name ?? '',
+            'test_result' => $row->test_result,
+            'treatment' => $row->treatment,
+            'recovery_status' => $row->recovery_status,
+            'quarter' => $row->quarter,
+            'clinical_type' => $row->clinical_type,
+            'cmt_score' => $row->cmt_score,
+            'scc_count' => $row->scc_count !== null ? (float) $row->scc_count : null,
+            'date' => optional($row->date)->format('d/m/Y'),
+            'follow_up_date' => optional($row->follow_up_date)->format('d/m/Y'),
+            'notes' => $row->notes,
+        ]);
 
-        return response()->json(['status' => true, 'message' => 'Mastitis records fetched successfully', 'data' => $rows]);
-    }
-
-    public function storeMastitis(Request $request)
+    return response()->json([
+        'status' => true,
+        'message' => 'Mastitis records fetched successfully',
+        'data' => $rows
+    ]);
+}    public function storeMastitis(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'farmer_id' => 'required|exists:farmers,id',
@@ -167,76 +171,152 @@ class HealthController extends Controller
     }
 
     public function storeMastitisTreatment(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'farmer_id' => 'required|exists:farmers,id',
-            'animal_id' => 'required|exists:animals,id',
-            'treatment' => 'required|string|max:255',
-            'date' => 'nullable|date',
-            'notes' => 'nullable|string',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'farmer_id' => 'required|exists:farmers,id',
+        'animal_id' => 'required|exists:animals,id',
+        'mastitis_record_id' => 'nullable|exists:mastitis_records,id',
+        'treatment' => 'required|string|max:255',
+        'date' => 'nullable|date',
+        'notes' => 'nullable|string',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
-
-        $data = $validator->validated();
-        $animal = Animal::with('animalType')
-            ->where('id', $data['animal_id'])
-            ->where('farmer_id', $data['farmer_id'])
-            ->first();
-
-        if (! $animal || ! $this->isMilkingCow($animal)) {
-            return response()->json(['status' => false, 'message' => 'Selected milking cow is invalid.'], 422);
-        }
-
-        $row = MastitisRecord::create([
-            'farmer_id' => $data['farmer_id'],
-            'animal_id' => $data['animal_id'],
-            'test_result' => 'positive',
-            'treatment' => trim((string) $data['treatment']),
-            'recovery_status' => 'under_treatment',
-            'date' => $data['date'] ?? now()->toDateString(),
-            'notes' => $data['notes'] ?? null,
-        ]);
-
-        return response()->json(['status' => true, 'message' => 'Treatment added successfully', 'data' => $row], 201);
+    if ($validator->fails()) {
+        return response()->json(['status' => false, 'message' => $validator->errors()], 422);
     }
 
-    public function recoverMastitis(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'farmer_id' => 'required|exists:farmers,id',
-            'animal_id' => 'required|exists:animals,id',
-            'date' => 'nullable|date',
-        ]);
+    $data = $validator->validated();
 
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
+    $animal = Animal::with('animalType')
+        ->where('id', $data['animal_id'])
+        ->where('farmer_id', $data['farmer_id'])
+        ->first();
 
-        $data = $validator->validated();
-        $animal = Animal::where('id', $data['animal_id'])
-            ->where('farmer_id', $data['farmer_id'])
-            ->first();
-
-        if (! $animal) {
-            return response()->json(['status' => false, 'message' => 'Selected animal is invalid.'], 422);
-        }
-
-        $row = MastitisRecord::create([
-            'farmer_id' => $data['farmer_id'],
-            'animal_id' => $data['animal_id'],
-            'test_result' => 'negative',
-            'treatment' => 'Recovered',
-            'recovery_status' => 'recovered',
-            'date' => $data['date'] ?? now()->toDateString(),
-        ]);
-
-        return response()->json(['status' => true, 'message' => 'Animal marked as recovered', 'data' => $row], 201);
+    if (! $animal || ! $this->isMilkingCow($animal)) {
+        return response()->json(['status' => false, 'message' => 'Selected milking cow is invalid.'], 422);
     }
 
-    public function dmiList(Request $request, $farmerId)
+    if (! empty($data['mastitis_record_id'])) {
+        $case = MastitisRecord::where('id', $data['mastitis_record_id'])
+            ->where('farmer_id', $data['farmer_id'])
+            ->where('animal_id', $data['animal_id'])
+            ->whereNull('case_id')
+            ->first();
+    } else {
+        $case = MastitisRecord::where('farmer_id', $data['farmer_id'])
+            ->where('animal_id', $data['animal_id'])
+            ->whereNull('case_id')
+            ->whereNotIn('recovery_status', ['recovered', 'Recovered', 'recoverd', 'Recoverd'])
+            ->latest('date')
+            ->latest('id')
+            ->first();
+    }
+
+    if (! $case) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Active mastitis record not found. Please create new mastitis record first.'
+        ], 422);
+    }
+
+    $caseStatus = strtolower(str_replace(' ', '_', (string) $case->recovery_status));
+
+    if (in_array($caseStatus, ['recovered', 'recoverd'], true)) {
+        return response()->json([
+            'status' => false,
+            'message' => 'This mastitis record is already recovered. Please create a new mastitis record.'
+        ], 422);
+    }
+
+    $row = MastitisRecord::create([
+        'case_id' => $case->id,
+        'farmer_id' => $data['farmer_id'],
+        'animal_id' => $data['animal_id'],
+        'test_result' => 'positive',
+        'treatment' => trim((string) $data['treatment']),
+        'recovery_status' => 'under_treatment',
+        'date' => $data['date'] ?? now()->toDateString(),
+        'notes' => $data['notes'] ?? null,
+    ]);
+
+    $case->update([
+        'recovery_status' => 'under_treatment',
+    ]);
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Treatment added successfully',
+        'data' => $row
+    ], 201);
+}
+
+public function recoverMastitis(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'farmer_id' => 'required|exists:farmers,id',
+        'animal_id' => 'required|exists:animals,id',
+        'mastitis_record_id' => 'nullable|exists:mastitis_records,id',
+        'date' => 'nullable|date',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+    }
+
+    $data = $validator->validated();
+
+    $animal = Animal::where('id', $data['animal_id'])
+        ->where('farmer_id', $data['farmer_id'])
+        ->first();
+
+    if (! $animal) {
+        return response()->json(['status' => false, 'message' => 'Selected animal is invalid.'], 422);
+    }
+
+    if (! empty($data['mastitis_record_id'])) {
+        $case = MastitisRecord::where('id', $data['mastitis_record_id'])
+            ->where('farmer_id', $data['farmer_id'])
+            ->where('animal_id', $data['animal_id'])
+            ->whereNull('case_id')
+            ->first();
+    } else {
+        $case = MastitisRecord::where('farmer_id', $data['farmer_id'])
+            ->where('animal_id', $data['animal_id'])
+            ->whereNull('case_id')
+            ->whereNotIn('recovery_status', ['recovered', 'Recovered', 'recoverd', 'Recoverd'])
+            ->latest('date')
+            ->latest('id')
+            ->first();
+    }
+
+    if (! $case) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Active mastitis record not found.'
+        ], 422);
+    }
+
+    $row = MastitisRecord::create([
+        'case_id' => $case->id,
+        'farmer_id' => $data['farmer_id'],
+        'animal_id' => $data['animal_id'],
+        'test_result' => 'negative',
+        'treatment' => 'Recovered',
+        'recovery_status' => 'recovered',
+        'date' => $data['date'] ?? now()->toDateString(),
+    ]);
+
+    $case->update([
+        'recovery_status' => 'recovered',
+    ]);
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Animal marked as recovered',
+        'data' => $row
+    ], 201);
+}
+public function dmiList(Request $request, $farmerId)
     {
         try {
             $fromDate = $request->filled('from_date')

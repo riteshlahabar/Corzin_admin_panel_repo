@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MastitisRecord extends Model
 {
     protected $fillable = [
+        'case_id',
         'farmer_id',
         'animal_id',
         'test_result',
