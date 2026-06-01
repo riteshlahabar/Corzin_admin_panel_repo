@@ -10,6 +10,7 @@ use App\Models\Farmer\AnimalType;
 use App\Models\Farmer\Farmer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AnimalListController extends Controller
 {
@@ -30,11 +31,158 @@ class AnimalListController extends Controller
     public function panList()
     {
         $pans = FarmerPan::query()
-            ->with(['farmer', 'animals'])
+            ->with(['farmer', 'animals.animalType'])
             ->latest()
             ->get();
 
-        return view('animal.pan_list', compact('pans'));
+        $farmers = Farmer::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get();
+
+        $assignableAnimals = Animal::query()
+            ->with(['farmer', 'animalType'])
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('pan_id')->orWhere('pan_id', 0);
+            })
+            ->orderBy('animal_name')
+            ->get();
+
+        return view('animal.pan_list', compact('pans', 'farmers', 'assignableAnimals'));
+    }
+
+    public function storePan(Request $request)
+    {
+        $data = $request->validate([
+            'farmer_id' => 'required|exists:farmers,id',
+            'name' => 'required|string|max:255',
+            'pan_type' => 'nullable|in:milking,non_milking',
+            'milk_shifts' => 'nullable|array',
+            'milk_shifts.*' => 'in:Morning,Afternoon,Evening',
+            'animal_ids' => 'nullable|array',
+            'animal_ids.*' => 'integer|exists:animals,id',
+        ]);
+
+        $farmerId = (int) $data['farmer_id'];
+        $panType = ($data['pan_type'] ?? 'milking') === 'non_milking' ? 'non_milking' : 'milking';
+        $milkShifts = $panType === 'non_milking'
+            ? []
+            : collect($data['milk_shifts'] ?? ['Morning', 'Afternoon', 'Evening'])
+                ->map(fn ($item) => trim((string) $item))
+                ->filter(fn ($item) => in_array($item, ['Morning', 'Afternoon', 'Evening'], true))
+                ->unique()
+                ->values()
+                ->all();
+
+        if ($panType === 'milking' && empty($milkShifts)) {
+            return redirect()
+                ->route('farmer.pans')
+                ->withErrors(['milk_shifts' => 'Please select at least one milk shift for Milking PAN.'])
+                ->withInput();
+        }
+
+        $animalIds = collect($data['animal_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        try {
+            DB::transaction(function () use ($data, $farmerId, $panType, $milkShifts, $animalIds) {
+                $pan = FarmerPan::query()->create([
+                    'farmer_id' => $farmerId,
+                    'name' => trim((string) $data['name']),
+                    'pan_type' => $panType,
+                    'milk_shifts' => $milkShifts,
+                ]);
+
+                if ($animalIds->isEmpty()) {
+                    return;
+                }
+
+                $animals = Animal::query()
+                    ->where('farmer_id', $farmerId)
+                    ->whereIn('id', $animalIds)
+                    ->where('is_active', true)
+                    ->get();
+
+                foreach ($animals as $animal) {
+                    $fromPanId = $animal->pan_id;
+                    if ($fromPanId === $pan->id) {
+                        continue;
+                    }
+
+                    $animal->update(['pan_id' => $pan->id]);
+                    $this->logPanTransferHistory($animal->fresh(), $fromPanId, $pan->id, 'Assigned in admin PAN creation.');
+                }
+            });
+        } catch (\Throwable $exception) {
+            return redirect()
+                ->route('farmer.pans')
+                ->with('error', 'Failed to create PAN. '.$exception->getMessage());
+        }
+
+        return redirect()->route('farmer.pans')->with('success', 'PAN created successfully.');
+    }
+
+    public function transferPanAnimal(Request $request)
+    {
+        $data = $request->validate([
+            'animal_id' => 'required|integer|exists:animals,id',
+            'to_pan_id' => 'required|integer|exists:farmer_pans,id',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        $animal = Animal::query()
+            ->with(['animalType', 'farmer'])
+            ->findOrFail((int) $data['animal_id']);
+
+        $toPan = FarmerPan::query()
+            ->where('id', (int) $data['to_pan_id'])
+            ->where('farmer_id', $animal->farmer_id)
+            ->first();
+
+        if (! $toPan) {
+            return redirect()->route('farmer.pans')->with('error', 'Destination PAN not found for this farmer.');
+        }
+
+        if ((int) $animal->pan_id === (int) $toPan->id) {
+            return redirect()->route('farmer.pans')->with('success', 'Animal is already in selected PAN.');
+        }
+
+        $fromPanId = $animal->pan_id;
+        $animal->update(['pan_id' => $toPan->id]);
+        $this->logPanTransferHistory(
+            $animal->fresh(),
+            $fromPanId,
+            $toPan->id,
+            $data['notes'] ?? 'Transferred from admin PAN list.'
+        );
+
+        return redirect()->route('farmer.pans')->with('success', 'Animal transferred successfully.');
+    }
+
+    public function destroyPan(FarmerPan $pan)
+    {
+        if ($pan->animals()->count() > 0) {
+            return redirect()
+                ->route('farmer.pans')
+                ->with('error', 'Cannot delete PAN while animals are assigned. Please transfer animals first.');
+        }
+
+        $hasPanMilkEntries = DB::table('pan_milk_entries')
+            ->where('pan_id', $pan->id)
+            ->exists();
+
+        if ($hasPanMilkEntries) {
+            return redirect()
+                ->route('farmer.pans')
+                ->with('error', 'Cannot delete PAN with milk records.');
+        }
+
+        $pan->delete();
+
+        return redirect()->route('farmer.pans')->with('success', 'PAN deleted successfully.');
     }
 
     public function create()
@@ -171,5 +319,25 @@ class AnimalListController extends Controller
         $file->move($directory, $filename);
 
         return 'assets/animal_images/' . $filename;
+    }
+
+    private function logPanTransferHistory(Animal $animal, ?int $fromPanId, ?int $toPanId, ?string $notes = null): void
+    {
+        if ($fromPanId === $toPanId) {
+            return;
+        }
+
+        AnimalLifecycleHistory::create([
+            'animal_id' => $animal->id,
+            'action_type' => 'move_pan',
+            'from_status' => $animal->lifecycle_status ?? 'active',
+            'to_status' => $animal->lifecycle_status ?? 'active',
+            'from_animal_type_id' => $animal->animal_type_id,
+            'to_animal_type_id' => $animal->animal_type_id,
+            'from_pan_id' => $fromPanId,
+            'to_pan_id' => $toPanId,
+            'notes' => $notes,
+            'changed_at' => now(),
+        ]);
     }
 }

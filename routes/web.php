@@ -51,6 +51,9 @@ Route::prefix('farmer')->group(function () {
 
     Route::get('/animals', [AnimalListController::class, 'index'])->name('farmer.animals');
     Route::get('/pans', [AnimalListController::class, 'panList'])->name('farmer.pans');
+    Route::post('/pans', [AnimalListController::class, 'storePan'])->name('farmer.pans.store');
+    Route::post('/pans/transfer', [AnimalListController::class, 'transferPanAnimal'])->name('farmer.pans.transfer');
+    Route::delete('/pans/{pan}', [AnimalListController::class, 'destroyPan'])->name('farmer.pans.destroy');
     Route::get('/animals/create', [AnimalListController::class, 'create'])->name('animal.create');
     Route::post('/animals', [AnimalListController::class, 'store'])->name('animal.store');
     Route::get('/animals/{animal}/edit', [AnimalListController::class, 'edit'])->name('animal.edit');
