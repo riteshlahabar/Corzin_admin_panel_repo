@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Farmer\FarmerSetting;
 use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,10 @@ class AuthController extends Controller
                 'farmer_name' => null,
                 'data' => null,
             ], 200);
+        }
+
+        if (! (bool) ($farmer->is_active ?? true)) {
+            return $this->inactiveFarmerResponse();
         }
 
         $sessionResult = $this->prepareSessionResponse($request, $farmer, $firebaseService);
@@ -60,6 +65,10 @@ class AuthController extends Controller
                 'farmer_name' => null,
                 'data' => null,
             ], 200);
+        }
+
+        if (! (bool) ($farmer->is_active ?? true)) {
+            return $this->inactiveFarmerResponse();
         }
 
         $sessionResult = $this->prepareSessionResponse($request, $farmer, $firebaseService);
@@ -182,5 +191,25 @@ class AuthController extends Controller
                 'message' => 'Your account was logged in on another mobile.',
             ]
         );
+    }
+
+    private function inactiveFarmerResponse()
+    {
+        $setting = FarmerSetting::query()->first();
+        $adminName = trim((string) ($setting->admin_contact_name ?? 'Corzin Admin'));
+        $adminNumber = trim((string) ($setting->admin_contact_number ?? ''));
+        $contactText = $adminNumber !== ''
+            ? "Please contact admin: {$adminNumber}"
+            : 'Please contact admin.';
+
+        return response()->json([
+            'status' => false,
+            'message' => "Your account is inactive. {$contactText}",
+            'account_inactive' => true,
+            'admin_contact' => [
+                'name' => $adminName,
+                'number' => $adminNumber,
+            ],
+        ], 403);
     }
 }
