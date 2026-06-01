@@ -11,6 +11,9 @@ use App\Models\Farmer\Farmer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnimalListController extends Controller
 {
@@ -197,6 +200,128 @@ class AnimalListController extends Controller
         ]);
     }
 
+    public function downloadImportTemplate(): StreamedResponse
+    {
+        $headers = [
+            'farmer_id',
+            'farmer_mobile',
+            'animal_name',
+            'tag_number',
+            'animal_type_id',
+            'animal_type_name',
+            'lactation_number',
+            'ai_date',
+            'breed_name',
+            'birth_date',
+            'purchase_date',
+            'gender',
+            'weight',
+            'default_milk_per_session',
+            'is_active',
+        ];
+
+        $sampleRows = [
+            [
+                '', '9876543210', 'Rani', 'TAG1001', '', 'Milking Cows',
+                '2', '15/05/2026', 'HF', '10/01/2023', '12/01/2024', 'Female',
+                '450', '8.5', '1',
+            ],
+            [
+                '', '9876543210', 'Gauri', 'TAG1002', '', 'Dry Cows',
+                '1', '', 'Jersey', '08/03/2022', '15/03/2023', 'Female',
+                '390', '', '1',
+            ],
+        ];
+
+        $filename = 'animal_import_template.csv';
+        return response()->streamDownload(function () use ($headers, $sampleRows) {
+            $output = fopen('php://output', 'w');
+            fputcsv($output, $headers);
+            foreach ($sampleRows as $row) {
+                fputcsv($output, $row);
+            }
+            fclose($output);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function importAnimals(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt,xls,xlsx|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $extension = Str::lower($file->getClientOriginalExtension() ?: '');
+        if (in_array($extension, ['xls', 'xlsx'], true)) {
+            return redirect()
+                ->route('farmer.animals')
+                ->with('error', 'Excel format upload is enabled, but this server currently imports CSV only. Please save Excel as CSV and upload.');
+        }
+        $handle = fopen($file->getRealPath(), 'r');
+        if (! $handle) {
+            return redirect()->route('farmer.animals')->with('error', 'Unable to read import file.');
+        }
+
+        $header = fgetcsv($handle);
+        if (! is_array($header) || empty($header)) {
+            fclose($handle);
+            return redirect()->route('farmer.animals')->with('error', 'Invalid template format.');
+        }
+
+        $headerMap = collect($header)
+            ->map(fn ($item) => Str::lower(trim((string) $item)))
+            ->values()
+            ->all();
+
+        $requiredColumns = ['animal_name', 'tag_number', 'birth_date'];
+        foreach ($requiredColumns as $column) {
+            if (! in_array($column, $headerMap, true)) {
+                fclose($handle);
+                return redirect()
+                    ->route('farmer.animals')
+                    ->with('error', "Missing required column in file: {$column}");
+            }
+        }
+
+        $created = 0;
+        $errors = [];
+        $rowNo = 1;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNo++;
+            if ($this->isCsvRowBlank($row)) {
+                continue;
+            }
+
+            $payload = [];
+            foreach ($headerMap as $index => $column) {
+                $payload[$column] = trim((string) ($row[$index] ?? ''));
+            }
+
+            $result = $this->importAnimalRow($payload, $rowNo);
+            if ($result['ok']) {
+                $created++;
+            } else {
+                $errors[] = $result['error'];
+            }
+        }
+        fclose($handle);
+
+        if ($created === 0 && count($errors) > 0) {
+            return redirect()
+                ->route('farmer.animals')
+                ->with('error', 'No animals imported. Please check file rows.')
+                ->with('import_errors', $errors);
+        }
+
+        return redirect()
+            ->route('farmer.animals')
+            ->with('success', "Animal import completed. Created: {$created}")
+            ->with('import_errors', $errors);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -319,6 +444,212 @@ class AnimalListController extends Controller
         $file->move($directory, $filename);
 
         return 'assets/animal_images/' . $filename;
+    }
+
+    private function importAnimalRow(array $payload, int $rowNo): array
+    {
+        $farmer = $this->resolveFarmerForImport($payload);
+        if (! $farmer) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id or farmer_mobile)."];
+        }
+
+        $animalType = $this->resolveAnimalTypeForImport($payload);
+        if (! $animalType) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Animal type not found (use animal_type_id or animal_type_name)."];
+        }
+
+        $normalized = [
+            'farmer_id' => $farmer->id,
+            'animal_name' => $payload['animal_name'] ?? '',
+            'tag_number' => $payload['tag_number'] ?? '',
+            'animal_type_id' => $animalType->id,
+            'lactation_number' => $this->toNullableInt($payload['lactation_number'] ?? null),
+            'ai_date' => $this->parseDateValue($payload['ai_date'] ?? null),
+            'breed_name' => $this->toNullableString($payload['breed_name'] ?? null),
+            'birth_date' => $this->parseDateValue($payload['birth_date'] ?? null),
+            'purchase_date' => $this->parseDateValue($payload['purchase_date'] ?? null),
+            'gender' => $this->normalizeGender($payload['gender'] ?? ''),
+            'weight' => $this->toNullableFloat($payload['weight'] ?? null),
+            'default_milk_per_session' => $this->toNullableFloat($payload['default_milk_per_session'] ?? null),
+            'is_active' => $this->toBool($payload['is_active'] ?? '1'),
+        ];
+
+        $validator = Validator::make($normalized, [
+            'farmer_id' => 'required|exists:farmers,id',
+            'animal_name' => 'required|string|max:255',
+            'tag_number' => 'required|string|max:255',
+            'animal_type_id' => 'required|exists:animal_types,id',
+            'lactation_number' => 'nullable|integer|min:0',
+            'ai_date' => 'nullable|date',
+            'breed_name' => 'nullable|string|max:255',
+            'birth_date' => 'required|date',
+            'purchase_date' => 'nullable|date',
+            'gender' => 'required|string|max:50',
+            'weight' => 'nullable|numeric|min:0',
+            'default_milk_per_session' => 'nullable|numeric|min:0',
+            'is_active' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return [
+                'ok' => false,
+                'error' => "Row {$rowNo}: ".collect($validator->errors()->all())->implode(' | '),
+            ];
+        }
+
+        $duplicateTag = Animal::query()
+            ->where('farmer_id', $farmer->id)
+            ->whereRaw('LOWER(tag_number) = ?', [Str::lower($normalized['tag_number'])])
+            ->exists();
+        if ($duplicateTag) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Tag number already exists for this farmer."];
+        }
+
+        $animalTypeName = $animalType->name ?? 'XX';
+        $animalTypeCode = strtoupper(substr($animalTypeName, 0, 2));
+        $prefix = "C/$animalTypeCode";
+        $lastAnimal = Animal::query()
+            ->where('unique_id', 'like', "$prefix/%")
+            ->latest('id')
+            ->first();
+        $nextNumber = $lastAnimal
+            ? str_pad(((int) substr((string) $lastAnimal->unique_id, -3)) + 1, 3, '0', STR_PAD_LEFT)
+            : '001';
+
+        Animal::create([
+            'farmer_id' => $normalized['farmer_id'],
+            'unique_id' => "$prefix/$nextNumber",
+            'animal_name' => $normalized['animal_name'],
+            'tag_number' => $normalized['tag_number'],
+            'animal_type_id' => $normalized['animal_type_id'],
+            'lactation_number' => $normalized['lactation_number'],
+            'ai_date' => $normalized['ai_date'],
+            'breed_name' => $normalized['breed_name'],
+            'age' => Carbon::parse($normalized['birth_date'])->age,
+            'birth_date' => $normalized['birth_date'],
+            'purchase_date' => $normalized['purchase_date'],
+            'gender' => $normalized['gender'],
+            'weight' => $normalized['weight'],
+            'default_milk_per_session' => $normalized['default_milk_per_session'],
+            'lifecycle_status' => $normalized['is_active'] ? 'active' : 'inactive',
+            'is_active' => $normalized['is_active'],
+            'is_for_sale' => false,
+        ]);
+
+        return ['ok' => true];
+    }
+
+    private function resolveFarmerForImport(array $payload): ?Farmer
+    {
+        $farmerId = $this->toNullableInt($payload['farmer_id'] ?? null);
+        if ($farmerId && $farmerId > 0) {
+            return Farmer::query()->find($farmerId);
+        }
+
+        $mobile = preg_replace('/\D+/', '', (string) ($payload['farmer_mobile'] ?? ''));
+        if (! blank($mobile)) {
+            return Farmer::query()->where('mobile', $mobile)->first();
+        }
+
+        return null;
+    }
+
+    private function resolveAnimalTypeForImport(array $payload): ?AnimalType
+    {
+        $animalTypeId = $this->toNullableInt($payload['animal_type_id'] ?? null);
+        if ($animalTypeId && $animalTypeId > 0) {
+            $type = AnimalType::query()->find($animalTypeId);
+            if ($type) {
+                return $type;
+            }
+        }
+
+        $name = trim((string) ($payload['animal_type_name'] ?? ''));
+        if ($name !== '') {
+            return AnimalType::query()
+                ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
+                ->first();
+        }
+
+        return null;
+    }
+
+    private function parseDateValue(?string $value): ?string
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'm-d-Y'];
+        foreach ($formats as $format) {
+            try {
+                return Carbon::createFromFormat($format, $raw)->format('Y-m-d');
+            } catch (\Throwable) {
+                // continue
+            }
+        }
+
+        try {
+            return Carbon::parse($raw)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function toNullableString($value): ?string
+    {
+        $text = trim((string) $value);
+        return $text === '' ? null : $text;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+        if (! is_numeric($text)) {
+            return null;
+        }
+        return (int) $text;
+    }
+
+    private function toNullableFloat($value): ?float
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+        if (! is_numeric($text)) {
+            return null;
+        }
+        return (float) $text;
+    }
+
+    private function toBool($value): bool
+    {
+        $text = Str::lower(trim((string) $value));
+        return in_array($text, ['1', 'true', 'yes', 'active'], true);
+    }
+
+    private function normalizeGender(?string $value): string
+    {
+        $text = Str::lower(trim((string) $value));
+        if ($text === 'male' || $text === 'm') {
+            return 'Male';
+        }
+        return 'Female';
+    }
+
+    private function isCsvRowBlank(array $row): bool
+    {
+        foreach ($row as $cell) {
+            if (trim((string) $cell) !== '') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private function logPanTransferHistory(Animal $animal, ?int $fromPanId, ?int $toPanId, ?string $notes = null): void

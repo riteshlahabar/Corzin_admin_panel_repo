@@ -5,6 +5,19 @@
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+    @if(session('import_errors'))
+        <div class="alert alert-warning">
+            <div class="fw-semibold mb-1">Import completed with some row errors:</div>
+            <ul class="mb-0 ps-3">
+                @foreach(session('import_errors') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     @php
         $cardStyles = ['bg-warning-subtle', 'bg-info-subtle', 'bg-secondary-subtle', 'bg-success-subtle', 'bg-primary-subtle'];
@@ -44,6 +57,16 @@
                 <button type="button" class="btn btn-light border" onclick="exportTableToExcel('animalTableExport', 'animal-list')" title="Download Excel">
                     <i class="fa-solid fa-file-excel text-success"></i>
                 </button>
+                <a href="{{ route('animal.import.template') }}" class="btn btn-light border" title="Download Animal Import Template">
+                    <i class="fa-solid fa-download me-1 text-primary"></i> Template
+                </a>
+                <form method="POST" action="{{ route('animal.import') }}" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                    @csrf
+                    <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.txt,.xls,.xlsx" required style="max-width:220px;">
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-upload me-1"></i> Upload List
+                    </button>
+                </form>
                 <a href="{{ route('animal.create') }}" class="btn btn-primary">
                     <i class="fa-solid fa-plus me-1"></i> Add Animal
                 </a>
