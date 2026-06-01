@@ -260,7 +260,10 @@ public function recoverMastitis(Request $request)
     ]);
 
     if ($validator->fails()) {
-        return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        return response()->json([
+            'status' => false,
+            'message' => $validator->errors()
+        ], 422);
     }
 
     $data = $validator->validated();
@@ -270,19 +273,20 @@ public function recoverMastitis(Request $request)
         ->first();
 
     if (! $animal) {
-        return response()->json(['status' => false, 'message' => 'Selected animal is invalid.'], 422);
+        return response()->json([
+            'status' => false,
+            'message' => 'Selected animal is invalid.'
+        ], 422);
     }
 
     if (! empty($data['mastitis_record_id'])) {
         $case = MastitisRecord::where('id', $data['mastitis_record_id'])
             ->where('farmer_id', $data['farmer_id'])
             ->where('animal_id', $data['animal_id'])
-            ->whereNull('case_id')
             ->first();
     } else {
         $case = MastitisRecord::where('farmer_id', $data['farmer_id'])
             ->where('animal_id', $data['animal_id'])
-            ->whereNull('case_id')
             ->whereNotIn('recovery_status', ['recovered', 'Recovered', 'recoverd', 'Recoverd'])
             ->latest('date')
             ->latest('id')
@@ -296,19 +300,28 @@ public function recoverMastitis(Request $request)
         ], 422);
     }
 
-    $row = MastitisRecord::create([
-        'case_id' => $case->id,
+    // Important: update main mastitis case also
+    $case->update([
+        'test_result' => 'negative',
+        'recovery_status' => 'recovered',
+        'date' => $data['date'] ?? $case->date ?? now()->toDateString(),
+    ]);
+
+    // Keep recovered entry also for history/date-wise display
+    $rowData = [
         'farmer_id' => $data['farmer_id'],
         'animal_id' => $data['animal_id'],
         'test_result' => 'negative',
         'treatment' => 'Recovered',
         'recovery_status' => 'recovered',
         'date' => $data['date'] ?? now()->toDateString(),
-    ]);
+    ];
 
-    $case->update([
-        'recovery_status' => 'recovered',
-    ]);
+    if (\Illuminate\Support\Facades\Schema::hasColumn('mastitis_records', 'case_id')) {
+        $rowData['case_id'] = $case->id;
+    }
+
+    $row = MastitisRecord::create($rowData);
 
     return response()->json([
         'status' => true,
