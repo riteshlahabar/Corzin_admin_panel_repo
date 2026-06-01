@@ -101,6 +101,8 @@ Route::prefix('health')->group(function () {
     Route::get('/mastitis/{farmer_id}', [HealthController::class, 'mastitisList']);
     Route::post('/mastitis', [HealthController::class, 'storeMastitis']);
     Route::post('/mastitis/update/{record}', [HealthController::class, 'updateMastitis']);
+    Route::post('/mastitis/treatment', [HealthController::class, 'storeMastitisTreatment']);
+    Route::post('/mastitis/recover', [HealthController::class, 'recoverMastitis']);
     Route::get('/dmi/{farmer_id}', [HealthController::class, 'dmiList']);
     Route::post('/dmi', [HealthController::class, 'storeDmi']);
 });
