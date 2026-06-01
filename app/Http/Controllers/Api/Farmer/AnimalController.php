@@ -559,6 +559,83 @@ class AnimalController extends Controller
         }
     }
 
+    public function deletePan(Request $request, $panId)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+            ], 422);
+        }
+
+        $farmerId = (int) $request->farmer_id;
+        $pan = FarmerPan::query()
+            ->where('id', (int) $panId)
+            ->where('farmer_id', $farmerId)
+            ->first();
+
+        if (! $pan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'PAN not found.',
+            ], 404);
+        }
+
+        $hasMilkEntries = DB::table('pan_milk_entries')
+            ->where('pan_id', $pan->id)
+            ->exists();
+
+        if ($hasMilkEntries) {
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'pan' => [
+                        'This PAN has milk records and cannot be deleted. Transfer animals and keep PAN for records.',
+                    ],
+                ],
+            ], 422);
+        }
+
+        try {
+            DB::transaction(function () use ($pan, $farmerId) {
+                $animals = Animal::query()
+                    ->where('farmer_id', $farmerId)
+                    ->where('pan_id', $pan->id)
+                    ->get();
+
+                foreach ($animals as $animal) {
+                    $this->logPanTransferForAnimal(
+                        $animal,
+                        $pan->id,
+                        null,
+                        'PAN deleted; animal moved out of PAN.'
+                    );
+
+                    $animal->update([
+                        'pan_id' => null,
+                    ]);
+                }
+
+                $pan->delete();
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'PAN deleted successfully.',
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to delete PAN.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function update(Request $request, $animal_id)
     {
         $validator = Validator::make($request->all(), [

@@ -49,6 +49,7 @@ Route::prefix('animal')->group(function () {
     Route::get('/pans/{farmer_id}', [AnimalController::class, 'panList']);
     Route::post('/pans', [AnimalController::class, 'createPan']);
     Route::post('/pans/{panId}/update', [AnimalController::class, 'updatePan']);
+    Route::post('/pans/{panId}/delete', [AnimalController::class, 'deletePan']);
     Route::post('/pans/transfer', [AnimalController::class, 'transferPanAnimal']);
     Route::post('/lifecycle/{animal_id}', [AnimalController::class, 'updateLifecycle']);
     Route::get('/history/{farmer_id}', [AnimalController::class, 'history']);
