@@ -54,26 +54,46 @@ class HealthManagementController extends Controller
     }
 
     public function storeMastitis(Request $request)
-    {
-        $data = $request->validate([
-            'farmer_id' => 'required|exists:farmers,id',
-            'animal_id' => 'required|exists:animals,id',
-            'test_result' => 'required|string|max:255',
-            'treatment' => 'required|string|max:255',
-            'recovery_status' => 'required|string|max:255',
-            'quarter' => 'nullable|string|max:50',
-            'clinical_type' => 'nullable|string|max:50',
-            'cmt_score' => 'nullable|string|max:20',
-            'scc_count' => 'nullable|numeric|min:0',
-            'date' => 'required|date',
-            'follow_up_date' => 'nullable|date',
-            'notes' => 'nullable|string',
-        ]);
+{
+    $data = $request->validate([
+        'animal_id' => 'required|exists:animals,id',
+        'test_result' => 'required|string|max:255',
 
-        MastitisRecord::create($data);
+        // Not required now
+        'farmer_id' => 'nullable|exists:farmers,id',
+        'treatment' => 'nullable|string|max:255',
+        'recovery_status' => 'nullable|string|max:255',
+        'quarter' => 'nullable|string|max:50',
+        'clinical_type' => 'nullable|string|max:50',
+        'cmt_score' => 'nullable|string|max:20',
+        'scc_count' => 'nullable|numeric|min:0',
+        'date' => 'nullable|date',
+        'follow_up_date' => 'nullable|date',
+        'notes' => 'nullable|string',
+    ]);
 
-        return redirect()->route('health.mastitis')->with('success', 'Mastitis record added successfully.');
-    }
+    $animal = Animal::findOrFail($data['animal_id']);
+
+    // If farmer_id not coming from form, take farmer from selected animal
+    $data['farmer_id'] = $data['farmer_id'] ?? $animal->farmer_id;
+
+    // If date not coming from form, use today date
+    $data['date'] = $data['date'] ?? now()->toDateString();
+
+    // Auto recovery status
+    $testResult = strtolower((string) $data['test_result']);
+
+    $data['recovery_status'] = $data['recovery_status'] ?? (
+        $testResult === 'positive' ? 'under_treatment' : 'recovered'
+    );
+
+    // Treatment optional
+    $data['treatment'] = $data['treatment'] ?? '';
+
+    MastitisRecord::create($data);
+
+    return redirect()->route('health.mastitis')->with('success', 'Mastitis record added successfully.');
+}
 
     public function dmi(Request $request)
     {
