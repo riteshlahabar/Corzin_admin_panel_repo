@@ -6,11 +6,20 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    @php
+        $cardStyles = ['bg-warning-subtle', 'bg-info-subtle', 'bg-secondary-subtle', 'bg-success-subtle', 'bg-primary-subtle'];
+    @endphp
     <div class="row g-3 mb-4 mt-2">
-        <div class="col-md-6 col-lg-3"><div class="card bg-warning-subtle"><div class="card-body text-center"><h5 class="fw-bold mb-1" style="font-size:18px;">Calf</h5><h2 class="fw-bold mb-0">{{ $counts['calf'] }}</h2></div></div></div>
-        <div class="col-md-6 col-lg-3"><div class="card bg-info-subtle"><div class="card-body text-center"><h5 class="fw-bold mb-1" style="font-size:18px;">Heifer</h5><h2 class="fw-bold mb-0">{{ $counts['heifer'] }}</h2></div></div></div>
-        <div class="col-md-6 col-lg-3"><div class="card bg-secondary-subtle"><div class="card-body text-center"><h5 class="fw-bold mb-1" style="font-size:18px;">Dry Cow</h5><h2 class="fw-bold mb-0">{{ $counts['dry'] }}</h2></div></div></div>
-        <div class="col-md-6 col-lg-3"><div class="card bg-success-subtle"><div class="card-body text-center"><h5 class="fw-bold mb-1" style="font-size:18px;">Milking Cow</h5><h2 class="fw-bold mb-0">{{ $counts['milking'] }}</h2></div></div></div>
+        @foreach($animalTypes as $index => $type)
+            <div class="col-md-6 col-lg-3">
+                <div class="card {{ $cardStyles[$index % count($cardStyles)] }}">
+                    <div class="card-body text-center">
+                        <h5 class="fw-bold mb-1" style="font-size:18px;">{{ $type->name }}</h5>
+                        <h2 class="fw-bold mb-0">{{ (int) ($typeCounts[$type->id] ?? 0) }}</h2>
+                    </div>
+                </div>
+            </div>
+        @endforeach
     </div>
 
     <div class="row mb-4">
@@ -23,7 +32,7 @@
                         <label class="btn btn-outline-primary active" for="type{{ $type->id }}">{{ $type->name }}</label>
                     @endforeach
                 </div>
-                <input type="text" id="animalSearch" class="form-control" placeholder="Search Farmer..." style="width:220px;">
+                <input type="text" id="animalSearch" class="form-control" placeholder="Search Farmer / Mobile..." style="width:240px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -71,7 +80,7 @@
                         @forelse($animals as $key => $animal)
                         <tr class="animal-row"
                             data-type="{{ $animal->animal_type_id }}"
-                            data-search="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '').' '.($animal->animal_name ?? '').' '.($animal->tag_number ?? '').' '.($animal->unique_id ?? '').' '.($animal->breed_name ?? '').' '.($animal->lactation_number ?? ''))) }}"
+                            data-search="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '').' '.($animal->farmer->mobile ?? '').' '.($animal->animal_name ?? '').' '.($animal->tag_number ?? '').' '.($animal->unique_id ?? '').' '.($animal->breed_name ?? '').' '.($animal->lactation_number ?? ''))) }}"
                             data-date="{{ optional($animal->created_at)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $animal->unique_id }}</td>

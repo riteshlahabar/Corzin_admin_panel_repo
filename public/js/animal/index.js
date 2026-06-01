@@ -1,22 +1,38 @@
-function filterAnimals() {
+function getAnimalFilters() {
     const selectedTypes = [];
     document.querySelectorAll('.animal-filter:checked').forEach((item) => selectedTypes.push(item.value));
-    const searchValue = document.getElementById('animalSearch')?.value.toLowerCase().trim() || '';
-    const start = document.getElementById('startDate')?.value || '';
-    const end = document.getElementById('endDate')?.value || '';
+    return {
+        selectedTypes,
+        searchValue: document.getElementById('animalSearch')?.value.toLowerCase().trim() || '',
+        start: document.getElementById('startDate')?.value || '',
+        end: document.getElementById('endDate')?.value || '',
+    };
+}
+
+function rowMatchesFilters(row, filters) {
+    const type = row.dataset.type || '';
+    const haystack = row.dataset.search || '';
+    const date = row.dataset.date || '';
+
+    if (filters.selectedTypes.length && !filters.selectedTypes.includes(type)) return false;
+    if (filters.searchValue && !haystack.includes(filters.searchValue)) return false;
+    if (filters.start && date && date < filters.start) return false;
+    if (filters.end && date && date > filters.end) return false;
+    return true;
+}
+
+function getFilteredRows() {
+    const filters = getAnimalFilters();
+    return Array.from(document.querySelectorAll('.animal-row')).filter((row) =>
+        rowMatchesFilters(row, filters),
+    );
+}
+
+function filterAnimals() {
+    const filters = getAnimalFilters();
 
     document.querySelectorAll('.animal-row').forEach((row) => {
-        const type = row.dataset.type || '';
-        const haystack = row.dataset.search || '';
-        const date = row.dataset.date || '';
-        let show = true;
-
-        if (selectedTypes.length && !selectedTypes.includes(type)) show = false;
-        if (searchValue && !haystack.includes(searchValue)) show = false;
-        if (start && date && date < start) show = false;
-        if (end && date && date > end) show = false;
-
-        row.style.display = show ? '' : 'none';
+        row.style.display = rowMatchesFilters(row, filters) ? '' : 'none';
     });
 
     window.CorzinTablePagination?.refresh('animalTableExport');
@@ -25,8 +41,25 @@ function filterAnimals() {
 function exportTableToExcel(tableId, filename) {
     const table = document.getElementById(tableId);
     if (!table) return;
+    const rows = getFilteredRows();
+    if (!rows.length) {
+        alert('No matching records found for export.');
+        return;
+    }
     const csv = [];
-    table.querySelectorAll('tr').forEach((row) => {
+    const headerRow = table.querySelector('thead tr');
+    if (headerRow) {
+        const headers = [];
+        const headerCols = headerRow.querySelectorAll('th');
+        headerCols.forEach((col, index) => {
+            if (index === headerCols.length - 1) return;
+            const text = (col.innerText || '').replace(/\n/g, ' ').replace(/,/g, ' ').trim();
+            headers.push('"' + text + '"');
+        });
+        csv.push(headers.join(','));
+    }
+
+    rows.forEach((row) => {
         const cols = row.querySelectorAll('th, td');
         const rowData = [];
         cols.forEach((col, index) => {
@@ -49,6 +82,27 @@ function exportTableToExcel(tableId, filename) {
 function exportTableToPdf(tableId, title) {
     const table = document.getElementById(tableId);
     if (!table) return;
+    const rows = getFilteredRows();
+    if (!rows.length) {
+        alert('No matching records found for export.');
+        return;
+    }
+
+    const headers = Array.from(table.querySelectorAll('thead th'))
+        .slice(0, -1)
+        .map((cell) => `<th>${cell.innerText}</th>`)
+        .join('');
+
+    const bodyRows = rows
+        .map((row) => {
+            const cols = Array.from(row.querySelectorAll('td'))
+                .slice(0, -1)
+                .map((cell) => `<td>${cell.innerText}</td>`)
+                .join('');
+            return `<tr>${cols}</tr>`;
+        })
+        .join('');
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html>
@@ -64,7 +118,10 @@ function exportTableToPdf(tableId, title) {
         </head>
         <body>
             <h2>${title}</h2>
-            ${table.outerHTML}
+            <table>
+                <thead><tr>${headers}</tr></thead>
+                <tbody>${bodyRows}</tbody>
+            </table>
         </body>
         </html>
     `);

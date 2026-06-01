@@ -17,16 +17,14 @@ class AnimalListController extends Controller
     {
         $animals = Animal::with(['farmer', 'animalType', 'pan'])->latest()->get();
         $history = AnimalLifecycleHistory::with(['animal.farmer', 'fromAnimalType', 'toAnimalType', 'fromPan', 'toPan'])->latest('changed_at')->get();
-        $animalTypes = AnimalType::all();
+        $animalTypes = AnimalType::orderBy('name')->get();
+        $typeCounts = Animal::query()
+            ->where('is_active', true)
+            ->selectRaw('animal_type_id, COUNT(*) as total')
+            ->groupBy('animal_type_id')
+            ->pluck('total', 'animal_type_id');
 
-        $counts = [
-            'calf' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Calf'))->count(),
-            'heifer' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Heifer'))->count(),
-            'dry' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Dry Cow'))->count(),
-            'milking' => Animal::where('is_active', true)->whereHas('animalType', fn ($query) => $query->where('name', 'Milking Cow'))->count(),
-        ];
-
-        return view('animal.index', compact('animals', 'counts', 'animalTypes', 'history'));
+        return view('animal.index', compact('animals', 'typeCounts', 'animalTypes', 'history'));
     }
 
     public function panList()
