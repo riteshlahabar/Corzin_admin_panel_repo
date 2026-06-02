@@ -36,9 +36,9 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-12">
-            <h4 class="page-title mb-3">Animal List</h4>
-            <div class="d-flex flex-column gap-2">
+        <div class="col-12 d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                <h4 class="page-title mb-0">Animal List</h4>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <div class="btn-group" role="group">
                         @foreach($animalTypes as $type)
@@ -62,18 +62,18 @@
                         <i class="fa-solid fa-plus me-1"></i> Add Animal
                     </a>
                 </div>
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <a href="{{ route('animal.import.template') }}" class="btn btn-light border" title="Download Animal Import Template">
-                        <i class="fa-solid fa-download me-1 text-primary"></i> Template
-                    </a>
-                    <form method="POST" action="{{ route('animal.import') }}" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
-                        @csrf
-                        <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.txt,.xls,.xlsx" required style="max-width:220px;">
-                        <button type="submit" class="btn btn-success btn-sm">
-                            <i class="fa-solid fa-upload me-1"></i> Upload List
-                        </button>
-                    </form>
-                </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                <a href="{{ route('animal.import.template') }}" class="btn btn-light border" title="Download Animal Import Template">
+                    <i class="fa-solid fa-download me-1 text-primary"></i> Template
+                </a>
+                <form method="POST" action="{{ route('animal.import') }}" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+                    @csrf
+                    <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.txt,.xls,.xlsx" required style="max-width:220px;">
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fa-solid fa-upload me-1"></i> Upload List
+                    </button>
+                </form>
             </div>
         </div>
     </div>
