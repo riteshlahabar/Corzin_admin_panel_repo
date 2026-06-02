@@ -205,6 +205,7 @@ class AnimalListController extends Controller
         $headers = [
             'farmer_id',
             'farmer_mobile',
+            'farmer_name',
             'animal_name',
             'tag_number',
             'animal_type_id',
@@ -222,12 +223,12 @@ class AnimalListController extends Controller
 
         $sampleRows = [
             [
-                '', '9876543210', 'Rani', 'TAG1001', '', 'Milking Cows',
+                '', '9876543210', 'Ritesh Deshmukh', 'Rani', 'TAG1001', '', 'Milking Cows',
                 '2', '15/05/2026', 'HF', '10/01/2023', '12/01/2024', 'Female',
                 '450', '8.5', '1',
             ],
             [
-                '', '9876543210', 'Gauri', 'TAG1002', '', 'Dry Cows',
+                '', '9876543210', 'Ritesh Deshmukh', 'Gauri', 'TAG1002', '', 'Dry Cows',
                 '1', '', 'Jersey', '08/03/2022', '15/03/2023', 'Female',
                 '390', '', '1',
             ],
@@ -450,7 +451,7 @@ class AnimalListController extends Controller
     {
         $farmer = $this->resolveFarmerForImport($payload);
         if (! $farmer) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id or farmer_mobile)."];
+            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id, farmer_mobile, or exact farmer_name)."];
         }
 
         $animalType = $this->resolveAnimalTypeForImport($payload);
@@ -551,6 +552,19 @@ class AnimalListController extends Controller
             return Farmer::query()->where('mobile', $mobile)->first();
         }
 
+        $name = $this->normalizeImportName($payload['farmer_name'] ?? '');
+        if ($name !== '') {
+            return Farmer::query()
+                ->get()
+                ->first(function (Farmer $farmer) use ($name) {
+                    return $this->normalizeImportName(implode(' ', array_filter([
+                        $farmer->first_name,
+                        $farmer->middle_name,
+                        $farmer->last_name,
+                    ]))) === $name;
+                });
+        }
+
         return null;
     }
 
@@ -595,6 +609,16 @@ class AnimalListController extends Controller
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function normalizeImportName(?string $value): string
+    {
+        $value = Str::lower(trim((string) $value));
+        if ($value === '') {
+            return '';
+        }
+
+        return preg_replace('/\s+/', ' ', $value) ?? '';
     }
 
     private function toNullableString($value): ?string
