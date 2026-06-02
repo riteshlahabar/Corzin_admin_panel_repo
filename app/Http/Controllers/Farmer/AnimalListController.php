@@ -203,12 +203,10 @@ class AnimalListController extends Controller
     public function downloadImportTemplate(): StreamedResponse
     {
         $headers = [
-            'farmer_id',
             'farmer_mobile',
             'farmer_name',
             'animal_name',
             'tag_number',
-            'animal_type_id',
             'animal_type_name',
             'lactation_number',
             'ai_date',
@@ -223,12 +221,12 @@ class AnimalListController extends Controller
 
         $sampleRows = [
             [
-                '', '9876543210', 'Ritesh Deshmukh', 'Rani', 'TAG1001', '', 'Milking Cows',
+                '9876543210', 'Ritesh Deshmukh', 'Rani', 'TAG1001', 'Milking Cows',
                 '2', '15/05/2026', 'HF', '10/01/2023', '12/01/2024', 'Female',
                 '450', '8.5', '1',
             ],
             [
-                '', '9876543210', 'Ritesh Deshmukh', 'Gauri', 'TAG1002', '', 'Dry Cows',
+                '9876543210', 'Ritesh Deshmukh', 'Gauri', 'TAG1002', 'Dry Cows',
                 '1', '', 'Jersey', '08/03/2022', '15/03/2023', 'Female',
                 '390', '', '1',
             ],
