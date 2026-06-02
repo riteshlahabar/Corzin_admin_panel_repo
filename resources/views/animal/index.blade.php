@@ -58,6 +58,9 @@
                     <button type="button" class="btn btn-light border" onclick="exportTableToExcel('animalTableExport', 'animal-list')" title="Download Excel">
                         <i class="fa-solid fa-file-excel text-success"></i>
                     </button>
+                    <a href="{{ route('animal.create') }}" class="btn btn-primary">
+                        <i class="fa-solid fa-plus me-1"></i> Add Animal
+                    </a>
                 </div>
                 <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap w-100">
                     <a href="{{ route('animal.import.template') }}" class="btn btn-light border" title="Download Animal Import Template">
@@ -70,9 +73,6 @@
                             <i class="fa-solid fa-upload me-1"></i> Upload List
                         </button>
                     </form>
-                    <a href="{{ route('animal.create') }}" class="btn btn-primary">
-                        <i class="fa-solid fa-plus me-1"></i> Add Animal
-                    </a>
                 </div>
             </div>
         </div>
@@ -219,6 +219,7 @@
 @push('scripts')
 <script src="{{ asset('js/animal/index.js') }}"></script>
 @endpush
+
 
 
 
