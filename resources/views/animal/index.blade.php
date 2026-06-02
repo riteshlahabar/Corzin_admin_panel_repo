@@ -36,10 +36,10 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <h4 class="page-title mb-0">Animal List</h4>
-            <div class="d-flex flex-column align-items-lg-end gap-2 w-100" style="max-width: 980px;">
-                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap w-100">
+        <div class="col-12">
+            <h4 class="page-title mb-3">Animal List</h4>
+            <div class="d-flex flex-column gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <div class="btn-group" role="group">
                         @foreach($animalTypes as $type)
                             <input type="checkbox" class="btn-check animal-filter" id="type{{ $type->id }}" value="{{ $type->id }}" checked>
@@ -62,7 +62,7 @@
                         <i class="fa-solid fa-plus me-1"></i> Add Animal
                     </a>
                 </div>
-                <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap w-100">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <a href="{{ route('animal.import.template') }}" class="btn btn-light border" title="Download Animal Import Template">
                         <i class="fa-solid fa-download me-1 text-primary"></i> Template
                     </a>
