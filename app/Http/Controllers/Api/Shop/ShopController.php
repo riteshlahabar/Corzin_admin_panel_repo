@@ -322,7 +322,7 @@ class ShopController extends Controller
 
         $normalizedCategory = strtolower(trim((string) $product->category));
         $packSize = max(0, (int) ($product->pack_size ?? 0));
-        $isMedicine = $normalizedCategory === 'medicine' || $packSize > 0;
+        $isMedicine = $normalizedCategory === 'medicine';
 
         return [
             'id' => $product->id,

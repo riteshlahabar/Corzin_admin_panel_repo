@@ -156,7 +156,7 @@
 <div class="modal fade" id="addShopModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="{{ route('shop.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('shop.store') }}" enctype="multipart/form-data" id="shopProductForm">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Add Shop Product</h5>
@@ -184,10 +184,10 @@
                         <div class="col-md-3"><label class="form-label">Price</label><input type="number" step="0.01" min="0" name="price" class="form-control" required></div>
                         <div class="col-12"><label class="form-label">Description</label><textarea name="description" rows="3" class="form-control"></textarea></div>
                         <div class="col-12"><label class="form-label">Features (one per line)</label><textarea name="features" rows="3" class="form-control" placeholder="High protein&#10;Fast delivery&#10;Best for milking cows"></textarea></div>
+                        <div class="col-md-3"><label class="form-label">Packing Size</label><input type="number" min="1" name="pack_size" class="form-control" placeholder="80 or 50"></div>
                         <div class="col-12" id="medicineFields">
                             <div class="row g-3">
                                 <div class="col-12"><label class="form-label">Medicine Aliases (for prescription match)</label><textarea name="medicine_aliases" rows="2" class="form-control" placeholder="Paracetamol&#10;PCM&#10;Acetaminophen"></textarea><small class="text-muted">Optional. Use line break or comma separated values.</small></div>
-                                <div class="col-md-6"><label class="form-label">Packing Size (units per strip/pack)</label><input type="number" min="1" name="pack_size" class="form-control" placeholder="15"></div>
                                 <div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="allow_partial_units" value="1" id="allowPartialUnits"><label class="form-check-label" for="allowPartialUnits">Allow partial quantity</label></div></div>
                             </div>
                         </div>
@@ -203,6 +203,7 @@
                                 <button type="button" class="btn btn-outline-primary btn-sm px-2" data-bs-toggle="modal" data-bs-target="#addUnitModal">+</button>
                                 <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="editUnitTrigger">Edit</button>
                             </div>
+                            <small class="text-muted">Example: packing size `50` + unit `kg` = `50 kg`</small>
                         </div>
                         <div class="col-md-6"><label class="form-label">Main Image</label><input type="file" name="image" class="form-control" accept="image/*"></div>
                         <div class="col-md-6"><label class="form-label">Gallery Images</label><input type="file" name="gallery_images[]" class="form-control" accept="image/*" multiple></div>
@@ -323,10 +324,8 @@ const shopCategory = document.getElementById('shopCategory');
 const medicineFields = document.getElementById('medicineFields');
 const editCategoryTrigger = document.getElementById('editCategoryTrigger');
 const editUnitTrigger = document.getElementById('editUnitTrigger');
-const editCategoryForm = document.getElementById('editCategoryForm');
-const editUnitForm = document.getElementById('editUnitForm');
-const editCategoryName = document.getElementById('editCategoryName');
-const editUnitName = document.getElementById('editUnitName');
+const shopProductForm = document.getElementById('shopProductForm');
+const shopDraftKey = 'shopProductDraft';
 
 function toggleMedicineFields() {
     const selectedCategory = (shopCategory?.value || '').toLowerCase();
@@ -336,14 +335,10 @@ function toggleMedicineFields() {
 
     const isMedicine = selectedCategory === 'medicine';
     medicineFields.style.display = isMedicine ? '' : 'none';
-    medicineFields.querySelectorAll('textarea, input').forEach((field) => {
+    medicineFields.querySelectorAll('textarea, input[type="checkbox"]').forEach((field) => {
         if (field.name === 'allow_partial_units') {
             field.checked = isMedicine ? field.checked : false;
             return;
-        }
-
-        if (!isMedicine) {
-            field.value = '';
         }
     });
 }
@@ -369,8 +364,94 @@ function openEditLookupModal(selectId, formId, inputId, baseUrl, modalId) {
     modal.show();
 }
 
+function captureShopProductDraft() {
+    if (!shopProductForm) {
+        return;
+    }
+
+    const payload = {};
+    shopProductForm.querySelectorAll('input[name], textarea[name], select[name]').forEach((field) => {
+        if (field.type === 'file') {
+            return;
+        }
+
+        if (field.type === 'checkbox') {
+            payload[field.name] = field.checked;
+            return;
+        }
+
+        payload[field.name] = field.value;
+    });
+
+    localStorage.setItem(shopDraftKey, JSON.stringify(payload));
+}
+
+function restoreShopProductDraft() {
+    if (!shopProductForm) {
+        return;
+    }
+
+    const raw = localStorage.getItem(shopDraftKey);
+    if (!raw) {
+        return;
+    }
+
+    try {
+        const payload = JSON.parse(raw);
+        Object.entries(payload).forEach(([name, value]) => {
+            const field = shopProductForm.querySelector(`[name="${name}"]`);
+            if (!field || field.type === 'file') {
+                return;
+            }
+
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(value);
+                return;
+            }
+
+            field.value = value ?? '';
+        });
+    } catch (error) {
+        localStorage.removeItem(shopDraftKey);
+    }
+
+    toggleMedicineFields();
+}
+
+function clearShopProductDraft() {
+    localStorage.removeItem(shopDraftKey);
+}
+
 shopCategory?.addEventListener('change', toggleMedicineFields);
+shopProductForm?.querySelectorAll('input[name], textarea[name], select[name]').forEach((field) => {
+    if (field.type === 'file') {
+        return;
+    }
+
+    field.addEventListener('input', captureShopProductDraft);
+    field.addEventListener('change', captureShopProductDraft);
+});
+
+const shouldClearDraft = @json((bool) session('shop_product_saved'));
+if (shouldClearDraft) {
+    clearShopProductDraft();
+} else {
+    restoreShopProductDraft();
+}
+
+const selectedCategoryFromQuery = @json(request('selected_category'));
+if (selectedCategoryFromQuery && shopCategory) {
+    shopCategory.value = selectedCategoryFromQuery;
+}
+
+const shopUnit = document.getElementById('shopUnit');
+const selectedUnitFromQuery = @json(request('selected_unit'));
+if (selectedUnitFromQuery && shopUnit) {
+    shopUnit.value = selectedUnitFromQuery;
+}
+
 toggleMedicineFields();
+captureShopProductDraft();
 
 editCategoryTrigger?.addEventListener('click', function () {
     openEditLookupModal(
@@ -391,5 +472,13 @@ editUnitTrigger?.addEventListener('click', function () {
         'editUnitModal'
     );
 });
+
+@if(request('modal') === 'add-product')
+const addShopModal = document.getElementById('addShopModal');
+if (addShopModal) {
+    const modal = new bootstrap.Modal(addShopModal);
+    modal.show();
+}
+@endif
 </script>
 @endpush

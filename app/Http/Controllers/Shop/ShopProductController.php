@@ -116,7 +116,7 @@ class ShopProductController extends Controller
             'unit' => $normalizedUnit !== '' ? $normalizedUnit : null,
             'features' => $data['features'] ?? null,
             'medicine_aliases' => $isMedicine ? $this->nullableTrim($data['medicine_aliases'] ?? null) : null,
-            'pack_size' => $isMedicine ? ($data['pack_size'] ?? null) : null,
+            'pack_size' => $data['pack_size'] ?? null,
             'allow_partial_units' => $isMedicine ? $request->boolean('allow_partial_units', false) : false,
             'image' => $imagePath,
             'gallery_images' => ! empty($gallery) ? $gallery : null,
@@ -124,7 +124,8 @@ class ShopProductController extends Controller
         ]);
 
         return redirect()->route('shop.index', ['tab' => 'add-product'])
-            ->with('success', 'Shop product saved successfully.');
+            ->with('success', 'Shop product saved successfully.')
+            ->with('shop_product_saved', true);
     }
 
     public function storeCategory(Request $request)
@@ -135,14 +136,14 @@ class ShopProductController extends Controller
 
         $name = $this->normalizeLookupName($data['name']);
         if ($name === '') {
-            return redirect()->route('shop.index', ['tab' => 'add-product'])
+            return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product'])
                 ->withErrors(['name' => 'Category name is required.'])
                 ->withInput();
         }
 
         ShopCategory::firstOrCreate(['name' => $name]);
 
-        return redirect()->route('shop.index', ['tab' => 'add-product'])
+        return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product', 'selected_category' => $name])
             ->with('success', 'Shop category saved successfully.');
     }
 
@@ -154,13 +155,13 @@ class ShopProductController extends Controller
 
         $name = $this->normalizeLookupName($data['name']);
         if ($name === '') {
-            return redirect()->route('shop.index', ['tab' => 'add-product'])
+            return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product'])
                 ->withErrors(['edit_category_name' => 'Category name is required.'])
                 ->withInput();
         }
 
         if ($name !== $category->name && ShopCategory::where('name', $name)->exists()) {
-            return redirect()->route('shop.index', ['tab' => 'add-product'])
+            return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product'])
                 ->withErrors(['edit_category_name' => 'This category already exists.'])
                 ->withInput();
         }
@@ -171,7 +172,7 @@ class ShopProductController extends Controller
             ShopProduct::query()->where('category', $oldName)->update(['category' => $name]);
         });
 
-        return redirect()->route('shop.index', ['tab' => 'add-product'])
+        return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product', 'selected_category' => $name])
             ->with('success', 'Shop category updated successfully.');
     }
 
@@ -183,14 +184,14 @@ class ShopProductController extends Controller
 
         $name = $this->normalizeLookupName($data['name']);
         if ($name === '') {
-            return redirect()->route('shop.index', ['tab' => 'add-product'])
+            return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product'])
                 ->withErrors(['name' => 'Unit name is required.'])
                 ->withInput();
         }
 
         ShopUnit::firstOrCreate(['name' => $name]);
 
-        return redirect()->route('shop.index', ['tab' => 'add-product'])
+        return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product', 'selected_unit' => $name])
             ->with('success', 'Shop unit saved successfully.');
     }
 
@@ -202,13 +203,13 @@ class ShopProductController extends Controller
 
         $name = $this->normalizeLookupName($data['name']);
         if ($name === '') {
-            return redirect()->route('shop.index', ['tab' => 'add-product'])
+            return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product'])
                 ->withErrors(['edit_unit_name' => 'Unit name is required.'])
                 ->withInput();
         }
 
         if ($name !== $unit->name && ShopUnit::where('name', $name)->exists()) {
-            return redirect()->route('shop.index', ['tab' => 'add-product'])
+            return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product'])
                 ->withErrors(['edit_unit_name' => 'This unit already exists.'])
                 ->withInput();
         }
@@ -219,7 +220,7 @@ class ShopProductController extends Controller
             ShopProduct::query()->where('unit', $oldName)->update(['unit' => $name]);
         });
 
-        return redirect()->route('shop.index', ['tab' => 'add-product'])
+        return redirect()->route('shop.index', ['tab' => 'add-product', 'modal' => 'add-product', 'selected_unit' => $name])
             ->with('success', 'Shop unit updated successfully.');
     }
 
