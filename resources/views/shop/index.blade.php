@@ -205,8 +205,8 @@
                             </div>
                             <small class="text-muted">Example: packing size `50` + unit `kg` = `50 kg`</small>
                         </div>
-                        <div class="col-md-6"><label class="form-label">Main Image</label><input type="file" name="image" class="form-control" accept="image/*"></div>
-                        <div class="col-md-6"><label class="form-label">Gallery Images</label><input type="file" name="gallery_images[]" class="form-control" accept="image/*" multiple></div>
+                        <div class="col-12"><label class="form-label">Main Image</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+                        <div class="col-12"><label class="form-label">Gallery Images</label><input type="file" name="gallery_images[]" class="form-control" accept="image/*" multiple></div>
                         <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="shopActive" checked><label class="form-check-label" for="shopActive">Active</label></div></div>
                     </div>
                 </div>
