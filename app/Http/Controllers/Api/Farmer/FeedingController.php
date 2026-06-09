@@ -414,7 +414,12 @@ class FeedingController extends Controller
                 'actual_dmi' => $actualDmi,
                 'plan_dry_matter_quantity' => round((float) ($plan->planned_dry_matter ?? $planDryMatter), 2),
                 'remaining_dry_matter_quantity' => $remainingDryMatter,
-                'dmi_gap' => round($actualDmi - (float) ($plan->target_dmi ?? 0), 2),
+                'dmi_gap' => round(
+                    $plan->dmi_gap !== null
+                        ? (float) $plan->dmi_gap
+                        : ($planDryMatter - (float) ($plan->target_dmi ?? 0)),
+                    2
+                ),
                 'subtype_details' => $normalizedSubtypes,
                 'created_at' => optional($plan->created_at)->toDateString(),
             ];
@@ -589,6 +594,8 @@ class FeedingController extends Controller
             'pan_id' => 'nullable|exists:farmer_pans,id',
             'reference_date' => 'nullable|date',
             'days_count' => 'nullable|integer|min:1|max:365',
+            'feed_type_id' => 'nullable|exists:feed_types,id',
+            'unit' => 'nullable|string|max:30',
             'subtype_details' => 'required|array|min:1',
             'subtype_details.*.name' => 'required|string|max:255',
             'subtype_details.*.quantity' => 'required|numeric|min:0.01',
@@ -658,6 +665,12 @@ class FeedingController extends Controller
             'planned_dry_matter' => $plannedDryMatter,
             'dmi_gap' => round($plannedDryMatter - $targetDmi, 2),
         ];
+        if ($request->filled('feed_type_id')) {
+            $updatePayload['feed_type_id'] = (int) $request->input('feed_type_id');
+        }
+        if ($request->filled('unit')) {
+            $updatePayload['unit'] = trim((string) $request->input('unit'));
+        }
         if ($request->exists('days_count')) {
             $updatePayload['days_count'] = $request->filled('days_count')
                 ? (int) $request->input('days_count')
