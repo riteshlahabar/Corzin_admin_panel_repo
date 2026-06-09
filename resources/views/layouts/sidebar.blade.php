@@ -172,6 +172,11 @@
                     </a>
                 </li>
                 <li class="menu-item">
+                    <a href="{{ route('analytics.dairy') }}" class="nav-link {{ request()->routeIs('analytics.dairy') ? 'active' : '' }}">
+                        <i class="iconoir-building me-2"></i> Dairy Analysis
+                    </a>
+                </li>
+                <li class="menu-item">
                     <a href="{{ route('analytics.doctor') }}" class="nav-link {{ request()->routeIs('analytics.doctor') ? 'active' : '' }}">
                         <i class="iconoir-health-shield me-2"></i> Doctor Analysis
                     </a>

@@ -1,11 +1,19 @@
 @extends('layouts.app')
 @section('title', 'Doctor Analysis')
 
+@php
+    $pdfExportUrl = request()->fullUrlWithQuery(['export' => 'pdf']);
+    $excelExportUrl = request()->fullUrlWithQuery(['export' => 'excel']);
+@endphp
+
 @section('content')
 <div class="row">
     <div class="col-sm-12">
         <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
-            <h4 class="page-title">Doctor Analysis</h4>
+            <div>
+                <h4 class="page-title mb-1">Doctor Analysis</h4>
+                <p class="text-muted mb-0">Doctor growth, appointment outcomes, revenue, retention, and live activity in one place.</p>
+            </div>
             <div>
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Corzin</a></li>
@@ -17,78 +25,150 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 col-lg-3">
-        <div class="card"><div class="card-body"><div class="row d-flex justify-content-center"><div class="col-9"><p class="text-dark mb-0 fw-semibold fs-14">Total Doctors</p><h3 class="mt-2 mb-0 fw-bold">{{ number_format($totalDoctors) }}</h3></div><div class="col-3 align-self-center"><div class="d-flex justify-content-center align-items-center thumb-xl bg-primary rounded-circle mx-auto"><i class="iconoir-health-shield h1 align-self-center mb-0 text-white"></i></div></div></div></div></div>
-    </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card"><div class="card-body"><div class="row d-flex justify-content-center"><div class="col-9"><p class="text-dark mb-0 fw-semibold fs-14">Approved</p><h3 class="mt-2 mb-0 fw-bold">{{ number_format($approvedDoctors) }}</h3></div><div class="col-3 align-self-center"><div class="d-flex justify-content-center align-items-center thumb-xl bg-success rounded-circle mx-auto"><i class="iconoir-check-circle h1 align-self-center mb-0 text-white"></i></div></div></div></div></div>
-    </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card"><div class="card-body"><div class="row d-flex justify-content-center"><div class="col-9"><p class="text-dark mb-0 fw-semibold fs-14">Pending</p><h3 class="mt-2 mb-0 fw-bold">{{ number_format($pendingDoctors) }}</h3></div><div class="col-3 align-self-center"><div class="d-flex justify-content-center align-items-center thumb-xl bg-warning rounded-circle mx-auto"><i class="iconoir-hourglass h1 align-self-center mb-0 text-white"></i></div></div></div></div></div>
-    </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card"><div class="card-body"><div class="row d-flex justify-content-center"><div class="col-9"><p class="text-dark mb-0 fw-semibold fs-14">New This Month</p><h3 class="mt-2 mb-0 fw-bold">{{ number_format($newDoctors) }}</h3></div><div class="col-3 align-self-center"><div class="d-flex justify-content-center align-items-center thumb-xl bg-info rounded-circle mx-auto"><i class="iconoir-user-plus h1 align-self-center mb-0 text-white"></i></div></div></div></div></div>
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-lg-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Total Doctors</small><h3 class="mt-2 mb-1">{{ number_format($totalDoctors) }}</h3><span class="text-muted">{{ number_format($newDoctors) }} new in period</span></div></div></div>
+    <div class="col-md-6 col-lg-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Active Doctors</small><h3 class="mt-2 mb-1">{{ number_format($activeDoctors) }}</h3><span class="text-muted">Live or appointment activity</span></div></div></div>
+    <div class="col-md-6 col-lg-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Retention Rate</small><h3 class="mt-2 mb-1">{{ $retentionRate }}%</h3><span class="text-muted">Compared with previous period</span></div></div></div>
+    <div class="col-md-6 col-lg-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Doctor Revenue</small><h3 class="mt-2 mb-1">Rs {{ number_format($doctorRevenue, 2) }}</h3><span class="{{ $revenueGrowthRate >= 0 ? 'text-success' : 'text-danger' }}">{{ $revenueGrowthRate >= 0 ? '+' : '' }}{{ $revenueGrowthRate }}% vs previous</span></div></div></div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('analytics.doctor') }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">Period</label>
+                    <select name="period" class="form-select">
+                        @foreach($periodOptions as $periodOption)
+                            <option value="{{ $periodOption['value'] }}" {{ $filters['period'] === $periodOption['value'] ? 'selected' : '' }}>{{ $periodOption['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Doctor</label>
+                    <select name="doctor_id" class="form-select">
+                        <option value="0">All Doctors</option>
+                        @foreach($options['doctors'] as $doctor)
+                            <option value="{{ $doctor['id'] }}" {{ $filters['doctor_id'] === $doctor['id'] ? 'selected' : '' }}>{{ $doctor['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">District</label>
+                    <select name="district" class="form-select">
+                        <option value="">All Districts</option>
+                        @foreach($options['districts'] as $district)
+                            <option value="{{ $district }}" {{ $filters['district'] === $district ? 'selected' : '' }}>{{ $district }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">State</label>
+                    <select name="state" class="form-select">
+                        <option value="">All States</option>
+                        @foreach($options['states'] as $state)
+                            <option value="{{ $state }}" {{ $filters['state'] === $state ? 'selected' : '' }}>{{ $state }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="all" {{ $filters['status'] === 'all' ? 'selected' : '' }}>All</option>
+                        <option value="approved" {{ $filters['status'] === 'approved' ? 'selected' : '' }}>Approved</option>
+                        <option value="pending" {{ $filters['status'] === 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="rejected" {{ $filters['status'] === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                        <option value="declined" {{ $filters['status'] === 'declined' ? 'selected' : '' }}>Declined</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="from_date" value="{{ request('from_date', $context['start']->toDateString()) }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="to_date" value="{{ request('to_date', $context['end']->toDateString()) }}" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass me-1"></i> Search</button>
+                        <a href="{{ route('analytics.doctor') }}" class="btn btn-light border">Reset</a>
+                        <a href="{{ $pdfExportUrl }}" target="_blank" class="btn btn-light border"><i class="fa-solid fa-file-pdf text-danger"></i></a>
+                        <a href="{{ $excelExportUrl }}" class="btn btn-light border"><i class="fa-solid fa-file-excel text-success"></i></a>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-12 col-lg-8">
-        <div class="card">
-            <div class="card-header"><div class="row align-items-center"><div class="col"><h4 class="card-title">Doctor Growth</h4></div><div class="col-auto"><span class="badge bg-primary-subtle text-primary">Last 12 months</span></div></div></div>
-            <div class="card-body pt-0"><div id="doctor-growth-line" class="apex-charts mb-3"></div></div>
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pb-0"><h5 class="mb-1">Doctor Performance Trend</h5></div>
+            <div class="card-body"><div id="doctor-trend-chart" class="apex-charts"></div></div>
         </div>
     </div>
-    <div class="col-md-12 col-lg-4">
-        <div class="card">
-            <div class="card-header"><h4 class="card-title mb-0">Status Split</h4></div>
-            <div class="card-body pt-0">
-                <div id="doctor-status-donut" class="apex-charts mb-3"></div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pb-0"><h5 class="mb-1">Status & Outcome</h5></div>
+            <div class="card-body">
+                <div id="doctor-status-chart" class="apex-charts mb-3"></div>
                 <div class="row g-2">
-                    <div class="col-6"><div class="p-2 bg-light rounded text-center"><small class="text-muted">Approval Rate</small><h6 class="mb-0">{{ $approvalRate }}%</h6></div></div>
-                    <div class="col-6"><div class="p-2 bg-light rounded text-center"><small class="text-muted">Completion Rate</small><h6 class="mb-0">{{ $completionRate }}%</h6></div></div>
-                    <div class="col-6"><div class="p-2 bg-light rounded text-center"><small class="text-muted">Appointments</small><h6 class="mb-0">{{ number_format($totalAppointments) }}</h6></div></div>
-                    <div class="col-6"><div class="p-2 bg-light rounded text-center"><small class="text-muted">Completed</small><h6 class="mb-0">{{ number_format($completedAppointments) }}</h6></div></div>
+                    <div class="col-6"><div class="rounded-3 bg-light p-3 text-center"><small class="text-muted d-block">Approval</small><strong>{{ $approvalRate }}%</strong></div></div>
+                    <div class="col-6"><div class="rounded-3 bg-light p-3 text-center"><small class="text-muted d-block">Completion</small><strong>{{ $completionRate }}%</strong></div></div>
+                    <div class="col-6"><div class="rounded-3 bg-light p-3 text-center"><small class="text-muted d-block">Appointments</small><strong>{{ number_format($totalAppointments) }}</strong></div></div>
+                    <div class="col-6"><div class="rounded-3 bg-light p-3 text-center"><small class="text-muted d-block">On-site</small><strong>{{ number_format($onSiteTreatments) }}</strong></div></div>
+                    <div class="col-12"><div class="rounded-3 bg-light p-3 text-center"><small class="text-muted d-block">Follow-ups</small><strong>{{ number_format($followups) }}</strong></div></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header"><h4 class="card-title mb-0">Doctor Details</h4></div>
-            <div class="card-body pt-0">
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th><th>Contact</th><th>City</th><th>Status</th><th>Start Date</th><th>Appointments</th><th>Completion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($doctorRows as $row)
-                                <tr>
-                                    <td>{{ $row['name'] }}</td>
-                                    <td>{{ $row['contact'] }}</td>
-                                    <td>{{ $row['city'] }}</td>
-                                    <td>
-                                        <span class="badge {{ $row['status'] === 'approved' ? 'bg-success-subtle text-success' : ($row['status'] === 'pending' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger') }}">
-                                            {{ ucfirst($row['status']) }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $row['joined_at'] }}</td>
-                                    <td>{{ $row['appointments_count'] }}</td>
-                                    <td>{{ $row['completion_rate'] }}%</td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="7" class="text-center text-muted">No doctors found</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0 pb-0">
+        <h5 class="mb-1">Doctor Performance Table</h5>
+        <p class="text-muted mb-0">Filtered doctor report with appointments, completion, on-site treatment, revenue, and last live activity.</p>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Doctor</th>
+                        <th>City</th>
+                        <th>District</th>
+                        <th>State</th>
+                        <th>Status</th>
+                        <th>Appointments</th>
+                        <th>Completed</th>
+                        <th>Completion</th>
+                        <th>On-site</th>
+                        <th>Revenue</th>
+                        <th>Last Live</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($doctorRows as $row)
+                        <tr>
+                            <td class="fw-semibold">{{ $row['name'] }}</td>
+                            <td>{{ $row['city'] }}</td>
+                            <td>{{ $row['district'] }}</td>
+                            <td>{{ $row['state'] }}</td>
+                            <td>{{ ucfirst($row['status']) }}</td>
+                            <td>{{ $row['appointments'] }}</td>
+                            <td>{{ $row['completed'] }}</td>
+                            <td>{{ $row['completion_rate'] }}%</td>
+                            <td>{{ $row['onsite_treatments'] }}</td>
+                            <td>Rs {{ number_format($row['revenue'], 2) }}</td>
+                            <td>{{ $row['last_live'] }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="11" class="text-center text-muted">No doctor report data available.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -98,17 +178,18 @@
 <script src="{{ asset('assets/libs/apexcharts/apexcharts.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const growthOptions = {
+    const trendOptions = {
         chart: { type: 'line', height: 320, toolbar: { show: false } },
         series: [
-            { name: 'Doctor Registrations', data: @json($doctorGrowthSeries) },
+            { name: 'Doctor Growth', data: @json($doctorGrowthSeries) },
             { name: 'Appointments', data: @json($appointmentGrowthSeries) },
+            { name: 'Revenue', data: @json($revenueSeries) },
         ],
-        xaxis: { categories: @json($monthLabels) },
+        xaxis: { categories: @json($bucketLabels) },
         stroke: { curve: 'smooth', width: 3 },
-        colors: ['#06b6d4', '#22c55e'],
+        colors: ['#0ea5e9', '#22c55e', '#f97316'],
         dataLabels: { enabled: false },
-        legend: { position: 'top', horizontalAlign: 'right' }
+        legend: { position: 'top', horizontalAlign: 'left' }
     };
 
     const statusOptions = {
@@ -120,11 +201,10 @@ document.addEventListener('DOMContentLoaded', function () {
         dataLabels: { enabled: true }
     };
 
-    const lineEl = document.querySelector('#doctor-growth-line');
-    if (lineEl) new ApexCharts(lineEl, growthOptions).render();
-    const donutEl = document.querySelector('#doctor-status-donut');
-    if (donutEl) new ApexCharts(donutEl, statusOptions).render();
+    const trendEl = document.querySelector('#doctor-trend-chart');
+    if (trendEl) new ApexCharts(trendEl, trendOptions).render();
+    const statusEl = document.querySelector('#doctor-status-chart');
+    if (statusEl) new ApexCharts(statusEl, statusOptions).render();
 });
 </script>
 @endpush
-

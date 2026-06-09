@@ -130,6 +130,7 @@ Route::prefix('shop')->group(function () {
 
 Route::prefix('analytics')->name('analytics.')->group(function () {
     Route::get('/farmer', [AnalyticsController::class, 'farmerAnalysis'])->name('farmer');
+    Route::get('/dairy', [AnalyticsController::class, 'dairyAnalysis'])->name('dairy');
     Route::get('/doctor', [AnalyticsController::class, 'doctorAnalysis'])->name('doctor');
     Route::get('/earnings', [AnalyticsController::class, 'earnings'])->name('earnings');
 });
