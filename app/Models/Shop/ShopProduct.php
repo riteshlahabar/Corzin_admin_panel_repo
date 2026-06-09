@@ -9,6 +9,8 @@ class ShopProduct extends Model
     protected $fillable = [
         'category',
         'name',
+        'company_name',
+        'hsn_code',
         'subtitle',
         'price',
         'unit',

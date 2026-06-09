@@ -329,6 +329,8 @@ class ShopController extends Controller
             'category' => $product->category,
             'is_medicine' => $isMedicine,
             'name' => $product->name,
+            'company_name' => $product->company_name,
+            'hsn_code' => $product->hsn_code,
             'subtitle' => $product->subtitle,
             'price' => (float) $product->price,
             'price_label' => 'Rs '.number_format((float) $product->price, 2),

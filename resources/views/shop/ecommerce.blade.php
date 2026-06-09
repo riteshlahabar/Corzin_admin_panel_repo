@@ -45,7 +45,7 @@
     </div>
 
     <ul class="nav nav-pills mb-3 gap-2">
-        <li class="nav-item"><a class="nav-link {{ $activeTab === 'add-product' ? 'active' : '' }}" href="{{ route('shop.index', ['tab' => 'add-product']) }}">Add Product</a></li>
+        <li class="nav-item"><a class="nav-link {{ $activeTab === 'add-product' ? 'active' : '' }}" href="{{ route('shop.index', ['tab' => 'add-product']) }}">Product List</a></li>
         <li class="nav-item"><a class="nav-link {{ $activeTab === 'new-order' ? 'active' : '' }}" href="{{ route('shop.index', ['tab' => 'new-order']) }}">New Order</a></li>
         <li class="nav-item"><a class="nav-link {{ $activeTab === 'in-progress' ? 'active' : '' }}" href="{{ route('shop.index', ['tab' => 'in-progress']) }}">Order In Progress</a></li>
         <li class="nav-item"><a class="nav-link {{ $activeTab === 'completed' ? 'active' : '' }}" href="{{ route('shop.index', ['tab' => 'completed']) }}">Order Completed</a></li>

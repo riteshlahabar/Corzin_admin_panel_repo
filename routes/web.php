@@ -120,6 +120,10 @@ Route::prefix('doctor')->group(function () {
 Route::prefix('shop')->group(function () {
     Route::get('/', [ShopProductController::class, 'index'])->name('shop.index');
     Route::post('/', [ShopProductController::class, 'store'])->name('shop.store');
+    Route::post('/categories', [ShopProductController::class, 'storeCategory'])->name('shop.categories.store');
+    Route::put('/categories/{category}', [ShopProductController::class, 'updateCategory'])->name('shop.categories.update');
+    Route::post('/units', [ShopProductController::class, 'storeUnit'])->name('shop.units.store');
+    Route::put('/units/{unit}', [ShopProductController::class, 'updateUnit'])->name('shop.units.update');
     Route::post('/orders/{order}/status', [ShopProductController::class, 'updateOrderStatus'])->name('shop.orders.status');
     Route::get('/animal-buy-sell', [AnimalBuySellController::class, 'index'])->name('shop.animal_buy_sell');
 });
