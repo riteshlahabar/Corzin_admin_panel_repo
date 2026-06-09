@@ -27,56 +27,56 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-6 col-lg-3 col-xl">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #0f766e, #14b8a6);">
             <div class="card-body">
-                <small class="text-uppercase text-muted fw-semibold">Total Farmers</small>
+                <small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Total Farmers</small>
                 <h3 class="mt-2 mb-1">{{ number_format($totalFarmers) }}</h3>
-                <span class="text-muted">Filtered farmer base</span>
+                <span style="color: rgba(255,255,255,.82);">Filtered farmer base</span>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3 col-xl">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #1d4ed8, #60a5fa);">
             <div class="card-body">
-                <small class="text-uppercase text-muted fw-semibold">Active Users</small>
+                <small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Active Users</small>
                 <h3 class="mt-2 mb-1">{{ number_format($activeUsers) }}</h3>
-                <span class="text-success">{{ $activeRate }}% of farmers active</span>
+                <span style="color: rgba(255,255,255,.82);">{{ $activeRate }}% of farmers active</span>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3 col-xl">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
             <div class="card-body">
-                <small class="text-uppercase text-muted fw-semibold">Retention Rate</small>
+                <small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Retention Rate</small>
                 <h3 class="mt-2 mb-1">{{ $retentionRate }}%</h3>
-                <span class="text-muted">Compared with previous period</span>
+                <span style="color: rgba(255,255,255,.82);">Compared with previous period</span>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3 col-xl">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #b45309, #f59e0b);">
             <div class="card-body">
-                <small class="text-uppercase text-muted fw-semibold">Revenue</small>
+                <small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Revenue</small>
                 <h3 class="mt-2 mb-1">Rs {{ number_format($revenue, 2) }}</h3>
-                <span class="{{ $revenueGrowthRate >= 0 ? 'text-success' : 'text-danger' }}">{{ $revenueGrowthRate >= 0 ? '+' : '' }}{{ $revenueGrowthRate }}% vs previous</span>
+                <span style="color: rgba(255,255,255,.82);">{{ $revenueGrowthRate >= 0 ? '+' : '' }}{{ $revenueGrowthRate }}% vs previous</span>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3 col-xl">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #be123c, #fb7185);">
             <div class="card-body">
-                <small class="text-uppercase text-muted fw-semibold">Milk Growth</small>
+                <small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Milk Growth</small>
                 <h3 class="mt-2 mb-1">{{ number_format($milkVolume, 2) }} L</h3>
-                <span class="{{ $milkGrowthRate >= 0 ? 'text-success' : 'text-danger' }}">{{ $milkGrowthRate >= 0 ? '+' : '' }}{{ $milkGrowthRate }}% vs previous</span>
+                <span style="color: rgba(255,255,255,.82);">{{ $milkGrowthRate >= 0 ? '+' : '' }}{{ $milkGrowthRate }}% vs previous</span>
             </div>
         </div>
     </div>
     <div class="col-md-6 col-lg-3 col-xl">
-        <div class="card h-100 border-0 shadow-sm">
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #4338ca, #818cf8);">
             <div class="card-body">
-                <small class="text-uppercase text-muted fw-semibold">Most Active Village</small>
+                <small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Most Active Village</small>
                 <h5 class="mt-2 mb-1">{{ $mostActiveVillage }}</h5>
-                <span class="text-muted">Activity score {{ $mostActiveVillageScore }}</span>
+                <span style="color: rgba(255,255,255,.82);">Activity score {{ $mostActiveVillageScore }}</span>
             </div>
         </div>
     </div>
