@@ -387,6 +387,7 @@ class FeedingController extends Controller
                 collect($normalizedSubtypes)->sum(fn ($item) => (float) data_get($item, 'dry_matter_quantity', 0)),
                 2
             );
+            $actualDmi = $this->calculateActualDryMatterForPlan($plan);
             $remainingDryMatter = (float) $plan->plan_quantity > 0
                 ? round(((float) $plan->remaining_quantity / (float) $plan->plan_quantity) * $planDryMatter, 2)
                 : 0.0;
@@ -410,14 +411,10 @@ class FeedingController extends Controller
                 'plan_quantity' => round((float) $plan->plan_quantity, 2),
                 'consumed_quantity' => round((float) $plan->consumed_quantity, 2),
                 'remaining_quantity' => round((float) $plan->remaining_quantity, 2),
+                'actual_dmi' => $actualDmi,
                 'plan_dry_matter_quantity' => round((float) ($plan->planned_dry_matter ?? $planDryMatter), 2),
                 'remaining_dry_matter_quantity' => $remainingDryMatter,
-                'dmi_gap' => round(
-                    $plan->dmi_gap !== null
-                        ? (float) $plan->dmi_gap
-                        : ($planDryMatter - (float) ($plan->target_dmi ?? 0)),
-                    2
-                ),
+                'dmi_gap' => round($actualDmi - (float) ($plan->target_dmi ?? 0), 2),
                 'subtype_details' => $normalizedSubtypes,
                 'created_at' => optional($plan->created_at)->toDateString(),
             ];
@@ -818,11 +815,32 @@ class FeedingController extends Controller
                 'message' => 'You are not allowed to update this record.',
             ], 403);
         }
+        $currentDietPlanId = (int) ($record->diet_plan_id ?? 0);
+        $nextDietPlanId = $request->filled('diet_plan_id')
+            ? (int) $request->input('diet_plan_id')
+            : $currentDietPlanId;
+
+        $nextDietPlan = null;
+        if ($nextDietPlanId > 0) {
+            $nextDietPlan = FeedDietPlan::query()
+                ->where('id', $nextDietPlanId)
+                ->where('farmer_id', (int) $request->input('farmer_id'))
+                ->first();
+
+            if (! $nextDietPlan) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected diet plan not found.',
+                ], 422);
+            }
+        }
+
+        $currentFeedingQuantity = (float) ($record->feeding_quantity ?? $record->quantity ?? 0);
         $updatedFeedingQuantity = $request->filled('feeding_quantity')
             ? (float) $request->input('feeding_quantity')
             : ($request->filled('quantity')
                 ? (float) $request->input('quantity')
-                : (float) ($record->feeding_quantity ?? $record->quantity ?? 0));
+                : $currentFeedingQuantity);
         $updatedRatePerUnit = $request->filled('rate_per_unit')
             ? (float) $request->input('rate_per_unit')
             : (float) ($record->rate_per_unit ?? 0);
@@ -830,31 +848,55 @@ class FeedingController extends Controller
             ? (float) $request->input('feeding_cost')
             : ($updatedFeedingQuantity * $updatedRatePerUnit);
 
-        $record->update([
-            'quantity' => round($updatedFeedingQuantity, 2),
-            'unit' => $request->unit,
-            'feeding_time' => $request->feeding_time ?: $record->feeding_time,
-            'date' => $request->date,
-            'notes' => $request->notes,
-            'feed_type_id' => $request->filled('feed_type_id')
-                ? $request->feed_type_id
-                : $record->feed_type_id,
-            'diet_plan_id' => $request->filled('diet_plan_id')
-                ? $request->diet_plan_id
-                : $record->diet_plan_id,
-            'feed_subtype_details' => $request->input('feed_subtype_details', $record->feed_subtype_details),
-            'package_quantity' => $request->filled('package_quantity')
-                ? $request->package_quantity
-                : $record->package_quantity,
-            'feeding_quantity' => $request->filled('feeding_quantity')
-                ? $request->feeding_quantity
-                : $record->feeding_quantity,
-            'balance_quantity' => $request->filled('balance_quantity')
-                ? $request->balance_quantity
-                : $record->balance_quantity,
-            'rate_per_unit' => round($updatedRatePerUnit, 2),
-            'feeding_cost' => round($updatedFeedingCost, 2),
-        ]);
+        DB::transaction(function () use (
+            $record,
+            $request,
+            $currentDietPlanId,
+            $nextDietPlanId,
+            $nextDietPlan,
+            $currentFeedingQuantity,
+            $updatedFeedingQuantity,
+            $updatedRatePerUnit,
+            $updatedFeedingCost
+        ) {
+            if ($currentDietPlanId > 0 && $currentDietPlanId !== $nextDietPlanId) {
+                $currentDietPlan = FeedDietPlan::query()->find($currentDietPlanId);
+                if ($currentDietPlan) {
+                    $this->adjustDietPlanConsumption($currentDietPlan, -$currentFeedingQuantity);
+                }
+            }
+
+            if ($nextDietPlan && $currentDietPlanId !== $nextDietPlanId) {
+                $this->adjustDietPlanConsumption($nextDietPlan, $updatedFeedingQuantity);
+            } elseif ($nextDietPlan) {
+                $this->adjustDietPlanConsumption(
+                    $nextDietPlan,
+                    $updatedFeedingQuantity - $currentFeedingQuantity
+                );
+            }
+
+            $record->update([
+                'quantity' => round($updatedFeedingQuantity, 2),
+                'unit' => $request->unit,
+                'feeding_time' => $request->feeding_time ?: $record->feeding_time,
+                'date' => $request->date,
+                'notes' => $request->notes,
+                'feed_type_id' => $request->filled('feed_type_id')
+                    ? $request->feed_type_id
+                    : $record->feed_type_id,
+                'diet_plan_id' => $nextDietPlan?->id,
+                'feed_subtype_details' => $request->input('feed_subtype_details', $record->feed_subtype_details),
+                'package_quantity' => $request->filled('package_quantity')
+                    ? $request->package_quantity
+                    : $record->package_quantity,
+                'feeding_quantity' => round($updatedFeedingQuantity, 2),
+                'balance_quantity' => $request->filled('balance_quantity')
+                    ? $request->balance_quantity
+                    : $record->balance_quantity,
+                'rate_per_unit' => round($updatedRatePerUnit, 2),
+                'feeding_cost' => round($updatedFeedingCost, 2),
+            ]);
+        });
 
         return response()->json([
             'status' => true,
@@ -894,6 +936,17 @@ class FeedingController extends Controller
         }
 
         return null;
+    }
+
+    private function adjustDietPlanConsumption(FeedDietPlan $plan, float $quantityDelta): void
+    {
+        $nextConsumed = max(round((float) $plan->consumed_quantity + $quantityDelta, 2), 0);
+        $nextRemaining = max(round((float) $plan->plan_quantity - $nextConsumed, 2), 0);
+
+        $plan->update([
+            'consumed_quantity' => $nextConsumed,
+            'remaining_quantity' => $nextRemaining,
+        ]);
     }
 
     private function normalizeSubtypeDetails(array $subtypes, bool $allowMissingDmPercent = false): array
@@ -1024,7 +1077,9 @@ class FeedingController extends Controller
                 'date' => $date,
                 'body_weight' => 0.0,
                 'milk_production' => 0.0,
+                'actual_dmi' => 0.0,
                 'target_dmi' => 0.0,
+                'dmi_gap' => 0.0,
             ];
         }
 
@@ -1050,13 +1105,24 @@ class FeedingController extends Controller
             ->whereDate('date', $date)
             ->whereIn('animal_id', $animalIds)
             ->sum('total_milk');
+        $actualDmi = round(
+            FeedingRecord::query()
+                ->with('dietPlan')
+                ->whereDate('date', $date)
+                ->whereIn('animal_id', $animalIds)
+                ->get()
+                ->sum(fn (FeedingRecord $record) => $this->calculateRecordActualDryMatter($record)),
+            2
+        );
         $targetDmi = $this->computeTargetDmi($bodyWeight, $milkProduction);
 
         return [
             'date' => $date,
             'body_weight' => round($bodyWeight, 2),
             'milk_production' => round($milkProduction, 2),
+            'actual_dmi' => $actualDmi,
             'target_dmi' => round($targetDmi, 2),
+            'dmi_gap' => round($actualDmi - $targetDmi, 2),
         ];
     }
 
@@ -1066,5 +1132,79 @@ class FeedingController extends Controller
             return 0;
         }
         return ($bodyWeight * 0.02) + ($milkProduction * 0.33);
+    }
+
+    private function calculateActualDryMatterForPlan(FeedDietPlan $plan): float
+    {
+        return round(
+            FeedingRecord::query()
+                ->where('diet_plan_id', $plan->id)
+                ->get()
+                ->sum(fn (FeedingRecord $record) => $this->calculateRecordActualDryMatter($record, $plan)),
+            2
+        );
+    }
+
+    private function calculateRecordActualDryMatter(FeedingRecord $record, ?FeedDietPlan $dietPlan = null): float
+    {
+        $feedingQuantity = (float) ($record->feeding_quantity ?? $record->quantity ?? 0);
+        if ($feedingQuantity <= 0) {
+            return 0.0;
+        }
+
+        $packageQuantity = (float) ($record->package_quantity ?? 0);
+        $dietPlan ??= $record->relationLoaded('dietPlan') ? $record->dietPlan : $record->dietPlan()->first();
+
+        $recordSubtypes = collect((array) ($record->feed_subtype_details ?? []));
+        $planSubtypes = collect(
+            $dietPlan ? $this->normalizeSubtypeDetails((array) ($dietPlan->subtype_details ?? []), true) : []
+        );
+
+        $dmPercentBySubtypeId = [];
+        $dmPercentByName = [];
+        foreach ($planSubtypes as $subtype) {
+            $subtypeId = (int) data_get($subtype, 'subtype_id', 0);
+            $subtypeName = mb_strtolower(trim((string) data_get($subtype, 'name', '')));
+            $dmPercent = (float) data_get($subtype, 'dm_percent', 0);
+
+            if ($subtypeId > 0) {
+                $dmPercentBySubtypeId[$subtypeId] = $dmPercent;
+            }
+            if ($subtypeName !== '') {
+                $dmPercentByName[$subtypeName] = $dmPercent;
+            }
+        }
+
+        $packageDryMatter = (float) $recordSubtypes->sum(function ($subtype) use ($dmPercentBySubtypeId, $dmPercentByName) {
+            $quantity = (float) data_get($subtype, 'quantity', 0);
+            $subtypeId = (int) data_get($subtype, 'subtype_id', 0);
+            $subtypeName = mb_strtolower(trim((string) data_get($subtype, 'name', '')));
+
+            $dmPercent = 0.0;
+            if ($subtypeId > 0 && array_key_exists($subtypeId, $dmPercentBySubtypeId)) {
+                $dmPercent = (float) $dmPercentBySubtypeId[$subtypeId];
+            } elseif ($subtypeName !== '' && array_key_exists($subtypeName, $dmPercentByName)) {
+                $dmPercent = (float) $dmPercentByName[$subtypeName];
+            }
+
+            return $quantity > 0 && $dmPercent > 0 ? ($quantity * $dmPercent) / 100 : 0;
+        });
+
+        if ($packageDryMatter <= 0 && $dietPlan && (float) $dietPlan->plan_quantity > 0) {
+            $planDryMatter = (float) ($dietPlan->planned_dry_matter ?? 0);
+            if ($planDryMatter > 0 && $packageQuantity > 0) {
+                $packageDryMatter = ($packageQuantity / (float) $dietPlan->plan_quantity) * $planDryMatter;
+            }
+        }
+
+        if ($packageDryMatter <= 0) {
+            return 0.0;
+        }
+
+        if ($packageQuantity <= 0) {
+            return round($packageDryMatter, 2);
+        }
+
+        return round($packageDryMatter * ($feedingQuantity / $packageQuantity), 2);
     }
 }

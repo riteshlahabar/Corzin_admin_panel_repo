@@ -48,28 +48,21 @@ class MilkProductionController extends Controller
         }
         $date = $dateObject->format('Y-m-d');
         $quantity = (float) $request->quantity;
-        $morning = 0;
-        $afternoon = 0;
-        $evening = 0;
-
-        if ($request->shift === 'Morning') {
-            $morning = $quantity;
-        } elseif ($request->shift === 'Afternoon') {
-            $afternoon = $quantity;
-        } else {
-            $evening = $quantity;
+        if ($this->shiftEntryExists((int) $request->animal_id, $date, $request->shift)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Milk entry already exists for the selected animal, date, and shift. Please edit the existing record instead.',
+            ], 422);
         }
 
         $milk = MilkProduction::create([
             'animal_id' => $request->animal_id,
             'dairy_id' => $request->dairy_id,
             'date' => $date,
-            'morning_milk' => $morning,
-            'afternoon_milk' => $afternoon,
-            'evening_milk' => $evening,
             'fat' => $request->fat,
             'snf' => $request->snf,
             'rate' => $request->rate,
+            ...$this->shiftValues($request->shift, $quantity),
         ]);
 
         $milk->load('animal.farmer');
@@ -204,6 +197,33 @@ class MilkProductionController extends Controller
             ], 422);
         }
 
+        $existingShiftEntries = MilkProduction::query()
+            ->whereIn('animal_id', $details->pluck('animal_id')->all())
+            ->whereDate('date', $dateObject->format('Y-m-d'))
+            ->where($this->shiftColumn($request->shift), '>', 0)
+            ->pluck('animal_id')
+            ->unique()
+            ->values();
+
+        if ($existingShiftEntries->isNotEmpty()) {
+            $duplicateNames = $details
+                ->whereIn('animal_id', $existingShiftEntries->all())
+                ->map(function (array $detail) use ($animals) {
+                    $animal = $animals->get($detail['animal_id']);
+                    $name = trim((string) ($animal?->animal_name ?? 'Animal'));
+                    $tag = trim((string) ($animal?->tag_number ?? ''));
+
+                    return $tag === '' ? $name : "{$name} ({$tag})";
+                })
+                ->values()
+                ->all();
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Milk entry already exists for the selected PAN cows on this date and shift: '.implode(', ', $duplicateNames).'. Please edit the existing record instead.',
+            ], 422);
+        }
+
         $entry = DB::transaction(function () use ($request, $farmerId, $pan, $dateObject, $details, $animals, $quantityLiters, $cowTotal) {
             $panMilkEntry = PanMilkEntry::create([
                 'farmer_id' => $farmerId,
@@ -221,20 +241,15 @@ class MilkProductionController extends Controller
 
             foreach ($details as $detail) {
                 $quantity = (float) $detail['final_milk_qty'];
-                $morning = $request->shift === 'Morning' ? $quantity : 0;
-                $afternoon = $request->shift === 'Afternoon' ? $quantity : 0;
-                $evening = $request->shift === 'Evening' ? $quantity : 0;
 
                 $milk = MilkProduction::create([
                     'animal_id' => $detail['animal_id'],
                     'dairy_id' => $request->dairy_id,
                     'date' => $dateObject->format('Y-m-d'),
-                    'morning_milk' => $morning,
-                    'afternoon_milk' => $afternoon,
-                    'evening_milk' => $evening,
                     'fat' => $request->fat,
                     'snf' => $request->snf,
                     'rate' => $request->rate,
+                    ...$this->shiftValues($request->shift, $quantity),
                 ]);
 
                 $animal = $animals->get($detail['animal_id']);
@@ -380,17 +395,6 @@ class MilkProductionController extends Controller
         }
 
         $quantity = (float) $request->quantity;
-        $morning = (float) ($milk->morning_milk ?? 0);
-        $afternoon = (float) ($milk->afternoon_milk ?? 0);
-        $evening = (float) ($milk->evening_milk ?? 0);
-
-        if ($request->shift === 'Morning') {
-            $morning = $quantity;
-        } elseif ($request->shift === 'Afternoon') {
-            $afternoon = $quantity;
-        } else {
-            $evening = $quantity;
-        }
 
         $dateObject = Carbon::createFromFormat('Y-m-d', $request->date)->startOfDay();
         if ($dateObject->gt(now()->startOfDay())) {
@@ -400,15 +404,25 @@ class MilkProductionController extends Controller
             ], 422);
         }
 
+        if ($this->shiftEntryExists(
+            (int) $milk->animal_id,
+            $dateObject->format('Y-m-d'),
+            $request->shift,
+            exceptId: (int) $milk->id
+        )) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Milk entry already exists for the selected animal, date, and shift. Please edit that existing record instead.',
+            ], 422);
+        }
+
         $milk->update([
             'dairy_id' => $request->dairy_id,
             'date' => $dateObject->format('Y-m-d'),
-            'morning_milk' => $morning,
-            'afternoon_milk' => $afternoon,
-            'evening_milk' => $evening,
             'fat' => $request->fat,
             'snf' => $request->snf,
             'rate' => $request->rate,
+            ...$this->shiftValues($request->shift, $quantity),
         ]);
 
         return response()->json([
@@ -428,5 +442,38 @@ class MilkProductionController extends Controller
                 'rate' => $milk->rate,
             ],
         ]);
+    }
+
+    private function shiftEntryExists(int $animalId, string $date, string $shift, ?int $exceptId = null): bool
+    {
+        $query = MilkProduction::query()
+            ->where('animal_id', $animalId)
+            ->whereDate('date', $date)
+            ->where($this->shiftColumn($shift), '>', 0);
+
+        if ($exceptId !== null) {
+            $query->where('id', '!=', $exceptId);
+        }
+
+        return $query->exists();
+    }
+
+    private function shiftValues(string $shift, float $quantity): array
+    {
+        return [
+            'morning_milk' => $shift === 'Morning' ? $quantity : 0,
+            'afternoon_milk' => $shift === 'Afternoon' ? $quantity : 0,
+            'evening_milk' => $shift === 'Evening' ? $quantity : 0,
+        ];
+    }
+
+    private function shiftColumn(string $shift): string
+    {
+        return match ($shift) {
+            'Morning' => 'morning_milk',
+            'Afternoon' => 'afternoon_milk',
+            'Evening' => 'evening_milk',
+            default => throw new \InvalidArgumentException("Unsupported milk shift [{$shift}]."),
+        };
     }
 }
