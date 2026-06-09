@@ -54,13 +54,14 @@
                             <th>State</th>
                             <th>Pincode</th>
                             <th>Status</th>
+                            <th>Last App activity</th>
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody id="farmerTable">
                         @forelse($farmers as $key => $farmer)
                         <tr class="farmer-row"
-                            data-name="{{ strtolower(trim(($farmer->first_name ?? '').' '.($farmer->middle_name ?? '').' '.($farmer->last_name ?? '').' '.($farmer->mobile ?? '').' '.($farmer->village ?? '').' '.($farmer->city ?? ''))) }}"
+                            data-name="{{ strtolower(trim(($farmer->first_name ?? '').' '.($farmer->middle_name ?? '').' '.($farmer->last_name ?? '').' '.($farmer->mobile ?? '').' '.($farmer->village ?? '').' '.($farmer->city ?? '').' '.($farmer->taluka ?? '').' '.($farmer->district ?? '').' '.($farmer->state ?? '').' '.($farmer->is_active ? 'active' : 'inactive'))) }}"
                             data-date="{{ optional($farmer->created_at)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $farmer->mobile }}</td>
@@ -78,6 +79,14 @@
                                     {{ $farmer->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
+                            <td>
+                                @if($farmer->active_session_at)
+                                    <div>{{ $farmer->active_session_at->format('d M Y') }}</div>
+                                    <small class="text-muted">{{ $farmer->active_session_at->format('h:i A') }}</small>
+                                @else
+                                    <span class="text-muted">Never</span>
+                                @endif
+                            </td>
                             <td class="text-end">
                                 <a href="{{ route('farmer.edit', $farmer) }}" class="btn btn-sm btn-light border me-1" title="Edit Farmer">
                                     <i class="las la-pen text-primary fs-18"></i>
@@ -92,7 +101,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="13" class="text-center text-muted">No Farmers Found</td>
+                            <td colspan="14" class="text-center text-muted">No Farmers Found</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -106,3 +115,4 @@
 @push('scripts')
 <script src="{{ asset('js/farmer/index.js') }}"></script>
 @endpush
+

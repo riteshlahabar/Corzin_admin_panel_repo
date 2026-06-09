@@ -160,13 +160,17 @@ class AuthController extends Controller
                 'fcm_token' => $fcmToken !== '' ? $fcmToken : ($farmer->fcm_token ?? null),
                 'updated_at' => now(),
             ]);
-            $farmer = DB::table('farmers')->where('id', $farmer->id)->first();
         }
+
+        DB::table('farmers')->where('id', $farmer->id)->update([
+            'active_session_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return [
             'force_logout' => false,
             'session_token' => $activeToken,
-            'farmer' => $farmer,
+            'farmer' => DB::table('farmers')->where('id', $farmer->id)->first(),
         ];
     }
 
@@ -213,3 +217,7 @@ class AuthController extends Controller
         ], 403);
     }
 }
+
+
+
+
