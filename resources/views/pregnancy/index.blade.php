@@ -100,9 +100,15 @@
                             if ($resultRaw === 'not_pregnant') {
                                 $resultAliases = array_merge($resultAliases, ['not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant', 'non preganant']);
                             }
+                            if ($resultRaw === 'pregnant') {
+                                $resultAliases = array_merge($resultAliases, ['preganant']);
+                            }
 
                             if ($statusRaw === 'not_pregnant') {
                                 $statusAliases = array_merge($statusAliases, ['not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant', 'non preganant']);
+                            }
+                            if ($statusRaw === 'pregnant') {
+                                $statusAliases = array_merge($statusAliases, ['preganant']);
                             }
 
                             if ($statusRaw === 'pregnancy_check_due') {
@@ -200,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         .split('|')
                         .map(normalizeTerm)
                         .filter(Boolean);
-                    isMatch = aliases.includes(q) || aliases.some((alias) => alias.includes(q));
+                    isMatch = aliases.includes(q);
                 } else {
                     const haystack = normalizeTerm(row.getAttribute('data-' + selectedField) || '');
                     isMatch = haystack.includes(q);
