@@ -1,3 +1,8 @@
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
 function updateMilkSummaryCards() {
     let morningTotal = 0;
     let afternoonTotal = 0;
@@ -51,7 +56,7 @@ function filterMilkRows() {
     document.querySelectorAll('.milk-row').forEach((row) => {
         const haystack = searchField === 'all'
             ? (row.dataset.search || '')
-            : (row.dataset[searchField] || '');
+            : datasetValue(row, searchField);
         const date = row.dataset.dateRaw || row.dataset.date || '';
         let shiftMatch = selectedShifts.length === 0;
         selectedShifts.forEach((shift) => {

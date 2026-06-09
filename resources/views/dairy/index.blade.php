@@ -37,7 +37,21 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Dairy List</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <input type="text" id="dairySearch" class="form-control" placeholder="Search dairy..." style="width:220px;">
+                <select id="dairySearchField" class="form-select" style="width:190px;">
+                    <option value="all">All Columns</option>
+                    <option value="farmer">Farmer</option>
+                    <option value="dairy-name">Dairy Name</option>
+                    <option value="gst-no">GST No.</option>
+                    <option value="contact">Contact</option>
+                    <option value="address">Address</option>
+                    <option value="city">City</option>
+                    <option value="taluka">Taluka</option>
+                    <option value="district">District</option>
+                    <option value="state">State</option>
+                    <option value="pincode">Pincode</option>
+                    <option value="status">Status</option>
+                </select>
+                <input type="text" id="dairySearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                 <button type="button" class="btn btn-light border" onclick="exportTableToPdf('dairyTableExport', 'Dairy List')" title="Download PDF">
                     <i class="fa-solid fa-file-pdf text-danger"></i>
                 </button>
@@ -73,7 +87,19 @@
                     </thead>
                     <tbody>
                         @forelse($dairies as $key => $dairy)
-                            <tr class="dairy-row" data-search="{{ strtolower(($dairy->farmer->first_name ?? '').' '.$dairy->dairy_name.' '.($dairy->city ?? '').' '.($dairy->district ?? '').' '.($dairy->contact_number ?? '')) }}">
+                            <tr class="dairy-row"
+                                data-all="{{ strtolower(trim(($dairy->farmer->first_name ?? '').' '.($dairy->farmer->last_name ?? '').' '.($dairy->dairy_name ?? '').' '.($dairy->gst_no ?? '').' '.($dairy->contact_number ?? '').' '.($dairy->address ?? '').' '.($dairy->city ?? '').' '.($dairy->taluka ?? '').' '.($dairy->district ?? '').' '.($dairy->state ?? '').' '.($dairy->pincode ?? '').' '.($dairy->is_active ? 'active' : 'inactive'))) }}"
+                                data-farmer="{{ strtolower(trim(($dairy->farmer->first_name ?? '').' '.($dairy->farmer->last_name ?? ''))) }}"
+                                data-dairy-name="{{ strtolower($dairy->dairy_name ?? '') }}"
+                                data-gst-no="{{ strtolower($dairy->gst_no ?? '') }}"
+                                data-contact="{{ strtolower($dairy->contact_number ?? '') }}"
+                                data-address="{{ strtolower($dairy->address ?? '') }}"
+                                data-city="{{ strtolower($dairy->city ?? '') }}"
+                                data-taluka="{{ strtolower($dairy->taluka ?? '') }}"
+                                data-district="{{ strtolower($dairy->district ?? '') }}"
+                                data-state="{{ strtolower($dairy->state ?? '') }}"
+                                data-pincode="{{ strtolower($dairy->pincode ?? '') }}"
+                                data-status="{{ $dairy->is_active ? 'active' : 'inactive' }}">
                                 <td>{{ $key + 1 }}</td>
                                 <td>{{ trim(($dairy->farmer->first_name ?? '').' '.($dairy->farmer->last_name ?? '')) ?: '-' }}</td>
                                 <td>{{ $dairy->dairy_name }}</td>

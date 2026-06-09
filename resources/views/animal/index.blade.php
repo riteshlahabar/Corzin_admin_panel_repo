@@ -46,7 +46,24 @@
                             <label class="btn btn-outline-primary active" for="type{{ $type->id }}">{{ $type->name }}</label>
                         @endforeach
                     </div>
-                    <input type="text" id="animalSearch" class="form-control" placeholder="Search Farmer / Mobile..." style="width:240px;">
+                    <select id="animalSearchField" class="form-select" style="width:190px;">
+                        <option value="all">All Columns</option>
+                        <option value="unique-id">Unique ID</option>
+                        <option value="farmer">Farmer</option>
+                        <option value="animal-name">Animal Name</option>
+                        <option value="tag-number">Tag Number</option>
+                        <option value="lactation-number">Lactation No.</option>
+                        <option value="ai-date">AI Date</option>
+                        <option value="breed-name">Breed Name</option>
+                        <option value="type-name">Type</option>
+                        <option value="pan-name">PAN</option>
+                        <option value="gender">Gender</option>
+                        <option value="birth-date">Birth Date</option>
+                        <option value="age">Age</option>
+                        <option value="weight">Weight</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <input type="text" id="animalSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                     <div class="input-group" style="width:260px;">
                         <input type="date" id="startDate" class="form-control">
                         <span class="input-group-text">to</span>
@@ -107,7 +124,21 @@
                         @forelse($animals as $key => $animal)
                         <tr class="animal-row"
                             data-type="{{ $animal->animal_type_id }}"
-                            data-search="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '').' '.($animal->farmer->mobile ?? '').' '.($animal->animal_name ?? '').' '.($animal->tag_number ?? '').' '.($animal->unique_id ?? '').' '.($animal->breed_name ?? '').' '.($animal->lactation_number ?? ''))) }}"
+                            data-all="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? '').' '.($animal->farmer->mobile ?? '').' '.($animal->animal_name ?? '').' '.($animal->tag_number ?? '').' '.($animal->unique_id ?? '').' '.($animal->breed_name ?? '').' '.($animal->lactation_number ?? '').' '.($animal->animalType->name ?? '').' '.($animal->pan->name ?? '').' '.($animal->gender ?? '').' '.($animal->birth_date ? \Carbon\Carbon::parse($animal->birth_date)->format('d-m-Y') : '').' '.($animal->calculated_age ?? '').' '.($animal->weight ?? '').' '.($animal->is_active ? 'active' : 'inactive'))) }}"
+                            data-unique-id="{{ strtolower($animal->unique_id ?? '') }}"
+                            data-farmer="{{ strtolower(trim(($animal->farmer->first_name ?? '').' '.($animal->farmer->last_name ?? ''))) }}"
+                            data-animal-name="{{ strtolower($animal->animal_name ?? '') }}"
+                            data-tag-number="{{ strtolower($animal->tag_number ?? '') }}"
+                            data-lactation-number="{{ strtolower((string) ($animal->lactation_number ?? '')) }}"
+                            data-ai-date="{{ strtolower($animal->ai_date ? \Carbon\Carbon::parse($animal->ai_date)->format('d-m-Y') : '') }}"
+                            data-breed-name="{{ strtolower($animal->breed_name ?? '') }}"
+                            data-type-name="{{ strtolower($animal->animalType->name ?? '') }}"
+                            data-pan-name="{{ strtolower($animal->pan->name ?? '') }}"
+                            data-gender="{{ strtolower($animal->gender ?? '') }}"
+                            data-birth-date="{{ strtolower($animal->birth_date ? \Carbon\Carbon::parse($animal->birth_date)->format('d-m-Y') : '') }}"
+                            data-age="{{ strtolower((string) ($animal->calculated_age ?? '')) }}"
+                            data-weight="{{ strtolower((string) ($animal->weight ?? '')) }}"
+                            data-status="{{ $animal->is_active ? 'active' : 'inactive' }}"
                             data-date="{{ optional($animal->created_at)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $animal->unique_id }}</td>

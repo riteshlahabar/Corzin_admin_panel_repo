@@ -1,9 +1,15 @@
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
 function getAnimalFilters() {
     const selectedTypes = [];
     document.querySelectorAll('.animal-filter:checked').forEach((item) => selectedTypes.push(item.value));
     return {
         selectedTypes,
         searchValue: document.getElementById('animalSearch')?.value.toLowerCase().trim() || '',
+        searchField: document.getElementById('animalSearchField')?.value || 'all',
         start: document.getElementById('startDate')?.value || '',
         end: document.getElementById('endDate')?.value || '',
     };
@@ -11,7 +17,9 @@ function getAnimalFilters() {
 
 function rowMatchesFilters(row, filters) {
     const type = row.dataset.type || '';
-    const haystack = row.dataset.search || '';
+    const haystack = filters.searchField === 'all'
+        ? (row.dataset.all || '')
+        : datasetValue(row, filters.searchField);
     const date = row.dataset.date || '';
 
     if (filters.selectedTypes.length && !filters.selectedTypes.includes(type)) return false;
@@ -139,6 +147,7 @@ document.querySelectorAll('.animal-filter').forEach((item) => {
 });
 
 document.getElementById('animalSearch')?.addEventListener('input', filterAnimals);
+document.getElementById('animalSearchField')?.addEventListener('change', filterAnimals);
 document.getElementById('startDate')?.addEventListener('change', filterAnimals);
 document.getElementById('endDate')?.addEventListener('change', filterAnimals);
 

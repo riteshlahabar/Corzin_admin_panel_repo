@@ -12,7 +12,22 @@
                 <h4 class="page-title mb-0">Farmer List</h4>
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <input type="text" id="farmerSearch" class="form-control" placeholder="Search Farmer..." style="width:220px;">
+                    <select id="farmerSearchField" class="form-select" style="width:190px;">
+                        <option value="all">All Columns</option>
+                        <option value="mobile">Mobile</option>
+                        <option value="first-name">First Name</option>
+                        <option value="middle-name">Middle Name</option>
+                        <option value="last-name">Last Name</option>
+                        <option value="village">Village</option>
+                        <option value="city">City</option>
+                        <option value="taluka">Taluka</option>
+                        <option value="district">District</option>
+                        <option value="state">State</option>
+                        <option value="pincode">Pincode</option>
+                        <option value="status">Status</option>
+                        <option value="last-app-activity">Last App Activity</option>
+                    </select>
+                    <input type="text" id="farmerSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
 
                     <div class="input-group" style="width:260px;">
                         <input type="date" id="startDate" class="form-control">
@@ -61,7 +76,19 @@
                     <tbody id="farmerTable">
                         @forelse($farmers as $key => $farmer)
                         <tr class="farmer-row"
-                            data-name="{{ strtolower(trim(($farmer->first_name ?? '').' '.($farmer->middle_name ?? '').' '.($farmer->last_name ?? '').' '.($farmer->mobile ?? '').' '.($farmer->village ?? '').' '.($farmer->city ?? '').' '.($farmer->taluka ?? '').' '.($farmer->district ?? '').' '.($farmer->state ?? '').' '.($farmer->is_active ? 'active' : 'inactive'))) }}"
+                            data-all="{{ strtolower(trim(($farmer->first_name ?? '').' '.($farmer->middle_name ?? '').' '.($farmer->last_name ?? '').' '.($farmer->mobile ?? '').' '.($farmer->village ?? '').' '.($farmer->city ?? '').' '.($farmer->taluka ?? '').' '.($farmer->district ?? '').' '.($farmer->state ?? '').' '.($farmer->pincode ?? '').' '.($farmer->is_active ? 'active' : 'inactive').' '.($farmer->active_session_at ? $farmer->active_session_at->format('d M Y h:i A') : 'never'))) }}"
+                            data-mobile="{{ strtolower($farmer->mobile ?? '') }}"
+                            data-first-name="{{ strtolower($farmer->first_name ?? '') }}"
+                            data-middle-name="{{ strtolower($farmer->middle_name ?? '') }}"
+                            data-last-name="{{ strtolower($farmer->last_name ?? '') }}"
+                            data-village="{{ strtolower($farmer->village ?? '') }}"
+                            data-city="{{ strtolower($farmer->city ?? '') }}"
+                            data-taluka="{{ strtolower($farmer->taluka ?? '') }}"
+                            data-district="{{ strtolower($farmer->district ?? '') }}"
+                            data-state="{{ strtolower($farmer->state ?? '') }}"
+                            data-pincode="{{ strtolower($farmer->pincode ?? '') }}"
+                            data-status="{{ $farmer->is_active ? 'active' : 'inactive' }}"
+                            data-last-app-activity="{{ strtolower($farmer->active_session_at ? $farmer->active_session_at->format('d M Y h:i A') : 'never') }}"
                             data-date="{{ optional($farmer->created_at)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $farmer->mobile }}</td>

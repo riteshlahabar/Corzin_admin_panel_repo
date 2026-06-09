@@ -37,7 +37,18 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Feeding Management</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <input type="text" id="feedingSearch" class="form-control" placeholder="Search farmer, animal, feed type..." style="width:260px;">
+                <select id="feedingSearchField" class="form-select" style="width:190px;">
+                    <option value="all">All Columns</option>
+                    <option value="farmer">Farmer</option>
+                    <option value="animal">Animal</option>
+                    <option value="feed-type">Feed Type</option>
+                    <option value="quantity">Quantity</option>
+                    <option value="unit">Unit</option>
+                    <option value="time">Time</option>
+                    <option value="date-text">Date</option>
+                    <option value="notes">Notes</option>
+                </select>
+                <input type="text" id="feedingSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -76,7 +87,15 @@
                     <tbody>
                         @forelse($records as $key => $record)
                         <tr class="feeding-row"
-                            data-search="{{ strtolower(trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? '').' '.($record->animal->animal_name ?? '').' '.($record->feedType->name ?? ''))) }}"
+                            data-all="{{ strtolower(trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? '').' '.($record->animal->animal_name ?? '').' '.($record->animal->tag_number ?? '').' '.($record->feedType->name ?? '').' '.($record->quantity ?? '').' '.($record->unit ?? '').' '.($record->feeding_time ?? '').' '.(optional($record->date)->format('d-m-Y') ?? '').' '.($record->notes ?? ''))) }}"
+                            data-farmer="{{ strtolower(trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? ''))) }}"
+                            data-animal="{{ strtolower(trim(($record->animal->animal_name ?? '').' '.(!empty($record->animal->tag_number) ? 'tag '.$record->animal->tag_number : ''))) }}"
+                            data-feed-type="{{ strtolower($record->feedType->name ?? '') }}"
+                            data-quantity="{{ strtolower(number_format($record->quantity, 2)) }}"
+                            data-unit="{{ strtolower($record->unit ?? '') }}"
+                            data-time="{{ strtolower($record->feeding_time ?? '') }}"
+                            data-date-text="{{ strtolower(optional($record->date)->format('d-m-Y') ?? '') }}"
+                            data-notes="{{ strtolower($record->notes ?? '') }}"
                             data-date="{{ optional($record->date)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? '')) ?: '-' }}</td>

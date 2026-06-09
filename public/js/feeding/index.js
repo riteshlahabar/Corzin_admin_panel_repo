@@ -1,10 +1,18 @@
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
 function filterFeedingRows() {
     const searchValue = document.getElementById('feedingSearch')?.value.toLowerCase().trim() || '';
+    const searchField = document.getElementById('feedingSearchField')?.value || 'all';
     const start = document.getElementById('startDate')?.value || '';
     const end = document.getElementById('endDate')?.value || '';
 
     document.querySelectorAll('.feeding-row').forEach((row) => {
-        const haystack = row.dataset.search || '';
+        const haystack = searchField === 'all'
+            ? (row.dataset.all || '')
+            : datasetValue(row, searchField);
         const date = row.dataset.date || '';
         let show = true;
 
@@ -68,5 +76,6 @@ function exportTableToPdf(tableId, title) {
 }
 
 document.getElementById('feedingSearch')?.addEventListener('input', filterFeedingRows);
+document.getElementById('feedingSearchField')?.addEventListener('change', filterFeedingRows);
 document.getElementById('startDate')?.addEventListener('change', filterFeedingRows);
 document.getElementById('endDate')?.addEventListener('change', filterFeedingRows);

@@ -1,10 +1,18 @@
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
 function filterHealthRows() {
     const searchValue = (document.getElementById('healthSearch')?.value || '').toLowerCase().trim();
+    const searchField = document.getElementById('healthSearchField')?.value || 'all';
     const start = document.getElementById('startDate')?.value || '';
     const end = document.getElementById('endDate')?.value || '';
 
     document.querySelectorAll('.health-row').forEach((row) => {
-        const haystack = row.dataset.search || '';
+        const haystack = searchField === 'all'
+            ? (row.dataset.all || '')
+            : datasetValue(row, searchField);
         const date = row.dataset.date || '';
         let show = true;
 
@@ -68,5 +76,6 @@ function exportTableToPdf(tableId, title) {
 }
 
 document.getElementById('healthSearch')?.addEventListener('input', filterHealthRows);
+document.getElementById('healthSearchField')?.addEventListener('change', filterHealthRows);
 document.getElementById('startDate')?.addEventListener('change', filterHealthRows);
 document.getElementById('endDate')?.addEventListener('change', filterHealthRows);

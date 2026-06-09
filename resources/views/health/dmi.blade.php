@@ -29,7 +29,18 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">{{ $title }}</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <input type="text" id="healthSearch" class="form-control" placeholder="Search DMI..." style="width:220px;">
+                <select id="healthSearchField" class="form-select" style="width:190px;">
+                    <option value="all">All Columns</option>
+                    <option value="farmer">Farmer</option>
+                    <option value="animal">Animal</option>
+                    <option value="tag">Tag</option>
+                    <option value="body-weight">Body Weight</option>
+                    <option value="total-milk">Total Milk</option>
+                    <option value="required-dmi">Required DMI</option>
+                    <option value="actual-dmi">Actual DMI</option>
+                    <option value="date-text">Date</option>
+                </select>
+                <input type="text" id="healthSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -110,7 +121,17 @@
                                 $status = strtolower((string) ($row->alert_status ?? ''));
                                 $isBalanced = str_contains($status, 'balanced') || str_contains($status, 'auto');
                             @endphp
-                            <tr class="health-row" data-search="{{ $searchText }}" data-date="{{ optional($row->date)->format('Y-m-d') }}">
+                            <tr class="health-row"
+                                data-all="{{ $searchText.' '.strtolower((string) ($row->body_weight ?? '')).' '.strtolower((string) ($row->total_milk ?? '')).' '.strtolower((string) ($row->required_dmi ?? '')).' '.strtolower((string) ($row->actual_dmi ?? '')).' '.strtolower(optional($row->date)->format('d-m-Y') ?? '') }}"
+                                data-farmer="{{ strtolower(trim(($row->farmer->first_name ?? '') . ' ' . ($row->farmer->last_name ?? ''))) }}"
+                                data-animal="{{ strtolower($row->animal->animal_name ?? '') }}"
+                                data-tag="{{ strtolower($row->animal->tag_number ?? '') }}"
+                                data-body-weight="{{ strtolower((string) ($row->body_weight ?? '')) }}"
+                                data-total-milk="{{ strtolower((string) ($row->total_milk ?? '')) }}"
+                                data-required-dmi="{{ strtolower((string) ($row->required_dmi ?? '')) }}"
+                                data-actual-dmi="{{ strtolower((string) ($row->actual_dmi ?? '')) }}"
+                                data-date-text="{{ strtolower(optional($row->date)->format('d-m-Y') ?? '') }}"
+                                data-date="{{ optional($row->date)->format('Y-m-d') }}">
                                 <td>{{ $key + 1 }}</td>
                                 <td>{{ trim(($row->farmer->first_name ?? '') . ' ' . ($row->farmer->last_name ?? '')) ?: '-' }}</td>
                                 <td>{{ $row->animal->animal_name ?? '-' }}</td>

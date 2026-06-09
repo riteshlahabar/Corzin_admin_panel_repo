@@ -10,7 +10,23 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">{{ $title }}</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <input type="text" id="healthSearch" class="form-control" placeholder="Search mastitis..." style="width:220px;">
+                <select id="healthSearchField" class="form-select" style="width:190px;">
+                    <option value="all">All Columns</option>
+                    <option value="farmer">Farmer</option>
+                    <option value="animal">Animal</option>
+                    <option value="tag">Tag</option>
+                    <option value="test-result">Test Result</option>
+                    <option value="treatment">Treatment</option>
+                    <option value="recovery-status">Recovery Status</option>
+                    <option value="quarter">Quarter</option>
+                    <option value="clinical-type">Clinical Type</option>
+                    <option value="cmt-score">CMT Score</option>
+                    <option value="scc-count">SCC Count</option>
+                    <option value="date-text">Date</option>
+                    <option value="follow-up-date">Follow-up Date</option>
+                    <option value="notes">Notes</option>
+                </select>
+                <input type="text" id="healthSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -55,7 +71,20 @@
                         @forelse($rows as $key => $row)
                             <tr
                                 class="health-row"
-                                data-search="{{ strtolower(trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? '').' '.($row->animal->animal_name ?? '').' '.($row->animal->tag_number ?? '').' '.($row->test_result ?? '').' '.($row->recovery_status ?? '').' '.($row->quarter ?? '').' '.($row->clinical_type ?? '').' '.($row->cmt_score ?? ''))) }}"
+                                data-all="{{ strtolower(trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? '').' '.($row->animal->animal_name ?? '').' '.($row->animal->tag_number ?? '').' '.($row->test_result ?? '').' '.($row->treatment ?? '').' '.($row->recovery_status ?? '').' '.($row->quarter ?? '').' '.($row->clinical_type ?? '').' '.($row->cmt_score ?? '').' '.($row->scc_count ?? '').' '.(optional($row->date)->format('d-m-Y') ?? '').' '.(optional($row->follow_up_date)->format('d-m-Y') ?? '').' '.($row->notes ?? ''))) }}"
+                                data-farmer="{{ strtolower(trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? ''))) }}"
+                                data-animal="{{ strtolower($row->animal->animal_name ?? '') }}"
+                                data-tag="{{ strtolower($row->animal->tag_number ?? '') }}"
+                                data-test-result="{{ strtolower($row->test_result ?? '') }}"
+                                data-treatment="{{ strtolower($row->treatment ?? '') }}"
+                                data-recovery-status="{{ strtolower($row->recovery_status ?? '') }}"
+                                data-quarter="{{ strtolower($row->quarter ?? '') }}"
+                                data-clinical-type="{{ strtolower($row->clinical_type ?? '') }}"
+                                data-cmt-score="{{ strtolower($row->cmt_score ?? '') }}"
+                                data-scc-count="{{ strtolower($row->scc_count !== null ? number_format((float) $row->scc_count, 2) : '') }}"
+                                data-date-text="{{ strtolower(optional($row->date)->format('d-m-Y') ?? '') }}"
+                                data-follow-up-date="{{ strtolower(optional($row->follow_up_date)->format('d-m-Y') ?? '') }}"
+                                data-notes="{{ strtolower($row->notes ?? '') }}"
                                 data-date="{{ optional($row->date)->format('Y-m-d') }}"
                             >
                                 <td>{{ $key + 1 }}</td>
@@ -198,4 +227,3 @@
 @push('scripts')
 <script src="{{ asset('js/health/index.js') }}"></script>
 @endpush
-

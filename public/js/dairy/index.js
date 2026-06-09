@@ -1,12 +1,23 @@
-document.getElementById('dairySearch')?.addEventListener('input', function () {
-    const value = this.value.toLowerCase().trim();
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
+function filterDairyRows() {
+    const value = document.getElementById('dairySearch')?.value.toLowerCase().trim() || '';
+    const searchField = document.getElementById('dairySearchField')?.value || 'all';
     document.querySelectorAll('.dairy-row').forEach((row) => {
-        const haystack = row.dataset.search || '';
+        const haystack = searchField === 'all'
+            ? (row.dataset.all || '')
+            : datasetValue(row, searchField);
         row.style.display = haystack.includes(value) ? '' : 'none';
     });
 
     window.CorzinTablePagination?.refresh('dairyTableExport');
-});
+}
+
+document.getElementById('dairySearch')?.addEventListener('input', filterDairyRows);
+document.getElementById('dairySearchField')?.addEventListener('change', filterDairyRows);
 
 function exportTableToExcel(tableId, filename) {
     const table = document.getElementById(tableId);

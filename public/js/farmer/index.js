@@ -1,10 +1,18 @@
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
 function filterFarmers() {
     const searchValue = document.getElementById('farmerSearch')?.value.toLowerCase().trim() || '';
+    const searchField = document.getElementById('farmerSearchField')?.value || 'all';
     const start = document.getElementById('startDate')?.value || '';
     const end = document.getElementById('endDate')?.value || '';
 
     document.querySelectorAll('.farmer-row').forEach((row) => {
-        const haystack = row.dataset.name || '';
+        const haystack = searchField === 'all'
+            ? (row.dataset.all || '')
+            : datasetValue(row, searchField);
         const date = row.dataset.date || '';
         let show = true;
 
@@ -75,5 +83,6 @@ function exportTableToPdf(tableId, title) {
 }
 
 document.getElementById('farmerSearch')?.addEventListener('input', filterFarmers);
+document.getElementById('farmerSearchField')?.addEventListener('change', filterFarmers);
 document.getElementById('startDate')?.addEventListener('change', filterFarmers);
 document.getElementById('endDate')?.addEventListener('change', filterFarmers);

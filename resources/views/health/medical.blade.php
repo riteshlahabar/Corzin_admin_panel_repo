@@ -10,7 +10,18 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">{{ $title }}</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <input type="text" id="healthSearch" class="form-control" placeholder="Search medical..." style="width:220px;">
+                <select id="healthSearchField" class="form-select" style="width:190px;">
+                    <option value="all">All Columns</option>
+                    <option value="farmer">Farmer</option>
+                    <option value="animal">Animal</option>
+                    <option value="tag">Tag</option>
+                    <option value="medicine-name">Medicine Name</option>
+                    <option value="dose">Dose</option>
+                    <option value="disease">Disease</option>
+                    <option value="date-text">Date</option>
+                    <option value="notes">Notes</option>
+                </select>
+                <input type="text" id="healthSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -32,7 +43,17 @@
                     </thead>
                     <tbody>
                         @forelse($rows as $key => $row)
-                        <tr class="health-row" data-search="{{ strtolower(trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? '').' '.($row->animal->animal_name ?? '').' '.($row->animal->tag_number ?? '').' '.($row->medicine_name ?? '').' '.($row->disease ?? ''))) }}" data-date="{{ optional($row->date)->format('Y-m-d') }}">
+                        <tr class="health-row"
+                            data-all="{{ strtolower(trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? '').' '.($row->animal->animal_name ?? '').' '.($row->animal->tag_number ?? '').' '.($row->medicine_name ?? '').' '.($row->dose ?? '').' '.($row->disease ?? '').' '.(optional($row->date)->format('d-m-Y') ?? '').' '.($row->notes ?? ''))) }}"
+                            data-farmer="{{ strtolower(trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? ''))) }}"
+                            data-animal="{{ strtolower($row->animal->animal_name ?? '') }}"
+                            data-tag="{{ strtolower($row->animal->tag_number ?? '') }}"
+                            data-medicine-name="{{ strtolower($row->medicine_name ?? '') }}"
+                            data-dose="{{ strtolower($row->dose ?? '') }}"
+                            data-disease="{{ strtolower($row->disease ?? '') }}"
+                            data-date-text="{{ strtolower(optional($row->date)->format('d-m-Y') ?? '') }}"
+                            data-notes="{{ strtolower($row->notes ?? '') }}"
+                            data-date="{{ optional($row->date)->format('Y-m-d') }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ trim(($row->farmer->first_name ?? '').' '.($row->farmer->last_name ?? '')) ?: '-' }}</td>
                             <td>{{ $row->animal->animal_name ?? '-' }}</td>
