@@ -27,9 +27,11 @@ class DoctorAppointmentController extends Controller
 
         $representative = $this->representativeAppointments($rows);
 
+        $searchField = strtolower(trim((string) $request->query('search_field', 'all')));
+
         if ($request->filled('search')) {
             $search = strtolower(trim((string) $request->search));
-            $representative = $representative->filter(function (DoctorAppointment $row) use ($search) {
+            $representative = $representative->filter(function (DoctorAppointment $row) use ($search, $searchField) {
                 $doctorName = $row->admin_doctor_name === '-'
                     ? ''
                     : strtolower((string) $row->admin_doctor_name);
@@ -44,16 +46,36 @@ class DoctorAppointmentController extends Controller
                 $appointmentCode = strtolower((string) $row->appointment_code);
                 $requestedAt = strtolower((string) optional($row->requested_at ?: $row->created_at)?->format('d-m-Y h:i A'));
                 $status = strtolower((string) $row->status);
+                $fieldMap = [
+                    'all' => strtolower(trim(implode(' ', array_filter([
+                        $row->farmer_name,
+                        $farmerFullName,
+                        $row->animal_name,
+                        $row->concern,
+                        $doctorName,
+                        $doctorAltName,
+                        $appointmentCode,
+                        $requestedAt,
+                        $status,
+                    ])))),
+                    'appointment-id' => $appointmentCode,
+                    'farmer' => strtolower(trim(implode(' ', array_filter([
+                        $row->farmer_name,
+                        $farmerFullName,
+                    ])))),
+                    'animal' => strtolower((string) $row->animal_name),
+                    'disease' => strtolower((string) $row->concern),
+                    'created-at' => $requestedAt,
+                    'doctor' => strtolower(trim(implode(' ', array_filter([
+                        $doctorName,
+                        $doctorAltName,
+                    ])))),
+                    'status' => $status,
+                ];
 
-                return str_contains(strtolower((string) $row->farmer_name), $search)
-                    || str_contains($farmerFullName, $search)
-                    || str_contains(strtolower((string) $row->animal_name), $search)
-                    || str_contains(strtolower((string) $row->concern), $search)
-                    || str_contains($doctorName, $search)
-                    || str_contains($doctorAltName, $search)
-                    || str_contains($appointmentCode, $search)
-                    || str_contains($requestedAt, $search)
-                    || str_contains($status, $search);
+                $haystack = $fieldMap[$searchField] ?? $fieldMap['all'];
+
+                return str_contains($haystack, $search);
             })->values();
         }
 

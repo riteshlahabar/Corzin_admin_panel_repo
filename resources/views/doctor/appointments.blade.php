@@ -70,6 +70,18 @@
                 @if(request('per_page'))
                     <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                 @endif
+                <div class="col-md-3 col-lg-2">
+                    <select id="appointmentsSearchField" name="search_field" class="form-select">
+                        <option value="all" {{ request('search_field', 'all') === 'all' ? 'selected' : '' }}>All</option>
+                        <option value="appointment-id" {{ request('search_field') === 'appointment-id' ? 'selected' : '' }}>Appointment ID</option>
+                        <option value="farmer" {{ request('search_field') === 'farmer' ? 'selected' : '' }}>Farmer</option>
+                        <option value="animal" {{ request('search_field') === 'animal' ? 'selected' : '' }}>Animal</option>
+                        <option value="disease" {{ request('search_field') === 'disease' ? 'selected' : '' }}>Disease</option>
+                        <option value="created-at" {{ request('search_field') === 'created-at' ? 'selected' : '' }}>Created At</option>
+                        <option value="doctor" {{ request('search_field') === 'doctor' ? 'selected' : '' }}>Doctor</option>
+                        <option value="status" {{ request('search_field') === 'status' ? 'selected' : '' }}>Status</option>
+                    </select>
+                </div>
                 <div class="col-md-4 col-lg-3">
                     <input
                         id="appointmentsSearchInput"
@@ -163,6 +175,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const input = document.getElementById('appointmentsSearchInput');
+    const field = document.getElementById('appointmentsSearchField');
     const form = document.getElementById('appointmentsSearchForm');
     if (!input || !form) return;
 
@@ -172,6 +185,10 @@ document.addEventListener('DOMContentLoaded', function () {
         timer = setTimeout(function () {
             form.submit();
         }, 350);
+    });
+
+    field?.addEventListener('change', function () {
+        form.submit();
     });
 });
 </script>

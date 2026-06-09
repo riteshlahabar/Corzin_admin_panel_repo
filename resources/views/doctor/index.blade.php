@@ -83,7 +83,20 @@
                         <label class="btn btn-outline-success doctor-filter-btn" for="filterUnapproved">Unapproved</label>
                     </div>
 
-                    <input type="text" id="doctorSearch" class="form-control doctor-search-input" placeholder="Search Doctor...">
+                    <select id="doctorSearchField" class="form-select doctor-search-field">
+                        <option value="all">All Columns</option>
+                        <option value="name">Name</option>
+                        <option value="clinic-name">Clinic Name</option>
+                        <option value="degree">Degree</option>
+                        <option value="mmc-number">MMC Reg No.</option>
+                        <option value="city">City</option>
+                        <option value="contact">Contact</option>
+                        <option value="register-date">Register Date</option>
+                        <option value="status">Status</option>
+                        <option value="active-status">Active / Inactive</option>
+                    </select>
+
+                    <input type="text" id="doctorSearch" class="form-control doctor-search-input" placeholder="Search selected field...">
 
                     <div class="input-group doctor-date-group">
                         <input type="date" id="doctorDateFrom" class="form-control" title="From date">
@@ -128,7 +141,18 @@
                                 $doctorStatus = ($doctor->status ?? 'pending') === 'approved' ? 'approved' : 'unapproved';
                                 $doctorDate = optional($doctor->created_at)->format('Y-m-d');
                             @endphp
-                            <tr class="doctor-row" data-status="{{ $doctorStatus }}" data-created="{{ $doctorDate }}" data-search="{{ strtolower(($doctor->full_name ?: $doctor->name).' '.($doctor->clinic_name ?? '').' '.($doctor->degree ?: $doctor->speciality).' '.($doctor->mmc_registration_number ?? '').' '.($doctor->city ?? $doctor->location ?? '').' '.($doctor->contact_number ?? $doctor->phone ?? '').' '.($doctor->email ?? '')) }}">
+                            <tr class="doctor-row"
+                                data-status="{{ $doctorStatus }}"
+                                data-created="{{ $doctorDate }}"
+                                data-all="{{ strtolower(($doctor->full_name ?: $doctor->name).' '.($doctor->clinic_name ?? '').' '.($doctor->degree ?: $doctor->speciality).' '.($doctor->mmc_registration_number ?? '').' '.($doctor->city ?? $doctor->location ?? '').' '.($doctor->contact_number ?? $doctor->phone ?? '').' '.($doctor->email ?? '').' '.optional($doctor->created_at)->format('d-m-Y h:i A').' '.(($doctor->is_active_for_appointments ?? false) ? 'active' : 'inactive').' '.(($doctor->status ?? 'pending') === 'approved' ? 'approved' : 'unapproved')) }}"
+                                data-name="{{ strtolower($doctor->full_name ?: $doctor->name) }}"
+                                data-clinic-name="{{ strtolower($doctor->clinic_name ?? '') }}"
+                                data-degree="{{ strtolower($doctor->degree ?: $doctor->speciality ?: '') }}"
+                                data-mmc-number="{{ strtolower($doctor->mmc_registration_number ?? '') }}"
+                                data-city="{{ strtolower($doctor->city ?: $doctor->location ?: '') }}"
+                                data-contact="{{ strtolower($doctor->contact_number ?: $doctor->phone ?: '') }}"
+                                data-register-date="{{ strtolower(optional($doctor->created_at)->format('d-m-Y h:i A') ?: '') }}"
+                                data-active-status="{{ ($doctor->is_active_for_appointments ?? false) ? 'active' : 'inactive' }}">
                                 <td>{{ $key + 1 }}</td>
                                 <td>
                                     <div>
@@ -255,6 +279,12 @@
     }
     .doctor-search-input {
         width: 220px;
+    }
+    .doctor-search-field {
+        width: 190px;
+        min-width: 190px;
+        height: 38px;
+        border-radius: 10px;
     }
     .doctor-date-group {
         width: 260px;

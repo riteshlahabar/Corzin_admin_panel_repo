@@ -1,12 +1,20 @@
+function datasetValue(row, field) {
+    const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    return row.dataset[key] || '';
+}
+
 function filterDoctorRows() {
     const searchValue = (document.getElementById('doctorSearch')?.value || '').toLowerCase().trim();
+    const searchField = document.getElementById('doctorSearchField')?.value || 'all';
     const fromDate = document.getElementById('doctorDateFrom')?.value || '';
     const toDate = document.getElementById('doctorDateTo')?.value || '';
     const showApproved = document.getElementById('filterApproved')?.checked ?? true;
     const showUnapproved = document.getElementById('filterUnapproved')?.checked ?? true;
 
     document.querySelectorAll('.doctor-row').forEach((row) => {
-        const haystack = row.dataset.search || '';
+        const haystack = searchField === 'all'
+            ? (row.dataset.all || '')
+            : datasetValue(row, searchField);
         const rowStatus = row.dataset.status || 'unapproved';
         const rowDate = row.dataset.created || '';
 
@@ -22,6 +30,7 @@ function filterDoctorRows() {
 }
 
 document.getElementById('doctorSearch')?.addEventListener('input', filterDoctorRows);
+document.getElementById('doctorSearchField')?.addEventListener('change', filterDoctorRows);
 document.getElementById('doctorDateFrom')?.addEventListener('change', filterDoctorRows);
 document.getElementById('doctorDateTo')?.addEventListener('change', filterDoctorRows);
 document.getElementById('filterApproved')?.addEventListener('change', filterDoctorRows);
