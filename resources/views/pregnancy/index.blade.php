@@ -75,7 +75,11 @@
                             $serviceNo = (string) ($record->service_no ?? '-');
                             $aiDate = optional($record->ai_date)->format('d-m-Y') ?: '-';
                             $checkDue = optional($record->pregnancy_check_due_date)->format('d-m-Y') ?: '-';
-                            $expectedCalving = optional($record->expected_calving_date)->format('d-m-Y') ?: '-';
+                            $shouldShowExpectedCalving = in_array($record->pregnancy_result, ['pending', 'pregnant'], true)
+                                && !in_array($record->status, ['not_pregnant', 'repeat_heat', 'aborted'], true);
+                            $expectedCalving = $shouldShowExpectedCalving
+                                ? (optional($record->expected_calving_date)->format('d-m-Y') ?: '-')
+                                : '-';
                             $result = str_replace('_', ' ', ucfirst($record->pregnancy_result));
                             $status = str_replace('_', ' ', ucfirst($record->status));
                             $current = $record->is_current ? 'Yes' : 'No';
