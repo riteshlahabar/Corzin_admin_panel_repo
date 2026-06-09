@@ -80,10 +80,41 @@
                             $expectedCalving = $shouldShowExpectedCalving
                                 ? (optional($record->expected_calving_date)->format('d-m-Y') ?: '-')
                                 : '-';
+                            $resultRaw = strtolower((string) ($record->pregnancy_result ?? ''));
+                            $statusRaw = strtolower((string) ($record->status ?? ''));
                             $result = str_replace('_', ' ', ucfirst($record->pregnancy_result));
                             $status = str_replace('_', ' ', ucfirst($record->status));
                             $current = $record->is_current ? 'Yes' : 'No';
                             $notes = $record->notes ?: '-';
+                            $resultAliases = [
+                                $resultRaw,
+                                str_replace('_', ' ', $resultRaw),
+                                str_replace('_', '', $resultRaw),
+                            ];
+                            $statusAliases = [
+                                $statusRaw,
+                                str_replace('_', ' ', $statusRaw),
+                                str_replace('_', '', $statusRaw),
+                            ];
+
+                            if ($resultRaw === 'not_pregnant') {
+                                $resultAliases = array_merge($resultAliases, ['not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant', 'non preganant']);
+                            }
+
+                            if ($statusRaw === 'not_pregnant') {
+                                $statusAliases = array_merge($statusAliases, ['not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant', 'non preganant']);
+                            }
+
+                            if ($statusRaw === 'pregnancy_check_due') {
+                                $statusAliases = array_merge($statusAliases, ['pregnancy check due', 'check due']);
+                            }
+
+                            if ($statusRaw === 'repeat_heat') {
+                                $statusAliases = array_merge($statusAliases, ['repeat heat', 'repeatheat']);
+                            }
+
+                            $resultSearch = strtolower(implode('|', array_values(array_unique(array_filter($resultAliases)))));
+                            $statusSearch = strtolower(implode('|', array_values(array_unique(array_filter($statusAliases)))));
                             $allSearch = strtolower(implode(' ', [
                                 $farmerName,
                                 $animalName,
@@ -94,6 +125,8 @@
                                 $expectedCalving,
                                 $result,
                                 $status,
+                                str_replace('|', ' ', $resultSearch),
+                                str_replace('|', ' ', $statusSearch),
                                 $current,
                                 $notes,
                             ]));
@@ -108,7 +141,9 @@
                             data-check-due="{{ strtolower($checkDue) }}"
                             data-expected-calving="{{ strtolower($expectedCalving) }}"
                             data-result="{{ strtolower($result) }}"
+                            data-result-search="{{ $resultSearch }}"
                             data-status="{{ strtolower($status) }}"
+                            data-status-search="{{ $statusSearch }}"
                             data-current="{{ strtolower($current) }}"
                             data-notes="{{ strtolower($notes) }}">
                             <td>{{ $key + 1 }}</td>
@@ -139,16 +174,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const input = document.getElementById('pregnancySearch');
     const field = document.getElementById('pregnancySearchField');
     if (!input || !field) return;
+    const exactAliasFields = new Set(['status', 'result']);
+
+    function normalizeTerm(value) {
+        return (value || '')
+            .toLowerCase()
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
     function filterRows() {
-        const q = input.value.toLowerCase().trim();
+        const q = normalizeTerm(input.value);
         const selectedField = field.value;
 
         document.querySelectorAll('.pregnancy-row').forEach((row) => {
-            const haystack = selectedField === 'all'
-                ? (row.getAttribute('data-all') || '')
-                : (row.getAttribute('data-' + selectedField) || '');
-            row.style.display = haystack.includes(q) ? '' : 'none';
+            let isMatch = true;
+
+            if (q !== '') {
+                if (selectedField === 'all') {
+                    const haystack = normalizeTerm(row.getAttribute('data-all') || '');
+                    isMatch = haystack.includes(q);
+                } else if (exactAliasFields.has(selectedField)) {
+                    const aliases = (row.getAttribute('data-' + selectedField + '-search') || row.getAttribute('data-' + selectedField) || '')
+                        .split('|')
+                        .map(normalizeTerm)
+                        .filter(Boolean);
+                    isMatch = aliases.includes(q) || aliases.some((alias) => alias.includes(q));
+                } else {
+                    const haystack = normalizeTerm(row.getAttribute('data-' + selectedField) || '');
+                    isMatch = haystack.includes(q);
+                }
+            }
+
+            row.style.display = isMatch ? '' : 'none';
         });
     }
 
