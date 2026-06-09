@@ -27,16 +27,16 @@
 
 <div class="row g-3 mb-3">
     <div class="col-md-6 col-lg-3">
-        <div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Total Dairies</small><h3 class="mt-2 mb-1">{{ number_format($totalDairies) }}</h3><span class="text-muted">Filtered dairy base</span></div></div>
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #0f766e, #14b8a6);"><div class="card-body"><small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Total Dairies</small><h3 class="mt-2 mb-1">{{ number_format($totalDairies) }}</h3><span style="color: rgba(255,255,255,.82);">Filtered dairy base</span></div></div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Active Dairies</small><h3 class="mt-2 mb-1">{{ number_format($activeDairies) }}</h3><span class="text-muted">{{ number_format($attachedFarmers) }} farmers attached</span></div></div>
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #1d4ed8, #60a5fa);"><div class="card-body"><small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Active Dairies</small><h3 class="mt-2 mb-1">{{ number_format($activeDairies) }}</h3><span style="color: rgba(255,255,255,.82);">{{ number_format($attachedFarmers) }} farmers attached</span></div></div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Milk Collection</small><h3 class="mt-2 mb-1">{{ number_format($milkVolume, 2) }} L</h3><span class="{{ $milkGrowthRate >= 0 ? 'text-success' : 'text-danger' }}">{{ $milkGrowthRate >= 0 ? '+' : '' }}{{ $milkGrowthRate }}% vs previous</span></div></div>
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #be123c, #fb7185);"><div class="card-body"><small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Milk Collection</small><h3 class="mt-2 mb-1">{{ number_format($milkVolume, 2) }} L</h3><span style="color: rgba(255,255,255,.82);">{{ $milkGrowthRate >= 0 ? '+' : '' }}{{ $milkGrowthRate }}% vs previous</span></div></div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="card h-100 border-0 shadow-sm"><div class="card-body"><small class="text-uppercase text-muted fw-semibold">Paid Amount</small><h3 class="mt-2 mb-1">Rs {{ number_format($paidAmount, 2) }}</h3><span class="{{ $paymentGrowthRate >= 0 ? 'text-success' : 'text-danger' }}">{{ $paymentGrowthRate >= 0 ? '+' : '' }}{{ $paymentGrowthRate }}% vs previous</span></div></div>
+        <div class="card h-100 border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #b45309, #f59e0b);"><div class="card-body"><small class="text-uppercase fw-semibold" style="color: rgba(255,255,255,.8);">Paid Amount</small><h3 class="mt-2 mb-1">Rs {{ number_format($paidAmount, 2) }}</h3><span style="color: rgba(255,255,255,.82);">{{ $paymentGrowthRate >= 0 ? '+' : '' }}{{ $paymentGrowthRate }}% vs previous</span></div></div>
     </div>
 </div>
 
