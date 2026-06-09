@@ -7,7 +7,7 @@
             <div class="card bg-warning-subtle">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Morning Milk</h5>
-                    <h2 class="fw-bold mb-0">{{ number_format($summary['morning'], 1) }} L</h2>
+                    <h2 class="fw-bold mb-0" id="summaryMorning">{{ number_format($summary['morning'], 1) }} L</h2>
                 </div>
             </div>
         </div>
@@ -15,7 +15,7 @@
             <div class="card bg-info-subtle">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Afternoon Milk</h5>
-                    <h2 class="fw-bold mb-0">{{ number_format($summary['afternoon'], 1) }} L</h2>
+                    <h2 class="fw-bold mb-0" id="summaryAfternoon">{{ number_format($summary['afternoon'], 1) }} L</h2>
                 </div>
             </div>
         </div>
@@ -23,7 +23,7 @@
             <div class="card bg-secondary-subtle">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Evening Milk</h5>
-                    <h2 class="fw-bold mb-0">{{ number_format($summary['evening'], 1) }} L</h2>
+                    <h2 class="fw-bold mb-0" id="summaryEvening">{{ number_format($summary['evening'], 1) }} L</h2>
                 </div>
             </div>
         </div>
@@ -31,7 +31,7 @@
             <div class="card bg-success-subtle">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Avg FAT</h5>
-                    <h2 class="fw-bold mb-0">{{ number_format($summary['fat'], 1) }} %</h2>
+                    <h2 class="fw-bold mb-0" id="summaryFat">{{ number_format($summary['fat'], 1) }} %</h2>
                 </div>
             </div>
         </div>
@@ -49,7 +49,21 @@
                     <input type="checkbox" class="btn-check shift-filter" id="eveningCheck" value="evening" checked>
                     <label class="btn btn-outline-primary active" for="eveningCheck">Evening</label>
                 </div>
-                <input type="text" id="milkSearch" class="form-control" placeholder="Search farmer, animal, dairy..." style="width:300px;">
+                <select id="milkSearchField" class="form-select" style="width:190px;">
+                    <option value="all">All Columns</option>
+                    <option value="date">Date</option>
+                    <option value="farmer">Farmer</option>
+                    <option value="dairy">Dairy</option>
+                    <option value="animal">Animal</option>
+                    <option value="morning-text">Morning (L)</option>
+                    <option value="afternoon-text">Afternoon (L)</option>
+                    <option value="evening-text">Evening (L)</option>
+                    <option value="total">Total (L)</option>
+                    <option value="fat">FAT</option>
+                    <option value="snf">SNF</option>
+                    <option value="rate">Rate</option>
+                </select>
+                <input type="text" id="milkSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                 <div class="input-group" style="width:260px;">
                     <input type="date" id="startDate" class="form-control">
                     <span class="input-group-text">to</span>
@@ -91,11 +105,24 @@
                         <tr class="milk-row"
                             data-farmer="{{ strtolower(trim(($milk->animal->farmer->first_name ?? '').' '.($milk->animal->farmer->last_name ?? ''))) }}"
                             data-dairy="{{ strtolower($milk->dairy->dairy_name ?? '') }}"
-                            data-search="{{ strtolower(trim(($milk->animal->farmer->first_name ?? '').' '.($milk->animal->farmer->last_name ?? '').' '.($milk->dairy->dairy_name ?? '').' '.($milk->animal->animal_name ?? ''))) }}"
-                            data-date="{{ $milk->date }}"
+                            data-animal="{{ strtolower($milk->animal->animal_name ?? '') }}"
+                            data-date="{{ strtolower(\Carbon\Carbon::parse($milk->date)->format('d-m-Y')) }}"
+                            data-date-raw="{{ $milk->date }}"
+                            data-search="{{ strtolower(trim(($milk->animal->farmer->first_name ?? '').' '.($milk->animal->farmer->last_name ?? '').' '.($milk->dairy->dairy_name ?? '').' '.($milk->animal->animal_name ?? '').' '.\Carbon\Carbon::parse($milk->date)->format('d-m-Y').' '.($milk->morning_milk ?? 0).' '.($milk->afternoon_milk ?? 0).' '.($milk->evening_milk ?? 0).' '.($milk->total_milk ?? 0).' '.($milk->fat ?? '').' '.($milk->snf ?? '').' '.($milk->rate ?? ''))) }}"
                             data-morning="{{ $milk->morning_milk > 0 ? 1 : 0 }}"
                             data-afternoon="{{ ($milk->afternoon_milk ?? 0) > 0 ? 1 : 0 }}"
-                            data-evening="{{ $milk->evening_milk > 0 ? 1 : 0 }}">
+                            data-evening="{{ $milk->evening_milk > 0 ? 1 : 0 }}"
+                            data-morning-text="{{ strtolower((string) ($milk->morning_milk ?? 0)) }}"
+                            data-afternoon-text="{{ strtolower((string) ($milk->afternoon_milk ?? 0)) }}"
+                            data-evening-text="{{ strtolower((string) ($milk->evening_milk ?? 0)) }}"
+                            data-total="{{ strtolower((string) ($milk->total_milk ?? 0)) }}"
+                            data-fat="{{ strtolower((string) ($milk->fat ?? '')) }}"
+                            data-snf="{{ strtolower((string) ($milk->snf ?? '')) }}"
+                            data-rate="{{ strtolower((string) ($milk->rate ?? '')) }}"
+                            data-morning-value="{{ (float) ($milk->morning_milk ?? 0) }}"
+                            data-afternoon-value="{{ (float) ($milk->afternoon_milk ?? 0) }}"
+                            data-evening-value="{{ (float) ($milk->evening_milk ?? 0) }}"
+                            data-fat-value="{{ $milk->fat !== null ? (float) $milk->fat : '' }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ \Carbon\Carbon::parse($milk->date)->format('d-m-Y') }}</td>
                             <td>{{ trim(($milk->animal->farmer->first_name ?? '').' '.($milk->animal->farmer->last_name ?? '')) ?: '-' }}</td>
@@ -129,3 +156,6 @@
 @push('scripts')
 <script src="{{ asset('js/milk_production/index.js') }}"></script>
 @endpush
+
+
+

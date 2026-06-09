@@ -1,13 +1,58 @@
+function updateMilkSummaryCards() {
+    let morningTotal = 0;
+    let afternoonTotal = 0;
+    let eveningTotal = 0;
+    let fatTotal = 0;
+    let fatCount = 0;
+
+    document.querySelectorAll('.milk-row').forEach((row) => {
+        if (row.style.display === 'none') {
+            return;
+        }
+
+        morningTotal += parseFloat(row.dataset.morningValue || '0') || 0;
+        afternoonTotal += parseFloat(row.dataset.afternoonValue || '0') || 0;
+        eveningTotal += parseFloat(row.dataset.eveningValue || '0') || 0;
+
+        const fatValue = parseFloat(row.dataset.fatValue || '');
+        if (!Number.isNaN(fatValue)) {
+            fatTotal += fatValue;
+            fatCount += 1;
+        }
+    });
+
+    const morningElement = document.getElementById('summaryMorning');
+    const afternoonElement = document.getElementById('summaryAfternoon');
+    const eveningElement = document.getElementById('summaryEvening');
+    const fatElement = document.getElementById('summaryFat');
+
+    if (morningElement) {
+        morningElement.textContent = `${morningTotal.toFixed(1)} L`;
+    }
+    if (afternoonElement) {
+        afternoonElement.textContent = `${afternoonTotal.toFixed(1)} L`;
+    }
+    if (eveningElement) {
+        eveningElement.textContent = `${eveningTotal.toFixed(1)} L`;
+    }
+    if (fatElement) {
+        fatElement.textContent = `${(fatCount > 0 ? fatTotal / fatCount : 0).toFixed(1)} %`;
+    }
+}
+
 function filterMilkRows() {
     const selectedShifts = [];
     document.querySelectorAll('.shift-filter:checked').forEach((item) => selectedShifts.push(item.value));
     const search = document.getElementById('milkSearch')?.value.toLowerCase().trim() || '';
+    const searchField = document.getElementById('milkSearchField')?.value || 'all';
     const start = document.getElementById('startDate')?.value || '';
     const end = document.getElementById('endDate')?.value || '';
 
     document.querySelectorAll('.milk-row').forEach((row) => {
-        const haystack = row.dataset.search || '';
-        const date = row.dataset.date || '';
+        const haystack = searchField === 'all'
+            ? (row.dataset.search || '')
+            : (row.dataset[searchField] || '');
+        const date = row.dataset.dateRaw || row.dataset.date || '';
         let shiftMatch = selectedShifts.length === 0;
         selectedShifts.forEach((shift) => {
             if (row.dataset[shift] === '1') shiftMatch = true;
@@ -19,6 +64,7 @@ function filterMilkRows() {
         row.style.display = show ? '' : 'none';
     });
 
+    updateMilkSummaryCards();
     window.CorzinTablePagination?.refresh('milkTableExport');
 }
 
@@ -82,5 +128,10 @@ document.querySelectorAll('.shift-filter').forEach((checkbox) => {
 });
 
 document.getElementById('milkSearch')?.addEventListener('input', filterMilkRows);
+document.getElementById('milkSearchField')?.addEventListener('change', filterMilkRows);
 document.getElementById('startDate')?.addEventListener('change', filterMilkRows);
 document.getElementById('endDate')?.addEventListener('change', filterMilkRows);
+
+document.addEventListener('DOMContentLoaded', updateMilkSummaryCards);
+
+
