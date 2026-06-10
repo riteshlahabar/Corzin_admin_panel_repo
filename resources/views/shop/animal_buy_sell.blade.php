@@ -24,7 +24,27 @@
                     <p class="text-muted mb-0 small">All animals listed for sale by farmers.</p>
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <input type="text" id="animalSaleSearch" class="form-control" placeholder="Search animal, tag, type, farmer..." style="width:280px;">
+                    <select id="animalSaleSearchField" class="form-select" style="width:220px;">
+                        <option value="all">All Columns</option>
+                        <option value="unique-id">Unique ID</option>
+                        <option value="animal">Animal</option>
+                        <option value="tag">Tag</option>
+                        <option value="type">Type</option>
+                        <option value="pan">PAN</option>
+                        <option value="gender">Gender</option>
+                        <option value="birth-date">Birth Date</option>
+                        <option value="age">Age</option>
+                        <option value="weight">Weight</option>
+                        <option value="breed">Breed</option>
+                        <option value="lactation">Lactation</option>
+                        <option value="ai-date">AI Date</option>
+                        <option value="mother">Mother</option>
+                        <option value="seller-name">Seller Name</option>
+                        <option value="seller-mobile">Seller Mobile</option>
+                        <option value="listed-at">Listed At</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <input type="text" id="animalSaleSearch" class="form-control" placeholder="Search selected field..." style="width:220px;">
                     <div class="input-group" style="width:260px;">
                         <input type="date" id="saleStartDate" class="form-control">
                         <span class="input-group-text">to</span>
@@ -70,21 +90,59 @@
                             @php
                                 $sellerName = trim((optional($animal->farmer)->first_name ?? '').' '.(optional($animal->farmer)->last_name ?? '')) ?: '-';
                                 $listedDate = optional($animal->listed_for_sale_at)->format('Y-m-d') ?: '';
+                                $birthDate = $animal->birth_date ? \Carbon\Carbon::parse($animal->birth_date)->format('d-m-Y') : '-';
+                                $age = $animal->calculated_age ?? '-';
+                                $weight = $animal->weight ? $animal->weight.' kg' : '-';
+                                $type = optional($animal->animalType)->name ?: '-';
+                                $panName = optional($animal->pan)->name ?: '-';
+                                $gender = $animal->gender ?: '-';
+                                $breed = $animal->breed_name ?: '-';
+                                $lactation = $animal->lactation_number ?? '-';
+                                $aiDate = optional($animal->ai_date)->format('d-m-Y') ?: '-';
+                                $sellerMobile = optional($animal->farmer)->mobile ?: '-';
+                                $listedAt = optional($animal->listed_for_sale_at)->format('d-m-Y h:i A') ?: '-';
+                                $status = 'For Sale';
                                 $motherName = trim((optional($animal->motherAnimal)->animal_name ?? '').' '.(optional($animal->motherAnimal)->tag_number ? '('.optional($animal->motherAnimal)->tag_number.')' : '')) ?: '-';
                                 $searchText = strtolower(trim(implode(' ', [
                                     $animal->unique_id,
                                     $animal->animal_name,
                                     $animal->tag_number,
-                                    optional($animal->animalType)->name,
-                                    optional($animal->pan)->name,
-                                    $animal->gender,
-                                    $animal->weight,
-                                    $animal->breed_name,
+                                    $type,
+                                    $panName,
+                                    $gender,
+                                    $birthDate,
+                                    $age,
+                                    $weight,
+                                    $breed,
+                                    $lactation,
+                                    $aiDate,
+                                    $motherName,
                                     $sellerName,
-                                    optional($animal->farmer)->mobile,
+                                    $sellerMobile,
+                                    $listedAt,
+                                    $status,
                                 ])));
                             @endphp
-                            <tr class="animal-sale-row" data-search="{{ $searchText }}" data-date="{{ $listedDate }}">
+                            <tr class="animal-sale-row"
+                                data-all="{{ $searchText }}"
+                                data-unique-id="{{ strtolower((string) ($animal->unique_id ?: '-')) }}"
+                                data-animal="{{ strtolower((string) ($animal->animal_name ?: '-')) }}"
+                                data-tag="{{ strtolower((string) ($animal->tag_number ?: '-')) }}"
+                                data-type="{{ strtolower($type) }}"
+                                data-pan="{{ strtolower($panName) }}"
+                                data-gender="{{ strtolower($gender) }}"
+                                data-birth-date="{{ strtolower($birthDate) }}"
+                                data-age="{{ strtolower((string) $age) }}"
+                                data-weight="{{ strtolower($weight) }}"
+                                data-breed="{{ strtolower($breed) }}"
+                                data-lactation="{{ strtolower((string) $lactation) }}"
+                                data-ai-date="{{ strtolower($aiDate) }}"
+                                data-mother="{{ strtolower($motherName) }}"
+                                data-seller-name="{{ strtolower($sellerName) }}"
+                                data-seller-mobile="{{ strtolower($sellerMobile) }}"
+                                data-listed-at="{{ strtolower($listedAt) }}"
+                                data-status="{{ strtolower($status) }}"
+                                data-date="{{ $listedDate }}">
                                 <td>{{ $index + 1 }}</td>
                                 <td>
                                     @if($animal->image_url)
@@ -98,20 +156,20 @@
                                 <td>{{ $animal->unique_id ?: '-' }}</td>
                                 <td class="fw-semibold">{{ $animal->animal_name ?: '-' }}</td>
                                 <td>{{ $animal->tag_number ?: '-' }}</td>
-                                <td>{{ optional($animal->animalType)->name ?: '-' }}</td>
-                                <td>{{ optional($animal->pan)->name ?: '-' }}</td>
-                                <td>{{ $animal->gender ?: '-' }}</td>
-                                <td>{{ $animal->birth_date ? \Carbon\Carbon::parse($animal->birth_date)->format('d-m-Y') : '-' }}</td>
-                                <td>{{ $animal->calculated_age ?? '-' }}</td>
-                                <td>{{ $animal->weight ? $animal->weight.' kg' : '-' }}</td>
-                                <td>{{ $animal->breed_name ?: '-' }}</td>
-                                <td>{{ $animal->lactation_number ?? '-' }}</td>
-                                <td>{{ optional($animal->ai_date)->format('d-m-Y') ?: '-' }}</td>
+                                <td>{{ $type }}</td>
+                                <td>{{ $panName }}</td>
+                                <td>{{ $gender }}</td>
+                                <td>{{ $birthDate }}</td>
+                                <td>{{ $age }}</td>
+                                <td>{{ $weight }}</td>
+                                <td>{{ $breed }}</td>
+                                <td>{{ $lactation }}</td>
+                                <td>{{ $aiDate }}</td>
                                 <td>{{ $motherName }}</td>
                                 <td>{{ $sellerName }}</td>
-                                <td>{{ optional($animal->farmer)->mobile ?: '-' }}</td>
-                                <td>{{ optional($animal->listed_for_sale_at)->format('d-m-Y h:i A') ?: '-' }}</td>
-                                <td><span class="badge bg-warning-subtle text-warning">For Sale</span></td>
+                                <td>{{ $sellerMobile }}</td>
+                                <td>{{ $listedAt }}</td>
+                                <td><span class="badge bg-warning-subtle text-warning">{{ $status }}</span></td>
                             </tr>
                         @empty
                             <tr>
@@ -130,17 +188,26 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const search = document.getElementById('animalSaleSearch');
+    const searchField = document.getElementById('animalSaleSearchField');
     const start = document.getElementById('saleStartDate');
     const end = document.getElementById('saleEndDate');
     const rows = Array.from(document.querySelectorAll('.animal-sale-row'));
 
+    function datasetValue(row, field) {
+        const key = field.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+        return row.dataset[key] || '';
+    }
+
     function applyFilters() {
         const term = (search?.value || '').trim().toLowerCase();
+        const selectedField = searchField?.value || 'all';
         const startDate = start?.value || '';
         const endDate = end?.value || '';
 
         rows.forEach((row) => {
-            const text = row.dataset.search || '';
+            const text = selectedField === 'all'
+                ? (row.dataset.all || '')
+                : datasetValue(row, selectedField);
             const date = row.dataset.date || '';
             const matchesSearch = !term || text.includes(term);
             const matchesStart = !startDate || (date && date >= startDate);
@@ -149,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    [search, start, end].forEach((element) => {
+    [search, searchField, start, end].forEach((element) => {
         if (!element) return;
         element.addEventListener('input', applyFilters);
         element.addEventListener('change', applyFilters);
