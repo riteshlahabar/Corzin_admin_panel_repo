@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Doctor Analysis')
+@section('title', 'Doctor Report')
 
 @php
     $pdfExportUrl = request()->fullUrlWithQuery(['export' => 'pdf']);
@@ -11,14 +11,14 @@
     <div class="col-sm-12">
         <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
             <div>
-                <h4 class="page-title mb-1">Doctor Analysis</h4>
+                <h4 class="page-title mb-1">Doctor Report</h4>
                 <p class="text-muted mb-0">Doctor growth, appointment outcomes, revenue, retention, and live activity in one place.</p>
             </div>
             <div>
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Corzin</a></li>
-                    <li class="breadcrumb-item"><a href="#">Analytics</a></li>
-                    <li class="breadcrumb-item active">Doctor Analysis</li>
+                    <li class="breadcrumb-item"><a href="#">Report</a></li>
+                    <li class="breadcrumb-item active">Doctor Report</li>
                 </ol>
             </div>
         </div>

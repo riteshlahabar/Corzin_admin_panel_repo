@@ -161,29 +161,29 @@
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('analytics.*') ? 'active' : '' }}" href="#analyticsMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('analytics.*') ? 'true' : 'false' }}">
             <i class="iconoir-reports menu-icon me-2"></i>
-            <span>Analytics</span>
+            <span>Report</span>
             <span class="menu-arrow"></span>
         </a>
         <div class="collapse {{ request()->routeIs('analytics.*') ? 'show' : '' }}" id="analyticsMenu">
             <ul class="nav flex-column ms-4">
                 <li class="menu-item">
                     <a href="{{ route('analytics.farmer') }}" class="nav-link {{ request()->routeIs('analytics.farmer') ? 'active' : '' }}">
-                        <i class="iconoir-group me-2"></i> Farmer Analysis
+                        <i class="iconoir-group me-2"></i> Farmer Report
                     </a>
                 </li>
                 <li class="menu-item">
                     <a href="{{ route('analytics.dairy') }}" class="nav-link {{ request()->routeIs('analytics.dairy') ? 'active' : '' }}">
-                        <i class="iconoir-building me-2"></i> Dairy Analysis
+                        <i class="iconoir-building me-2"></i> Dairy Report
                     </a>
                 </li>
                 <li class="menu-item">
                     <a href="{{ route('analytics.doctor') }}" class="nav-link {{ request()->routeIs('analytics.doctor') ? 'active' : '' }}">
-                        <i class="iconoir-health-shield me-2"></i> Doctor Analysis
+                        <i class="iconoir-health-shield me-2"></i> Doctor Report
                     </a>
                 </li>
                 <li class="menu-item">
                     <a href="{{ route('analytics.earnings') }}" class="nav-link {{ request()->routeIs('analytics.earnings') ? 'active' : '' }}">
-                        <i class="iconoir-dollar-circle me-2"></i> Earnings
+                        <i class="iconoir-dollar-circle me-2"></i> Earnings Report
                     </a>
                 </li>
             </ul>

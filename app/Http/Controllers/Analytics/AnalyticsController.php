@@ -218,7 +218,7 @@ class AnalyticsController extends Controller
             ],
         ];
 
-        if ($response = $this->maybeExportReport($request, 'Farmer Analysis Report', $filtersSummary, $kpis, $exportTables)) {
+        if ($response = $this->maybeExportReport($request, 'Farmer Report', $filtersSummary, $kpis, $exportTables)) {
             return $response;
         }
 
@@ -390,7 +390,7 @@ class AnalyticsController extends Controller
             ],
         ];
 
-        if ($response = $this->maybeExportReport($request, 'Dairy Analysis Report', $filtersSummary, $kpis, $exportTables)) {
+        if ($response = $this->maybeExportReport($request, 'Dairy Report', $filtersSummary, $kpis, $exportTables)) {
             return $response;
         }
 
@@ -578,7 +578,7 @@ class AnalyticsController extends Controller
             ],
         ];
 
-        if ($response = $this->maybeExportReport($request, 'Doctor Analysis Report', $filtersSummary, $kpis, $exportTables)) {
+        if ($response = $this->maybeExportReport($request, 'Doctor Report', $filtersSummary, $kpis, $exportTables)) {
             return $response;
         }
 

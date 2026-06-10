@@ -1,16 +1,16 @@
 @extends('layouts.app')
-@section('title', 'Earnings Analysis')
+@section('title', 'Earnings Report')
 
 @section('content')
 <div class="row">
     <div class="col-sm-12">
         <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
-            <h4 class="page-title">Earnings Analysis</h4>
+            <h4 class="page-title">Earnings Report</h4>
             <div>
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Corzin</a></li>
-                    <li class="breadcrumb-item"><a href="#">Analytics</a></li>
-                    <li class="breadcrumb-item active">Earnings</li>
+                    <li class="breadcrumb-item"><a href="#">Report</a></li>
+                    <li class="breadcrumb-item active">Earnings Report</li>
                 </ol>
             </div>
         </div>
