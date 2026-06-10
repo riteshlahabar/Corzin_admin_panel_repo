@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Farmer;
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\DmiRecord;
+use App\Models\Farmer\FeedDietPlan;
+use App\Models\Farmer\FeedingRecord;
 use App\Models\Farmer\MastitisRecord;
 use App\Models\Farmer\MedicalRecord;
 use App\Models\Farmer\MilkProduction;
@@ -362,6 +364,15 @@ public function dmiList(Request $request, $farmerId)
                         ->where('animal_id', $animal->id)
                         ->whereDate('date', $date->toDateString())
                         ->sum('total_milk');
+                    $actualDmi = round(
+                        FeedingRecord::query()
+                            ->with('dietPlan')
+                            ->where('animal_id', $animal->id)
+                            ->whereDate('date', $date->toDateString())
+                            ->get()
+                            ->sum(fn (FeedingRecord $record) => $this->calculateRecordActualDryMatter($record)),
+                        2
+                    );
 
                     $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
                     $isNonMilkingType = str_contains($typeName, 'non')
@@ -374,6 +385,10 @@ public function dmiList(Request $request, $farmerId)
                     $requiredDmi = $isMilking
                         ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
                         : round(($bodyWeight * 0.025), 2);
+                    $dmiDifference = round($actualDmi - $requiredDmi, 2);
+                    $alertStatus = abs($dmiDifference) <= 0.5
+                        ? 'Balanced'
+                        : ($dmiDifference < 0 ? 'Low' : 'High');
 
                     $animalRows[] = [
                         'id' => (int) $animal->id,
@@ -385,8 +400,8 @@ public function dmiList(Request $request, $farmerId)
                         'body_weight' => round($bodyWeight, 2),
                         'total_milk' => round($totalMilk, 2),
                         'required_dmi' => $requiredDmi,
-                        'actual_dmi' => $requiredDmi,
-                        'alert_status' => 'Auto Calculated',
+                        'actual_dmi' => $actualDmi,
+                        'alert_status' => $alertStatus,
                         'date' => $date->format('d/m/Y'),
                         'notes' => '',
                     ];
@@ -429,6 +444,120 @@ public function dmiList(Request $request, $farmerId)
         ]);
 
         return response()->json(['status' => true, 'message' => 'DMI record saved successfully', 'data' => $row], 201);
+    }
+
+    private function calculateRecordActualDryMatter(FeedingRecord $record, ?FeedDietPlan $dietPlan = null): float
+    {
+        $feedingQuantity = (float) ($record->feeding_quantity ?? $record->quantity ?? 0);
+        if ($feedingQuantity <= 0) {
+            return 0.0;
+        }
+
+        $packageQuantity = (float) ($record->package_quantity ?? 0);
+        $dietPlan ??= $record->relationLoaded('dietPlan') ? $record->dietPlan : $record->dietPlan()->first();
+
+        $recordSubtypes = collect((array) ($record->feed_subtype_details ?? []));
+        $planSubtypes = collect(
+            $dietPlan ? $this->normalizeSubtypeDetails((array) ($dietPlan->subtype_details ?? []), true) : []
+        );
+
+        $dmPercentBySubtypeId = [];
+        $dmPercentByName = [];
+        foreach ($planSubtypes as $subtype) {
+            $subtypeId = (int) data_get($subtype, 'subtype_id', 0);
+            $subtypeName = mb_strtolower(trim((string) data_get($subtype, 'name', '')));
+            $dmPercent = (float) data_get($subtype, 'dm_percent', 0);
+
+            if ($subtypeId > 0) {
+                $dmPercentBySubtypeId[$subtypeId] = $dmPercent;
+            }
+            if ($subtypeName !== '') {
+                $dmPercentByName[$subtypeName] = $dmPercent;
+            }
+        }
+
+        $packageDryMatter = (float) $recordSubtypes->sum(function ($subtype) use ($dmPercentBySubtypeId, $dmPercentByName) {
+            $quantity = (float) data_get($subtype, 'quantity', 0);
+            $subtypeId = (int) data_get($subtype, 'subtype_id', 0);
+            $subtypeName = mb_strtolower(trim((string) data_get($subtype, 'name', '')));
+            $recordDmPercent = (float) data_get($subtype, 'dm_percent', 0);
+
+            $dmPercent = 0.0;
+            if ($subtypeId > 0 && array_key_exists($subtypeId, $dmPercentBySubtypeId)) {
+                $dmPercent = (float) $dmPercentBySubtypeId[$subtypeId];
+            } elseif ($subtypeName !== '' && array_key_exists($subtypeName, $dmPercentByName)) {
+                $dmPercent = (float) $dmPercentByName[$subtypeName];
+            } elseif ($recordDmPercent > 0) {
+                $dmPercent = $recordDmPercent;
+            }
+
+            return $quantity > 0 && $dmPercent > 0 ? ($quantity * $dmPercent) / 100 : 0;
+        });
+
+        if ($packageDryMatter <= 0 && $dietPlan && (float) $dietPlan->plan_quantity > 0) {
+            $planDryMatter = (float) ($dietPlan->planned_dry_matter ?? 0);
+            if ($planDryMatter > 0 && $packageQuantity > 0) {
+                $packageDryMatter = ($packageQuantity / (float) $dietPlan->plan_quantity) * $planDryMatter;
+            }
+        }
+
+        if ($packageDryMatter <= 0) {
+            return 0.0;
+        }
+
+        if ($packageQuantity <= 0) {
+            return round($packageDryMatter, 2);
+        }
+
+        return round($packageDryMatter * ($feedingQuantity / $packageQuantity), 2);
+    }
+
+    private function normalizeSubtypeDetails(array $subtypes, bool $allowMissingDmPercent = false): array
+    {
+        $bucket = [];
+        foreach ($subtypes as $item) {
+            $name = trim((string) data_get($item, 'name', ''));
+            $qty = (float) data_get($item, 'quantity', 0);
+            $dmPercent = (float) data_get($item, 'dm_percent', 0);
+            $feedTypeId = (int) data_get($item, 'feed_type_id', 0);
+            $feedTypeName = trim((string) data_get($item, 'feed_type_name', data_get($item, 'feed_type', '')));
+            if ($allowMissingDmPercent && $dmPercent <= 0) {
+                $dmPercent = 100;
+            }
+
+            if ($name === '' || $qty <= 0 || $dmPercent <= 0 || $dmPercent > 100) {
+                continue;
+            }
+
+            $subtypeId = (int) data_get($item, 'subtype_id', 0);
+            $typeKey = $feedTypeId > 0
+                ? "type:$feedTypeId"
+                : ($feedTypeName !== '' ? 'type_name:' . mb_strtolower($feedTypeName) : 'type:any');
+            $key = $subtypeId > 0
+                ? "$typeKey|id:$subtypeId"
+                : "$typeKey|name:" . mb_strtolower($name);
+
+            if (! isset($bucket[$key])) {
+                $bucket[$key] = [
+                    'subtype_id' => $subtypeId > 0 ? $subtypeId : null,
+                    'feed_type_id' => $feedTypeId > 0 ? $feedTypeId : null,
+                    'feed_type_name' => $feedTypeName !== '' ? $feedTypeName : null,
+                    'name' => $name,
+                    'quantity' => 0,
+                    'dm_percent' => 0,
+                ];
+            }
+
+            $existingQty = (float) $bucket[$key]['quantity'];
+            $existingDm = (float) $bucket[$key]['dm_percent'];
+            $nextQty = $existingQty + $qty;
+            $bucket[$key]['dm_percent'] = $nextQty > 0
+                ? round((($existingQty * $existingDm) + ($qty * $dmPercent)) / $nextQty, 2)
+                : $dmPercent;
+            $bucket[$key]['quantity'] = round($nextQty, 2);
+        }
+
+        return array_values($bucket);
     }
 
     private function isMilkingCow(Animal $animal): bool
