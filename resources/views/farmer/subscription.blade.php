@@ -75,22 +75,24 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Plan</label>
-                    <select name="farmer_plan_id" class="form-select @error('farmer_plan_id') is-invalid @enderror" required>
+                    <select id="farmer-plan-select" name="farmer_plan_id" class="form-select @error('farmer_plan_id') is-invalid @enderror" required>
                         <option value="">Select Plan</option>
                         @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}">{{ $plan->name }} (Rs {{ number_format((float) $plan->price, 2) }})</option>
+                            <option value="{{ $plan->id }}" data-duration-days="{{ (int) $plan->duration_days }}">
+                                {{ $plan->name }} (Rs {{ number_format((float) $plan->price, 2) }})
+                            </option>
                         @endforeach
                     </select>
                     @error('farmer_plan_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Start Date</label>
-                    <input type="date" name="start_date" class="form-control @error('start_date') is-invalid @enderror" value="{{ old('start_date') }}">
+                    <input id="farmer-plan-start-date" type="date" name="start_date" class="form-control @error('start_date') is-invalid @enderror" value="{{ old('start_date') }}">
                     @error('start_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Due Date</label>
-                    <input type="date" name="due_date" class="form-control @error('due_date') is-invalid @enderror" value="{{ old('due_date') }}">
+                    <input id="farmer-plan-due-date" type="date" name="due_date" class="form-control @error('due_date') is-invalid @enderror" value="{{ old('due_date') }}">
                     @error('due_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-2">
@@ -220,4 +222,43 @@
         @include('partials.table-pagination', ['paginator' => $farmers])
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const planSelect = document.getElementById('farmer-plan-select');
+        const startDateInput = document.getElementById('farmer-plan-start-date');
+        const dueDateInput = document.getElementById('farmer-plan-due-date');
+
+        if (!planSelect || !startDateInput || !dueDateInput) {
+            return;
+        }
+
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const applyPlanDates = () => {
+            const selectedOption = planSelect.options[planSelect.selectedIndex];
+            const durationDays = Number(selectedOption?.dataset?.durationDays || 0);
+
+            if (!selectedOption || !selectedOption.value || durationDays <= 0) {
+                return;
+            }
+
+            const startDate = new Date();
+            startDate.setHours(0, 0, 0, 0);
+
+            const dueDate = new Date(startDate);
+            dueDate.setDate(dueDate.getDate() + durationDays);
+
+            startDateInput.value = formatDate(startDate);
+            dueDateInput.value = formatDate(dueDate);
+        };
+
+        planSelect.addEventListener('change', applyPlanDates);
+    });
+</script>
 @endsection
