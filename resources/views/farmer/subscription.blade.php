@@ -143,6 +143,7 @@
                             <th>Farmer</th>
                             <th>Current Plan</th>
                             <th>Due Date</th>
+                            <th>Plan Expired In</th>
                             <th>Status</th>
                             <th>Suggestion</th>
                         </tr>
@@ -155,6 +156,17 @@
                                 $status = strtolower((string) optional($subscription)->status);
                                 $isExpired = $dueDate ? $dueDate->lt(now()->startOfDay()) : false;
                                 $isExpiringSoon = $dueDate ? $dueDate->between(now()->startOfDay(), now()->copy()->addDays(7)->endOfDay()) : false;
+                                $daysLeft = $dueDate ? now()->startOfDay()->diffInDays($dueDate->copy()->startOfDay(), false) : null;
+                                if ($daysLeft === null) {
+                                    $expiryLabel = '-';
+                                } elseif ($daysLeft > 0) {
+                                    $expiryLabel = 'Expires in '.$daysLeft.' day'.($daysLeft === 1 ? '' : 's');
+                                } elseif ($daysLeft === 0) {
+                                    $expiryLabel = 'Expires today';
+                                } else {
+                                    $expiredDays = abs($daysLeft);
+                                    $expiryLabel = 'Expired '.$expiredDays.' day'.($expiredDays === 1 ? '' : 's').' ago';
+                                }
                                 if (! $subscription) {
                                     $suggestion = 'Assign a subscription plan to this farmer.';
                                 } elseif ($status === 'cancelled') {
@@ -178,6 +190,16 @@
                                 <td>
                                     <span class="badge {{
                                         ! $subscription ? 'bg-secondary' :
+                                        ($daysLeft === null ? 'bg-secondary' :
+                                        ($daysLeft < 0 ? 'bg-danger' :
+                                        ($daysLeft <= 7 ? 'bg-warning text-dark' : 'bg-info text-dark')))
+                                    }}">
+                                        {{ $expiryLabel }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {{
+                                        ! $subscription ? 'bg-secondary' :
                                         (($status === 'active' && ! $isExpired) ? 'bg-success' :
                                         (($status === 'cancelled') ? 'bg-dark' : 'bg-danger'))
                                     }}">
@@ -188,7 +210,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">No farmers found.</td>
+                                <td colspan="7" class="text-center text-muted py-4">No farmers found.</td>
                             </tr>
                         @endforelse
                     </tbody>

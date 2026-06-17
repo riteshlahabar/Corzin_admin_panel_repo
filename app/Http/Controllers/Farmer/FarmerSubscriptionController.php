@@ -17,6 +17,11 @@ class FarmerSubscriptionController extends Controller
 
     public function index(Request $request)
     {
+        FarmerSubscription::query()
+            ->where('status', 'active')
+            ->whereDate('due_date', '<', now()->toDateString())
+            ->update(['status' => 'expired']);
+
         $farmersQuery = Farmer::query()
             ->with(['subscription.plan'])
             ->latest('id');
@@ -40,12 +45,21 @@ class FarmerSubscriptionController extends Controller
         $summaryQuery = FarmerSubscription::query();
         $summary = [
             'total' => (clone $summaryQuery)->count(),
-            'active' => (clone $summaryQuery)->where('status', 'active')->count(),
+            'active' => (clone $summaryQuery)
+                ->where('status', 'active')
+                ->whereDate('due_date', '>=', now()->toDateString())
+                ->count(),
             'expiring_soon' => (clone $summaryQuery)
+                ->where('status', 'active')
                 ->whereDate('due_date', '>=', now()->toDateString())
                 ->whereDate('due_date', '<=', now()->addDays(7)->toDateString())
                 ->count(),
-            'expired' => (clone $summaryQuery)->whereDate('due_date', '<', now()->toDateString())->count(),
+            'expired' => (clone $summaryQuery)
+                ->where(function ($query) {
+                    $query->where('status', 'expired')
+                        ->orWhereDate('due_date', '<', now()->toDateString());
+                })
+                ->count(),
         ];
 
         return view('farmer.subscription', compact('farmers', 'farmerOptions', 'plans', 'summary'));

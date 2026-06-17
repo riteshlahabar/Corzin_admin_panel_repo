@@ -123,6 +123,10 @@ class SubscriptionController extends Controller
         }
 
         $plan = $subscription->plan;
+        $today = now()->startOfDay();
+        $dueDate = $subscription->due_date ? $subscription->due_date->copy()->startOfDay() : null;
+        $daysLeft = $dueDate ? $today->diffInDays($dueDate, false) : null;
+
         return [
             'id' => $subscription->id,
             'farmer_id' => $subscription->farmer_id,
@@ -135,6 +139,27 @@ class SubscriptionController extends Controller
             'due_date' => optional($subscription->due_date)->toDateString(),
             'status' => $subscription->status,
             'is_active' => $this->isSubscriptionUsable($subscription),
+            'days_left' => $daysLeft,
+            'expiry_text' => $this->expiryTextFromDays($daysLeft),
         ];
+    }
+
+    private function expiryTextFromDays(?int $daysLeft): string
+    {
+        if ($daysLeft === null) {
+            return '-';
+        }
+
+        if ($daysLeft > 0) {
+            return 'Expires in '.$daysLeft.' day'.($daysLeft === 1 ? '' : 's');
+        }
+
+        if ($daysLeft === 0) {
+            return 'Expires today';
+        }
+
+        $expiredDays = abs($daysLeft);
+
+        return 'Expired '.$expiredDays.' day'.($expiredDays === 1 ? '' : 's').' ago';
     }
 }
