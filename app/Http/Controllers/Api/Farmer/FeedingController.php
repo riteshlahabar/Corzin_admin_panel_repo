@@ -1080,12 +1080,15 @@ class FeedingController extends Controller
     private function resolveDietMetricsValues(int $farmerId, int $animalId, int $panId, string $forDate): array
     {
         $date = Carbon::parse($forDate)->toDateString();
-        $selectedAnimal = Animal::query()
-            ->where('id', $animalId)
-            ->where('farmer_id', $farmerId)
-            ->first();
+        $animalQuery = Animal::query()->where('farmer_id', $farmerId);
+        if ($panId > 0) {
+            $animalQuery->where('pan_id', $panId);
+        } else {
+            $animalQuery->where('id', $animalId);
+        }
 
-        if (! $selectedAnimal) {
+        $selectedAnimals = $animalQuery->get();
+        if ($selectedAnimals->isEmpty()) {
             return [
                 'date' => $date,
                 'body_weight' => 0.0,
@@ -1093,31 +1096,35 @@ class FeedingController extends Controller
                 'actual_dmi' => 0.0,
                 'target_dmi' => 0.0,
                 'dmi_gap' => 0.0,
+                'is_non_milking' => false,
             ];
         }
 
-        $animalIds = [$selectedAnimal->id];
-        if ($panId > 0) {
-            $panAnimalIds = Animal::query()
-                ->where('farmer_id', $farmerId)
-                ->where('pan_id', $panId)
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->filter(fn ($id) => $id > 0)
-                ->values()
-                ->all();
-            if (! empty($panAnimalIds)) {
-                $animalIds = $panAnimalIds;
-            }
-        }
+        $animalIds = $selectedAnimals
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
 
         $bodyWeight = (float) Animal::query()
             ->whereIn('id', $animalIds)
             ->sum('weight');
-        $milkProduction = (float) MilkProduction::query()
+        $rawMilkProduction = (float) MilkProduction::query()
             ->whereDate('date', $date)
             ->whereIn('animal_id', $animalIds)
             ->sum('total_milk');
+        $typeNames = $selectedAnimals
+            ->map(function (Animal $animal) {
+                return mb_strtolower(trim((string) optional($animal->animalType)->name));
+            })
+            ->filter(fn ($type) => $type !== '')
+            ->values()
+            ->all();
+        $isNonMilking = ! empty($typeNames)
+            ? collect($typeNames)->every(fn ($type) => $this->isNonMilkingAnimalTypeName((string) $type))
+            : $rawMilkProduction <= 0;
+        $milkProduction = $isNonMilking ? 0.0 : $rawMilkProduction;
         $actualDmi = round(
             FeedingRecord::query()
                 ->with('dietPlan')
@@ -1127,7 +1134,7 @@ class FeedingController extends Controller
                 ->sum(fn (FeedingRecord $record) => $this->calculateRecordActualDryMatter($record)),
             2
         );
-        $targetDmi = $this->computeTargetDmi($bodyWeight, $milkProduction);
+        $targetDmi = $this->computeTargetDmi($bodyWeight, $milkProduction, $isNonMilking);
 
         return [
             'date' => $date,
@@ -1136,15 +1143,28 @@ class FeedingController extends Controller
             'actual_dmi' => $actualDmi,
             'target_dmi' => round($targetDmi, 2),
             'dmi_gap' => round($actualDmi - $targetDmi, 2),
+            'is_non_milking' => $isNonMilking,
         ];
     }
 
-    private function computeTargetDmi(float $bodyWeight, float $milkProduction): float
+    private function computeTargetDmi(float $bodyWeight, float $milkProduction, bool $isNonMilking = false): float
     {
         if ($bodyWeight <= 0) {
             return 0;
         }
+        if ($isNonMilking || $milkProduction <= 0) {
+            return $bodyWeight * 0.025;
+        }
         return ($bodyWeight * 0.02) + ($milkProduction * 0.33);
+    }
+
+    private function isNonMilkingAnimalTypeName(string $typeName): bool
+    {
+        return str_contains($typeName, 'non')
+            || str_contains($typeName, 'dry')
+            || str_contains($typeName, 'heifer')
+            || str_contains($typeName, 'calf')
+            || str_contains($typeName, 'bull');
     }
 
     private function calculateActualDryMatterForPlan(FeedDietPlan $plan): float
