@@ -1245,49 +1245,14 @@ class FeedingController extends Controller
         }
 
         $packageQuantity = (float) ($record->package_quantity ?? 0);
-        $dietPlan ??= $record->relationLoaded('dietPlan') ? $record->dietPlan : $record->dietPlan()->first();
-
         $recordSubtypes = collect((array) ($record->feed_subtype_details ?? []));
-        $planSubtypes = collect(
-            $dietPlan ? $this->normalizeSubtypeDetails((array) ($dietPlan->subtype_details ?? [])) : []
-        );
-
-        $dmPercentBySubtypeId = [];
-        $dmPercentByName = [];
-        foreach ($planSubtypes as $subtype) {
-            $subtypeId = (int) data_get($subtype, 'subtype_id', 0);
-            $subtypeName = mb_strtolower(trim((string) data_get($subtype, 'name', '')));
-            $dmPercent = (float) data_get($subtype, 'dm_percent', 0);
-
-            if ($subtypeId > 0) {
-                $dmPercentBySubtypeId[$subtypeId] = $dmPercent;
-            }
-            if ($subtypeName !== '') {
-                $dmPercentByName[$subtypeName] = $dmPercent;
-            }
-        }
-
-        $packageDryMatter = (float) $recordSubtypes->sum(function ($subtype) use ($dmPercentBySubtypeId, $dmPercentByName) {
+        $packageDryMatter = (float) $recordSubtypes->sum(function ($subtype) {
             $quantity = (float) data_get($subtype, 'quantity', 0);
-            $subtypeId = (int) data_get($subtype, 'subtype_id', 0);
-            $subtypeName = mb_strtolower(trim((string) data_get($subtype, 'name', '')));
-
-            $dmPercent = 0.0;
-            if ($subtypeId > 0 && array_key_exists($subtypeId, $dmPercentBySubtypeId)) {
-                $dmPercent = (float) $dmPercentBySubtypeId[$subtypeId];
-            } elseif ($subtypeName !== '' && array_key_exists($subtypeName, $dmPercentByName)) {
-                $dmPercent = (float) $dmPercentByName[$subtypeName];
-            }
-
-            return $quantity > 0 && $dmPercent > 0 ? ($quantity * $dmPercent) / 100 : 0;
+            $recordDmPercent = (float) data_get($subtype, 'dm_percent', 0);
+            return $quantity > 0 && $recordDmPercent > 0
+                ? ($quantity * $recordDmPercent) / 100
+                : 0;
         });
-
-        if ($packageDryMatter <= 0 && $dietPlan && (float) $dietPlan->plan_quantity > 0) {
-            $planDryMatter = (float) ($dietPlan->planned_dry_matter ?? 0);
-            if ($planDryMatter > 0 && $packageQuantity > 0) {
-                $packageDryMatter = ($packageQuantity / (float) $dietPlan->plan_quantity) * $planDryMatter;
-            }
-        }
 
         if ($packageDryMatter <= 0) {
             return 0.0;
