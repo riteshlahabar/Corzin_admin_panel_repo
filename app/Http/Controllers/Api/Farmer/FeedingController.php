@@ -1170,7 +1170,7 @@ class FeedingController extends Controller
 
         $recordSubtypes = collect((array) ($record->feed_subtype_details ?? []));
         $planSubtypes = collect(
-            $dietPlan ? $this->normalizeSubtypeDetails((array) ($dietPlan->subtype_details ?? []), true) : []
+            $dietPlan ? $this->normalizeSubtypeDetails((array) ($dietPlan->subtype_details ?? [])) : []
         );
 
         $dmPercentBySubtypeId = [];
