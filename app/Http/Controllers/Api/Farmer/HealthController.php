@@ -350,7 +350,7 @@ public function dmiList(Request $request, $farmerId)
         }
 
         $rows = Animal::query()
-            ->with(['animalType', 'farmer'])
+            ->with(['animalType', 'farmer', 'pan'])
             ->where('farmer_id', $farmerId)
             ->where('is_active', true)
             ->latest('id')
@@ -360,10 +360,9 @@ public function dmiList(Request $request, $farmerId)
 
                 for ($date = $fromDate->copy(); $date->lte($toDate); $date->addDay()) {
                     $bodyWeight = (float) ($animal->weight ?? 0);
-                    $totalMilk = (float) MilkProduction::query()
-                        ->where('animal_id', $animal->id)
-                        ->whereDate('date', $date->toDateString())
-                        ->sum('total_milk');
+                    $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
+                    $isNonMilkingType = $this->isNonMilkingAnimalTypeName($typeName);
+                    $totalMilk = $this->resolveDmiDailyMilk($animal, $date->toDateString(), $isNonMilkingType);
                     $actualDmi = round(
                         FeedingRecord::query()
                             ->with('dietPlan')
@@ -373,12 +372,6 @@ public function dmiList(Request $request, $farmerId)
                             ->sum(fn (FeedingRecord $record) => $this->calculateRecordActualDryMatter($record)),
                         2
                     );
-
-                    $typeName = mb_strtolower(trim((string) ($animal->animalType->name ?? '')));
-                    $isNonMilkingType = str_contains($typeName, 'non')
-                        || str_contains($typeName, 'dry')
-                        || str_contains($typeName, 'heifer')
-                        || str_contains($typeName, 'calf');
                     $isMilking = ! $isNonMilkingType
                         && (str_contains($typeName, 'milking') || $totalMilk > 0);
 
@@ -404,6 +397,8 @@ public function dmiList(Request $request, $farmerId)
                         'alert_status' => $alertStatus,
                         'date' => $date->format('d/m/Y'),
                         'notes' => '',
+                        'pan_id' => (int) ($animal->pan_id ?? 0),
+                        'pan_name' => $animal->pan->name ?? '',
                     ];
                 }
 
@@ -572,5 +567,41 @@ public function dmiList(Request $request, $farmerId)
             && ! str_contains($typeName, 'dry')
             && ! str_contains($typeName, 'calf')
             && ! str_contains($typeName, 'heifer');
+    }
+
+    private function isNonMilkingAnimalTypeName(string $typeName): bool
+    {
+        return str_contains($typeName, 'non')
+            || str_contains($typeName, 'dry')
+            || str_contains($typeName, 'heifer')
+            || str_contains($typeName, 'calf')
+            || str_contains($typeName, 'bull');
+    }
+
+    private function resolveDmiDailyMilk(Animal $animal, string $date, bool $isNonMilkingType): float
+    {
+        if ($isNonMilkingType) {
+            return 0.0;
+        }
+
+        $pan = $animal->pan;
+        $panType = trim(strtolower((string) ($pan->pan_type ?? '')));
+        if ($pan && $panType === 'milking') {
+            $milkShifts = is_array($pan->milk_shifts) ? $pan->milk_shifts : [];
+            $shiftCount = collect($milkShifts)
+                ->map(fn ($shift) => trim((string) $shift))
+                ->filter(fn ($shift) => in_array($shift, ['Morning', 'Afternoon', 'Evening'], true))
+                ->unique()
+                ->count();
+
+            if ($shiftCount > 0) {
+                return round(((float) ($animal->default_milk_per_session ?? 0)) * $shiftCount, 2);
+            }
+        }
+
+        return round((float) MilkProduction::query()
+            ->where('animal_id', $animal->id)
+            ->whereDate('date', $date)
+            ->sum('total_milk'), 2);
     }
 }

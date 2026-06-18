@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\FeedDietPlan;
 use App\Models\Farmer\FeedingRecord;
+use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\FeedType;
 use App\Models\Farmer\FeedSubtype;
 use App\Models\Farmer\MilkProduction;
@@ -1080,8 +1081,13 @@ class FeedingController extends Controller
     private function resolveDietMetricsValues(int $farmerId, int $animalId, int $panId, string $forDate): array
     {
         $date = Carbon::parse($forDate)->toDateString();
+        $selectedPan = null;
         $animalQuery = Animal::query()->where('farmer_id', $farmerId);
         if ($panId > 0) {
+            $selectedPan = FarmerPan::query()
+                ->where('id', $panId)
+                ->where('farmer_id', $farmerId)
+                ->first();
             $animalQuery->where('pan_id', $panId);
         } else {
             $animalQuery->where('id', $animalId);
@@ -1110,10 +1116,6 @@ class FeedingController extends Controller
         $bodyWeight = (float) Animal::query()
             ->whereIn('id', $animalIds)
             ->sum('weight');
-        $rawMilkProduction = (float) MilkProduction::query()
-            ->whereDate('date', $date)
-            ->whereIn('animal_id', $animalIds)
-            ->sum('total_milk');
         $typeNames = $selectedAnimals
             ->map(function (Animal $animal) {
                 return mb_strtolower(trim((string) optional($animal->animalType)->name));
@@ -1121,10 +1123,17 @@ class FeedingController extends Controller
             ->filter(fn ($type) => $type !== '')
             ->values()
             ->all();
-        $isNonMilking = ! empty($typeNames)
-            ? collect($typeNames)->every(fn ($type) => $this->isNonMilkingAnimalTypeName((string) $type))
-            : $rawMilkProduction <= 0;
-        $milkProduction = $isNonMilking ? 0.0 : $rawMilkProduction;
+        $isNonMilking = $selectedPan
+            ? $this->normalizePanType((string) ($selectedPan->pan_type ?? 'milking')) === 'non_milking'
+            : (! empty($typeNames)
+                ? collect($typeNames)->every(fn ($type) => $this->isNonMilkingAnimalTypeName((string) $type))
+                : false);
+        $milkProduction = $this->resolveContextMilkProduction(
+            animals: $selectedAnimals->all(),
+            pan: $selectedPan,
+            date: $date,
+            isNonMilking: $isNonMilking,
+        );
         $actualDmi = round(
             FeedingRecord::query()
                 ->with('dietPlan')
@@ -1158,6 +1167,38 @@ class FeedingController extends Controller
         return ($bodyWeight * 0.02) + ($milkProduction * 0.33);
     }
 
+    private function resolveContextMilkProduction(array $animals, ?FarmerPan $pan, string $date, bool $isNonMilking): float
+    {
+        if ($isNonMilking || empty($animals)) {
+            return 0.0;
+        }
+
+        if ($pan && $this->normalizePanType((string) ($pan->pan_type ?? 'milking')) === 'milking') {
+            $shiftCount = count($this->normalizeMilkShifts($pan->milk_shifts ?? []));
+            if ($shiftCount > 0) {
+                $perShiftTotal = collect($animals)
+                    ->sum(fn (Animal $animal) => (float) ($animal->default_milk_per_session ?? 0));
+
+                return round($perShiftTotal * $shiftCount, 2);
+            }
+        }
+
+        $animalIds = collect($animals)
+            ->map(fn (Animal $animal) => (int) $animal->id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+
+        if (empty($animalIds)) {
+            return 0.0;
+        }
+
+        return round((float) MilkProduction::query()
+            ->whereDate('date', $date)
+            ->whereIn('animal_id', $animalIds)
+            ->sum('total_milk'), 2);
+    }
+
     private function isNonMilkingAnimalTypeName(string $typeName): bool
     {
         return str_contains($typeName, 'non')
@@ -1165,6 +1206,24 @@ class FeedingController extends Controller
             || str_contains($typeName, 'heifer')
             || str_contains($typeName, 'calf')
             || str_contains($typeName, 'bull');
+    }
+
+    private function normalizePanType(string $type): string
+    {
+        return trim(strtolower($type)) === 'non_milking' ? 'non_milking' : 'milking';
+    }
+
+    private function normalizeMilkShifts($milkShifts): array
+    {
+        $allowed = ['Morning', 'Afternoon', 'Evening'];
+        $values = is_array($milkShifts) ? $milkShifts : [];
+
+        return collect($values)
+            ->map(fn ($value) => trim((string) $value))
+            ->filter(fn ($value) => in_array($value, $allowed, true))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function calculateActualDryMatterForPlan(FeedDietPlan $plan): float
