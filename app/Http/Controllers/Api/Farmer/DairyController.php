@@ -78,7 +78,7 @@ class DairyController extends Controller
         $dairyIds = $dairies->pluck('id')->values();
         $today = now()->toDateString();
         $milkRowsByDairy = MilkProduction::query()
-            ->with(['animal:id,animal_name,tag_number'])
+            ->with(['animal:id,animal_name,tag_number,pan_id', 'animal.pan:id,name'])
             ->whereIn('dairy_id', $dairyIds)
             ->orderBy('date')
             ->get()
@@ -244,6 +244,8 @@ class DairyController extends Controller
                         return [
                             'animal_name' => trim($animalName) !== '' ? $animalName : '-',
                             'tag_number' => trim($tagNumber),
+                            'pan_id' => (int) (optional($firstRow->animal)->pan_id ?? 0),
+                            'pan_name' => (string) (optional(optional($firstRow->animal)->pan)->name ?? ''),
                             'morning_milk' => $morning,
                             'afternoon_milk' => $afternoon,
                             'evening_milk' => $evening,
