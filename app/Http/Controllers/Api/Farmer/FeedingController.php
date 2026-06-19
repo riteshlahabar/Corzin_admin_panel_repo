@@ -70,7 +70,8 @@ class FeedingController extends Controller
             }
         }
 
-        $calculatedSubtypeTotal = collect($request->input('feed_subtype_details', []))
+        $submittedSubtypeDetails = (array) $request->input('feed_subtype_details', []);
+        $calculatedSubtypeTotal = collect($submittedSubtypeDetails)
             ->sum(fn ($item) => (float) data_get($item, 'quantity', 0));
 
         $feedingQuantity = $request->filled('feeding_quantity')
@@ -83,18 +84,32 @@ class FeedingController extends Controller
             ? (float) $request->input('feeding_cost')
             : ($feedingQuantity * $ratePerUnit);
 
-        $packageQuantity = (float) $calculatedSubtypeTotal;
+        $packageQuantity = $calculatedSubtypeTotal > 0
+            ? (float) $calculatedSubtypeTotal
+            : (float) $request->input('package_quantity', 0);
 
-        $balanceQuantity = $request->filled('balance_quantity')
-            ? (float) $request->input('balance_quantity')
-            : max($packageQuantity - $feedingQuantity, 0);
+        if ($packageQuantity <= 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Package quantity must be greater than zero.',
+            ], 422);
+        }
+
+        if (($feedingQuantity - $packageQuantity) > 0.000001) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Feeding quantity cannot exceed package quantity.',
+            ], 422);
+        }
+
+        $balanceQuantity = max($packageQuantity - $feedingQuantity, 0);
 
         $record = FeedingRecord::create([
             'farmer_id' => $request->farmer_id,
             'animal_id' => $request->animal_id,
             'feed_type_id' => $feedType->id,
             'diet_plan_id' => $dietPlan?->id,
-            'feed_subtype_details' => $request->input('feed_subtype_details'),
+            'feed_subtype_details' => $submittedSubtypeDetails,
             'quantity' => $feedingQuantity,
             'package_quantity' => $packageQuantity,
             'feeding_quantity' => $feedingQuantity,
@@ -861,6 +876,31 @@ class FeedingController extends Controller
         $updatedFeedingCost = $request->filled('feeding_cost')
             ? (float) $request->input('feeding_cost')
             : ($updatedFeedingQuantity * $updatedRatePerUnit);
+        $updatedSubtypeDetails = $request->input('feed_subtype_details', $record->feed_subtype_details);
+        $updatedSubtypeDetails = is_array($updatedSubtypeDetails) ? $updatedSubtypeDetails : [];
+        $updatedSubtypeTotal = collect($updatedSubtypeDetails)
+            ->sum(fn ($item) => (float) data_get($item, 'quantity', 0));
+        $updatedPackageQuantity = $updatedSubtypeTotal > 0
+            ? (float) $updatedSubtypeTotal
+            : ($request->filled('package_quantity')
+                ? (float) $request->input('package_quantity')
+                : (float) ($record->package_quantity ?? 0));
+
+        if ($updatedPackageQuantity <= 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Package quantity must be greater than zero.',
+            ], 422);
+        }
+
+        if (($updatedFeedingQuantity - $updatedPackageQuantity) > 0.000001) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Feeding quantity cannot exceed package quantity.',
+            ], 422);
+        }
+
+        $updatedBalanceQuantity = max($updatedPackageQuantity - $updatedFeedingQuantity, 0);
 
         DB::transaction(function () use (
             $record,
@@ -870,6 +910,9 @@ class FeedingController extends Controller
             $nextDietPlan,
             $currentFeedingQuantity,
             $updatedFeedingQuantity,
+            $updatedPackageQuantity,
+            $updatedBalanceQuantity,
+            $updatedSubtypeDetails,
             $updatedRatePerUnit,
             $updatedFeedingCost
         ) {
@@ -899,14 +942,10 @@ class FeedingController extends Controller
                     ? $request->feed_type_id
                     : $record->feed_type_id,
                 'diet_plan_id' => $nextDietPlan?->id,
-                'feed_subtype_details' => $request->input('feed_subtype_details', $record->feed_subtype_details),
-                'package_quantity' => $request->filled('package_quantity')
-                    ? $request->package_quantity
-                    : $record->package_quantity,
+                'feed_subtype_details' => $updatedSubtypeDetails,
+                'package_quantity' => round($updatedPackageQuantity, 2),
                 'feeding_quantity' => round($updatedFeedingQuantity, 2),
-                'balance_quantity' => $request->filled('balance_quantity')
-                    ? $request->balance_quantity
-                    : $record->balance_quantity,
+                'balance_quantity' => round($updatedBalanceQuantity, 2),
                 'rate_per_unit' => round($updatedRatePerUnit, 2),
                 'feeding_cost' => round($updatedFeedingCost, 2),
             ]);
