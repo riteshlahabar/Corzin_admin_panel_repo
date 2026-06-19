@@ -13,6 +13,7 @@ use App\Http\Controllers\Farmer\DairyListController;
 use App\Http\Controllers\Farmer\AnimalLifecycleController;
 use App\Http\Controllers\Farmer\HealthManagementController;
 use App\Http\Controllers\Farmer\FarmerPlanController;
+use App\Http\Controllers\Farmer\FarmerReferralController;
 use App\Http\Controllers\Farmer\FarmerSubscriptionController;
 use App\Http\Controllers\Farmer\FarmerSettingController;
 use App\Http\Controllers\Doctor\DoctorAppointmentController;
@@ -72,6 +73,7 @@ Route::prefix('farmer')->group(function () {
     Route::post('/settings/support-contact', [FarmerSettingController::class, 'updateSupportContact'])->name('farmer.settings.support-contact.update');
     Route::post('/settings/banner', [FarmerSettingController::class, 'uploadBanner'])->name('farmer.settings.banner.upload');
     Route::delete('/settings/banner/{farmerBanner}', [FarmerSettingController::class, 'destroyBanner'])->name('farmer.settings.banner.destroy');
+    Route::get('/referred', [FarmerReferralController::class, 'index'])->name('farmer.referred');
     Route::get('/plan', [FarmerPlanController::class, 'index'])->name('farmer.plan.index');
     Route::post('/plan', [FarmerPlanController::class, 'store'])->name('farmer.plan.store');
     Route::put('/plan/{farmerPlan}', [FarmerPlanController::class, 'update'])->name('farmer.plan.update');

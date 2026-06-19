@@ -36,6 +36,7 @@
                 <li class="menu-item"><a href="{{ route('farmer.pregnancy') }}" class="nav-link"><i class="iconoir-healthcare me-2"></i> Pregnancy</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.dairy') }}" class="nav-link"><i class="iconoir-building me-2"></i> Dairy</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.settings') }}" class="nav-link {{ request()->routeIs('farmer.settings*') ? 'active' : '' }}"><i class="iconoir-settings me-2"></i> Settings</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.referred') }}" class="nav-link"><i class="iconoir-gift me-2"></i> Refer &amp; Earn</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.plan.index') }}" class="nav-link"><i class="iconoir-coins me-2"></i> Farmer Plan</a></li>
                 <li class="menu-item"><a href="{{ route('farmer.subscription.index') }}" class="nav-link"><i class="iconoir-wallet me-2"></i> Farmer Subscription</a></li>
             </ul>

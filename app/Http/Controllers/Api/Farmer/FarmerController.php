@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Doctor\Doctor;
+use App\Models\Farmer\Farmer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -32,12 +33,15 @@ class FarmerController extends Controller
             'start_session' => 'nullable|boolean',
         ]);
 
-        $referrerDoctor = $this->resolveReferrerDoctor($request->input('referral_code'));
+        $referralContext = $this->resolveReferralContext(
+            $request->input('referral_code'),
+            $request->input('mobile')
+        );
         $sessionToken = $request->boolean('start_session') ? Str::random(64) : null;
-        if ($request->filled('referral_code') && ! $referrerDoctor) {
+        if ($request->filled('referral_code') && ! $referralContext) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid doctor referral code. Please check and try again.',
+                'message' => 'Invalid referral code. Please check and try again.',
             ], 422);
         }
 
@@ -59,9 +63,14 @@ class FarmerController extends Controller
                 'pincode' => $request->pincode,
                 'updated_at' => now(),
             ];
-            if ($referrerDoctor && empty($farmer->referred_by_doctor_id)) {
-                $updates['referred_by_doctor_id'] = $referrerDoctor->id;
-                $updates['doctor_referral_code'] = $referrerDoctor->referral_code;
+            if ($referralContext && $this->canAttachReferral($farmer)) {
+                if ($referralContext['type'] === 'doctor') {
+                    $updates['referred_by_doctor_id'] = $referralContext['model']->id;
+                    $updates['doctor_referral_code'] = $referralContext['model']->referral_code;
+                } elseif ($referralContext['type'] === 'farmer') {
+                    $updates['referred_by_farmer_id'] = $referralContext['model']->id;
+                    $updates['farmer_referral_code'] = $referralContext['model']->referral_code;
+                }
             }
             if ($sessionToken !== null) {
                 $updates['active_device_id'] = $request->input('device_id');
@@ -106,11 +115,19 @@ class FarmerController extends Controller
         }
 
         /// CREATE NEW FARMER
+        $referralType = $referralContext['type'] ?? null;
+        $referralModel = $referralContext['model'] ?? null;
+
         $farmerId = DB::table('farmers')->insertGetId([
             'mobile' => $request->mobile,
-            'referred_by_doctor_id' => $referrerDoctor?->id,
-            'doctor_referral_code' => $referrerDoctor?->referral_code,
+            'referral_code' => Farmer::generateUniqueReferralCode(),
+            'referral_points' => 0,
+            'referred_by_doctor_id' => $referralType === 'doctor' ? $referralModel->id : null,
+            'doctor_referral_code' => $referralType === 'doctor' ? $referralModel->referral_code : null,
             'referral_reward_granted_at' => null,
+            'referred_by_farmer_id' => $referralType === 'farmer' ? $referralModel->id : null,
+            'farmer_referral_code' => $referralType === 'farmer' ? $referralModel->referral_code : null,
+            'farmer_referral_reward_granted_at' => null,
             'fcm_token' => $request->input('fcm_token'),
             'active_device_id' => $sessionToken !== null ? $request->input('device_id') : null,
             'active_session_token' => $sessionToken,
@@ -335,6 +352,9 @@ class FarmerController extends Controller
         return [
             'id' => $farmer->id ?? null,
             'mobile' => $farmer->mobile ?? '',
+            'referral_code' => $farmer->referral_code ?? '',
+            'referral_points' => (int) ($farmer->referral_points ?? 0),
+            'referral_link' => $this->buildFarmerReferralLink((string) ($farmer->referral_code ?? '')),
             'first_name' => $farmer->first_name ?? '',
             'middle_name' => $farmer->middle_name ?? '',
             'last_name' => $farmer->last_name ?? '',
@@ -352,22 +372,62 @@ class FarmerController extends Controller
             'referred_by_doctor_id' => $farmer->referred_by_doctor_id ?? null,
             'doctor_referral_code' => $farmer->doctor_referral_code ?? '',
             'referral_reward_granted_at' => $farmer->referral_reward_granted_at ?? null,
+            'referred_by_farmer_id' => $farmer->referred_by_farmer_id ?? null,
+            'farmer_referral_code' => $farmer->farmer_referral_code ?? '',
+            'farmer_referral_reward_granted_at' => $farmer->farmer_referral_reward_granted_at ?? null,
             'created_at' => $farmer->created_at ?? null,
             'updated_at' => $farmer->updated_at ?? null,
         ];
     }
 
-    private function resolveReferrerDoctor(?string $code): ?Doctor
+    private function resolveReferralContext(?string $code, ?string $mobile = null): ?array
     {
         $normalized = strtoupper(trim((string) $code));
         if ($normalized === '') {
             return null;
         }
 
-        return Doctor::query()
+        $doctor = Doctor::query()
             ->whereRaw('UPPER(referral_code) = ?', [$normalized])
             ->where('status', 'approved')
             ->first();
+        if ($doctor) {
+            return [
+                'type' => 'doctor',
+                'model' => $doctor,
+            ];
+        }
+
+        $farmer = Farmer::query()
+            ->whereRaw('UPPER(referral_code) = ?', [$normalized])
+            ->when($mobile, fn ($query) => $query->where('mobile', '!=', $mobile))
+            ->first();
+
+        if (! $farmer) {
+            return null;
+        }
+
+        return [
+            'type' => 'farmer',
+            'model' => $farmer,
+        ];
+    }
+
+    private function canAttachReferral(object $farmer): bool
+    {
+        return empty($farmer->referred_by_doctor_id) && empty($farmer->referred_by_farmer_id);
+    }
+
+    private function buildFarmerReferralLink(string $referralCode): string
+    {
+        $code = strtoupper(trim($referralCode));
+        if ($code === '') {
+            return '';
+        }
+
+        $referrerQuery = rawurlencode('far_ref='.$code);
+
+        return 'https://play.google.com/store/apps/details?id=com.dairy.corzin&referrer='.$referrerQuery;
     }
 
     private function resolveAddressFromCoordinates(float $latitude, float $longitude): string

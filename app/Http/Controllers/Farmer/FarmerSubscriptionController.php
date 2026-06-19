@@ -95,6 +95,7 @@ class FarmerSubscriptionController extends Controller
         );
 
         $this->grantDoctorReferralRewardIfEligible($subscription->fresh('farmer'));
+        $this->grantFarmerReferralRewardIfEligible($subscription->fresh('farmer'));
 
         return redirect()->route('farmer.subscription.index')->with('success', 'Farmer subscription updated successfully.');
     }
@@ -141,6 +142,52 @@ class FarmerSubscriptionController extends Controller
                 ->increment('referral_points', self::REFERRAL_REWARD_POINTS);
 
             $lockedFarmer->referral_reward_granted_at = now();
+            $lockedFarmer->save();
+        });
+    }
+
+    private function grantFarmerReferralRewardIfEligible(?FarmerSubscription $subscription): void
+    {
+        if (! $subscription || strtolower((string) $subscription->status) !== 'active') {
+            return;
+        }
+
+        $farmer = $subscription->farmer;
+        if (! $farmer || ! $farmer->referred_by_farmer_id || $farmer->farmer_referral_reward_granted_at) {
+            return;
+        }
+
+        if (! $farmer->created_at || $farmer->created_at->gt(now()->subMonth())) {
+            return;
+        }
+
+        DB::transaction(function () use ($subscription): void {
+            $lockedFarmer = Farmer::query()
+                ->whereKey($subscription->farmer_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedFarmer ||
+                ! $lockedFarmer->referred_by_farmer_id ||
+                $lockedFarmer->farmer_referral_reward_granted_at ||
+                ! $lockedFarmer->created_at ||
+                $lockedFarmer->created_at->gt(now()->subMonth())) {
+                return;
+            }
+
+            $activeSubscription = FarmerSubscription::query()
+                ->where('farmer_id', $lockedFarmer->id)
+                ->where('status', 'active')
+                ->exists();
+            if (! $activeSubscription) {
+                return;
+            }
+
+            Farmer::query()
+                ->whereKey($lockedFarmer->referred_by_farmer_id)
+                ->increment('referral_points', self::REFERRAL_REWARD_POINTS);
+
+            $lockedFarmer->farmer_referral_reward_granted_at = now();
             $lockedFarmer->save();
         });
     }
