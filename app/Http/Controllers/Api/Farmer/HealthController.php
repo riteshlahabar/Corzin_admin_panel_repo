@@ -124,6 +124,20 @@ class HealthController extends Controller
             return response()->json(['status' => false, 'message' => ['animal_id' => ['Only milking cows can be selected for mastitis record.']]], 422);
         }
 
+        $hasActiveCase = MastitisRecord::query()
+            ->where('farmer_id', $data['farmer_id'])
+            ->where('animal_id', $data['animal_id'])
+            ->whereNull('case_id')
+            ->whereNotIn('recovery_status', ['recovered', 'Recovered', 'recoverd', 'Recoverd'])
+            ->exists();
+
+        if ($hasActiveCase) {
+            return response()->json([
+                'status' => false,
+                'message' => ['animal_id' => ['This animal is already under treatment for mastitis. Mark it recovered before adding a new mastitis record.']]],
+            ], 422);
+        }
+
         $data['date'] = $data['date'] ?? now()->toDateString();
         $data['treatment'] = trim((string) ($data['treatment'] ?? ''));
         $data['recovery_status'] = $data['test_result'] === 'positive' ? 'under_treatment' : 'recovered';
