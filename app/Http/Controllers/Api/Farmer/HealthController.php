@@ -134,7 +134,7 @@ class HealthController extends Controller
         if ($hasActiveCase) {
             return response()->json([
                 'status' => false,
-                'message' => ['animal_id' => ['This animal is already under treatment for mastitis. Mark it recovered before adding a new mastitis record.']]],
+                'message' => ['animal_id' => ['This animal is already under treatment for mastitis. Mark it recovered before adding a new mastitis record.']],
             ], 422);
         }
 
