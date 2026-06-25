@@ -25,50 +25,18 @@ class DietPlanListController extends Controller
             'active' => $plans->where('is_active', true)->count(),
             'planned_quantity' => round((float) $plans->sum(fn ($plan) => (float) ($plan->plan_quantity ?? 0)), 2),
         ];
-
-        $farmers = Farmer::query()->orderBy('first_name')->orderBy('last_name')->get();
-        $animals = Animal::query()
-            ->with(['farmer', 'pan'])
-            ->orderBy('animal_name')
-            ->get();
-        $pans = FarmerPan::query()
-            ->with('farmer')
-            ->orderBy('name')
-            ->get();
-        $feedTypes = FeedType::query()
-            ->with(['subtypes' => fn ($query) => $query->where('is_active', true)])
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-        $feedTypesJson = $feedTypes
-            ->map(function ($type) {
-                return [
-                    'id' => $type->id,
-                    'name' => $type->name,
-                    'default_unit' => $type->default_unit ?: 'Kg',
-                    'subtypes' => $type->subtypes
-                        ->map(function ($subtype) {
-                            return [
-                                'id' => $subtype->id,
-                                'name' => $subtype->name,
-                            ];
-                        })
-                        ->values()
-                        ->all(),
-                ];
-            })
-            ->values()
-            ->all();
-
-        return view('feeding.diet_plans', compact(
-            'plans',
-            'summary',
-            'farmers',
-            'animals',
-            'pans',
-            'feedTypes',
-            'feedTypesJson',
+        return view('feeding.diet_plans', array_merge(
+            [
+                'plans' => $plans,
+                'summary' => $summary,
+            ],
+            $this->getFormViewData(),
         ));
+    }
+
+    public function create()
+    {
+        return view('feeding.diet_plan_create', $this->getFormViewData());
     }
 
     public function store(Request $request)
@@ -131,7 +99,9 @@ class DietPlanListController extends Controller
             'is_active' => (bool) ($data['is_active'] ?? false),
         ]);
 
-        return back()->with('success', 'Diet plan added successfully.');
+        return redirect()
+            ->route('farmer.diet-plan')
+            ->with('success', 'Diet plan added successfully.');
     }
 
     public function update(Request $request, FeedDietPlan $plan)
@@ -226,6 +196,45 @@ class DietPlanListController extends Controller
             'subtype_details.*.dm_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_active' => ['nullable', 'boolean'],
         ]);
+    }
+
+    private function getFormViewData(): array
+    {
+        $farmers = Farmer::query()->orderBy('first_name')->orderBy('last_name')->get();
+        $animals = Animal::query()
+            ->with(['farmer', 'pan'])
+            ->orderBy('animal_name')
+            ->get();
+        $pans = FarmerPan::query()
+            ->with('farmer')
+            ->orderBy('name')
+            ->get();
+        $feedTypes = FeedType::query()
+            ->with(['subtypes' => fn ($query) => $query->where('is_active', true)])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        $feedTypesJson = $feedTypes
+            ->map(function ($type) {
+                return [
+                    'id' => $type->id,
+                    'name' => $type->name,
+                    'default_unit' => $type->default_unit ?: 'Kg',
+                    'subtypes' => $type->subtypes
+                        ->map(function ($subtype) {
+                            return [
+                                'id' => $subtype->id,
+                                'name' => $subtype->name,
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return compact('farmers', 'animals', 'pans', 'feedTypes', 'feedTypesJson');
     }
 
     /**
