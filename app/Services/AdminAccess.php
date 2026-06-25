@@ -215,7 +215,10 @@ class AdminAccess
                     ],
                     'shop_animal_buy_sell' => [
                         'label' => 'Animal Buy / Sell',
-                        'actions' => ['view' => 'View'],
+                        'actions' => [
+                            'view' => 'View',
+                            'export' => 'Export',
+                        ],
                     ],
                 ],
             ],

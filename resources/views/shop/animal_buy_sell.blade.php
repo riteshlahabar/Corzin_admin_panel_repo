@@ -50,12 +50,14 @@
                         <span class="input-group-text">to</span>
                         <input type="date" id="saleEndDate" class="form-control">
                     </div>
+                    @perm('shop_animal_buy_sell.export')
                     <button type="button" class="btn btn-light border" onclick="exportTableToPdf('animalBuySellTableExport', 'Animal Buy Sell')" title="Download PDF">
                         <i class="fa-solid fa-file-pdf text-danger"></i>
                     </button>
                     <button type="button" class="btn btn-light border" onclick="exportTableToExcel('animalBuySellTableExport', 'animal-buy-sell')" title="Download Excel">
                         <i class="fa-solid fa-file-excel text-success"></i>
                     </button>
+                    @endperm
                 </div>
             </div>
         </div>
