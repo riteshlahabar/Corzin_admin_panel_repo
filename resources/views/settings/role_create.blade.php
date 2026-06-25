@@ -14,9 +14,6 @@
     </div>
 
     <div class="card border-0 shadow-sm">
-        <div class="card-header role-page-header">
-            <h5 class="mb-0 text-white">Create Role</h5>
-        </div>
         <div class="card-body">
             <form method="POST" action="{{ route('settings.roles.store') }}">
                 @csrf
@@ -82,9 +79,6 @@
 
 @push('styles')
 <style>
-    .role-page-header {
-        background: #448100;
-    }
     .permission-chip {
         display: inline-flex;
         align-items: center;
