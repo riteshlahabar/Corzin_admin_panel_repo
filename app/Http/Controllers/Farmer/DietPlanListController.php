@@ -40,6 +40,25 @@ class DietPlanListController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
+        $feedTypesJson = $feedTypes
+            ->map(function ($type) {
+                return [
+                    'id' => $type->id,
+                    'name' => $type->name,
+                    'default_unit' => $type->default_unit ?: 'Kg',
+                    'subtypes' => $type->subtypes
+                        ->map(function ($subtype) {
+                            return [
+                                'id' => $subtype->id,
+                                'name' => $subtype->name,
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
 
         return view('feeding.diet_plans', compact(
             'plans',
@@ -48,6 +67,7 @@ class DietPlanListController extends Controller
             'animals',
             'pans',
             'feedTypes',
+            'feedTypesJson',
         ));
     }
 

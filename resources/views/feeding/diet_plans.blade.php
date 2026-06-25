@@ -546,17 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const createForm = document.getElementById('dietPlanCreateForm');
     const feedBlocksContainer = document.getElementById('dietFeedBlocks');
     const addFeedBlockBtn = document.getElementById('addFeedBlockBtn');
-    const feedTypes = @json(
-        $feedTypes->map(fn ($type) => [
-            'id' => $type->id,
-            'name' => $type->name,
-            'default_unit' => $type->default_unit ?: 'Kg',
-            'subtypes' => $type->subtypes->map(fn ($subtype) => [
-                'id' => $subtype->id,
-                'name' => $subtype->name,
-            ])->values()->all(),
-        ])->values()->all()
-    );
+    const feedTypes = @json($feedTypesJson);
     let blockIndex = 0;
 
     function datasetValue(row, field) {
