@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@push('styles')
+<link href="{{ asset('assets/libs/mobius1-selectr/selectr.min.css') }}" rel="stylesheet" type="text/css" />
+@endpush
+
 @section('content')
 <div class="container-fluid">
     @if(session('success'))
@@ -109,12 +113,24 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <label class="form-label">Farmer</label>
+                            <select name="farmer_id" id="vaccinationFarmerSelect" class="form-select" required>
+                                <option value="">Select farmer</option>
+                                @foreach($farmers as $farmer)
+                                    <option value="{{ $farmer->id }}">
+                                        {{ trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) }} - {{ $farmer->mobile }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Animal</label>
                             <select name="animal_id" id="vaccinationAnimalSelect" class="form-select" required>
                                 <option value="">Select animal</option>
                                 @foreach($animals as $animal)
                                     <option
                                         value="{{ $animal->id }}"
+                                        data-farmer-id="{{ $animal->farmer_id }}"
                                         data-pan-name="{{ $animal->pan->name ?? '' }}"
                                     >
                                         {{ $animal->animal_name }} - {{ $animal->tag_number ?: '-' }}
@@ -162,22 +178,81 @@
 
 @push('scripts')
 <script src="{{ asset('js/health/index.js') }}"></script>
+<script src="{{ asset('assets/libs/mobius1-selectr/selectr.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const farmerSelect = document.getElementById('vaccinationFarmerSelect');
     const animalSelect = document.getElementById('vaccinationAnimalSelect');
     const panInput = document.getElementById('vaccinationPanName');
+    const originalAnimalOptions = Array.from(animalSelect ? animalSelect.options : []).map(function (option) {
+        return {
+            value: option.value,
+            text: option.text,
+            farmerId: option.getAttribute('data-farmer-id') || '',
+            panName: option.getAttribute('data-pan-name') || '',
+            selected: option.selected,
+        };
+    });
+    let farmerSelectr = null;
+    let animalSelectr = null;
 
-    if (!animalSelect || !panInput) {
+    if (!farmerSelect || !animalSelect || !panInput) {
         return;
     }
+
+    const initSearchableSelect = (element) => {
+        return new Selectr(element, {
+            searchable: true,
+            clearable: false,
+            placeholder: element.options[0] ? element.options[0].text : 'Select an option...',
+        });
+    };
+
+    const rebuildAnimalSelect = (selectedFarmerId) => {
+        animalSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select animal';
+        animalSelect.appendChild(placeholder);
+
+        originalAnimalOptions.forEach((optionData) => {
+            if (!optionData.value) {
+                return;
+            }
+            if (selectedFarmerId && optionData.farmerId !== selectedFarmerId) {
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = optionData.value;
+            option.textContent = optionData.text;
+            option.setAttribute('data-farmer-id', optionData.farmerId);
+            option.setAttribute('data-pan-name', optionData.panName);
+            animalSelect.appendChild(option);
+        });
+
+        animalSelect.value = '';
+        panInput.value = '';
+
+        if (animalSelectr) {
+            animalSelectr.destroy();
+        }
+        animalSelectr = initSearchableSelect(animalSelect);
+    };
 
     const syncPanName = () => {
         const option = animalSelect.options[animalSelect.selectedIndex];
         panInput.value = option ? (option.getAttribute('data-pan-name') || '') : '';
     };
 
+    farmerSelect.addEventListener('change', function () {
+        rebuildAnimalSelect(farmerSelect.value);
+    });
     animalSelect.addEventListener('change', syncPanName);
-    syncPanName();
+
+    farmerSelectr = initSearchableSelect(farmerSelect);
+    rebuildAnimalSelect(farmerSelect.value);
 });
 </script>
 @endpush

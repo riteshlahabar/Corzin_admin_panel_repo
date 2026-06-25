@@ -107,6 +107,7 @@ class HealthManagementController extends Controller
         return view('health.vaccination', [
             'title' => 'Vaccination',
             'rows' => $rows,
+            'farmers' => Farmer::orderBy('first_name')->orderBy('last_name')->get(),
             'animals' => Animal::with(['farmer', 'pan'])->orderBy('animal_name')->get(),
             'vaccines' => Vaccine::query()
                 ->where('is_active', true)
@@ -119,6 +120,7 @@ class HealthManagementController extends Controller
     public function storeVaccination(Request $request)
     {
         $data = $request->validate([
+            'farmer_id' => 'required|exists:farmers,id',
             'animal_id' => 'required|exists:animals,id',
             'vaccine_id' => 'required|exists:vaccines,id',
             'doses' => 'required|string|max:255',
@@ -126,7 +128,16 @@ class HealthManagementController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $animal = Animal::with('pan')->findOrFail($data['animal_id']);
+        $animal = Animal::with('pan')
+            ->where('id', (int) $data['animal_id'])
+            ->where('farmer_id', (int) $data['farmer_id'])
+            ->first();
+
+        if (! $animal) {
+            return back()->withErrors([
+                'animal_id' => 'Selected animal is not valid for this farmer.',
+            ])->withInput();
+        }
 
         AnimalVaccination::create([
             'farmer_id' => $animal->farmer_id,
