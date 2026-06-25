@@ -8,30 +8,14 @@
         background: #fff;
         box-shadow: 0 12px 28px rgba(20, 54, 20, 0.08);
     }
-    .diet-app-hero {
-        background: linear-gradient(135deg, #5aa75d 0%, #3f8d4c 100%);
-        border-radius: 18px;
-        padding: 14px;
-        color: #fff;
-    }
-    .diet-app-hero-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.16);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
     .diet-summary-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 10px;
     }
     .diet-summary-box {
-        background: #f7fbf7;
-        border: 1px solid #dfedde;
+        background: #fff;
+        border: 1px solid #e5e7eb;
         border-radius: 16px;
         padding: 12px;
     }
@@ -48,14 +32,14 @@
         line-height: 1.1;
     }
     .diet-package-box {
-        background: #f8fcf8;
-        border: 1px solid #e0efe1;
+        background: #fff;
+        border: 1px solid #e5e7eb;
         border-radius: 16px;
         padding: 14px;
     }
     .diet-block {
-        background: #fbfdfb;
-        border: 1px solid #e1eee2;
+        background: #fff;
+        border: 1px solid #e5e7eb;
         border-radius: 18px;
         padding: 14px;
     }
@@ -74,7 +58,7 @@
     }
     .diet-subtype-card {
         background: #fff;
-        border: 1px solid #e5efe5;
+        border: 1px solid #e5e7eb;
         border-radius: 14px;
         padding: 12px;
     }
@@ -169,6 +153,61 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function setMetrics(bodyWeight, milkProduction, targetDmi) {
+        if (!createForm) return;
+
+        const bodyWeightValue = parseFloat(bodyWeight || '0') || 0;
+        const milkProductionValue = parseFloat(milkProduction || '0') || 0;
+        const targetDmiValue = parseFloat(targetDmi || '0') || 0;
+
+        const bodyWeightInput = createForm.querySelector('.diet-input-body-weight');
+        const milkProductionInput = createForm.querySelector('.diet-input-milk-production');
+        const targetDmiInput = createForm.querySelector('.diet-input-target-dmi');
+
+        if (bodyWeightInput) bodyWeightInput.value = bodyWeightValue.toFixed(2);
+        if (milkProductionInput) milkProductionInput.value = milkProductionValue.toFixed(2);
+        if (targetDmiInput) targetDmiInput.value = targetDmiValue.toFixed(2);
+    }
+
+    function syncContextSelection(source) {
+        if (!createForm) return;
+
+        const animalSelect = createForm.querySelector('.diet-plan-animal');
+        const panSelect = createForm.querySelector('.diet-plan-pan');
+        if (!animalSelect || !panSelect) return;
+
+        if (source === 'animal' && animalSelect.value) {
+            panSelect.value = '';
+        }
+
+        if (source === 'pan' && panSelect.value) {
+            animalSelect.value = '';
+        }
+
+        const selectedAnimal = animalSelect.selectedOptions[0];
+        const selectedPan = panSelect.selectedOptions[0];
+
+        if (panSelect.value && selectedPan) {
+            setMetrics(
+                selectedPan.getAttribute('data-body-weight'),
+                selectedPan.getAttribute('data-milk-production'),
+                selectedPan.getAttribute('data-target-dmi'),
+            );
+            return;
+        }
+
+        if (animalSelect.value && selectedAnimal) {
+            setMetrics(
+                selectedAnimal.getAttribute('data-body-weight'),
+                selectedAnimal.getAttribute('data-milk-production'),
+                selectedAnimal.getAttribute('data-target-dmi'),
+            );
+            return;
+        }
+
+        setMetrics(0, 0, 0);
+    }
+
     function updateCreateSummary() {
         if (!createForm) return;
 
@@ -195,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'body-weight': bodyWeight.toFixed(2),
             'milk-production': milkProduction.toFixed(2),
             'target-dmi': targetDmi.toFixed(2),
+            'dmi-gap': (plannedDryMatter - targetDmi).toFixed(2),
             'planned-dry-matter': plannedDryMatter.toFixed(2),
             'package-quantity': packageQuantity.toFixed(2),
         };
@@ -390,19 +430,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const farmerSelect = createForm.querySelector('.diet-plan-farmer');
     farmerSelect?.addEventListener('change', function () {
         syncTargetOptions(createForm);
+        syncContextSelection('');
+        updateCreateSummary();
     });
     syncTargetOptions(createForm);
+    syncContextSelection('');
 
-    createForm.querySelector('.diet-input-body-weight')?.addEventListener('input', updateCreateSummary);
-    createForm.querySelector('.diet-input-milk-production')?.addEventListener('input', updateCreateSummary);
-    createForm.querySelector('.diet-input-target-dmi')?.addEventListener('input', updateCreateSummary);
-
-    createForm.querySelector('.diet-plan-animal')?.addEventListener('change', function (event) {
-        const option = event.target.selectedOptions[0];
-        const weightInput = createForm.querySelector('.diet-input-body-weight');
-        if (weightInput && option && !weightInput.value) {
-            weightInput.value = option.getAttribute('data-weight') || '';
-        }
+    createForm.querySelector('.diet-plan-animal')?.addEventListener('change', function () {
+        syncContextSelection('animal');
+        updateCreateSummary();
+    });
+    createForm.querySelector('.diet-plan-pan')?.addEventListener('change', function () {
+        syncContextSelection('pan');
         updateCreateSummary();
     });
 
@@ -414,7 +453,14 @@ document.addEventListener('DOMContentLoaded', function () {
         addFeedBlock();
     });
 
-    createForm.addEventListener('submit', function () {
+    createForm.addEventListener('submit', function (event) {
+        const animalValue = createForm.querySelector('.diet-plan-animal')?.value || '';
+        const panValue = createForm.querySelector('.diet-plan-pan')?.value || '';
+        if (!animalValue && !panValue) {
+            window.alert('Please select one animal or one pen.');
+            event.preventDefault();
+            return;
+        }
         refreshSubtypeNames();
     });
 });
