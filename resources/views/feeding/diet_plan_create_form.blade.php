@@ -4,27 +4,27 @@
             @csrf
 
             <div class="diet-summary-grid">
-                <div class="diet-summary-box">
+                <div class="diet-summary-box diet-summary-weight">
                     <div class="diet-summary-label">Body Weight</div>
                     <div class="diet-summary-value"><span data-summary="body-weight">0.00</span> <small>Kg</small></div>
                 </div>
-                <div class="diet-summary-box">
+                <div class="diet-summary-box diet-summary-milk">
                     <div class="diet-summary-label">Milk Production</div>
                     <div class="diet-summary-value"><span data-summary="milk-production">0.00</span> <small>L</small></div>
                 </div>
-                <div class="diet-summary-box">
+                <div class="diet-summary-box diet-summary-dmi">
                     <div class="diet-summary-label">Required DMI</div>
                     <div class="diet-summary-value"><span data-summary="target-dmi">0.00</span> <small>Kg</small></div>
                 </div>
-                <div class="diet-summary-box">
+                <div class="diet-summary-box diet-summary-gap">
                     <div class="diet-summary-label">Gap</div>
                     <div class="diet-summary-value"><span data-summary="dmi-gap">0.00</span> <small>Kg</small></div>
                 </div>
-                <div class="diet-summary-box">
+                <div class="diet-summary-box diet-summary-dry">
                     <div class="diet-summary-label">Dry Matter</div>
                     <div class="diet-summary-value"><span data-summary="planned-dry-matter">0.00</span> <small>Kg</small></div>
                 </div>
-                <div class="diet-summary-box">
+                <div class="diet-summary-box diet-summary-feed">
                     <div class="diet-summary-label">Total Feeding</div>
                     <div class="diet-summary-value"><span data-summary="package-quantity">0.00</span> <small>Kg</small></div>
                 </div>

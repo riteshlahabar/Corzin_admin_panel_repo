@@ -19,6 +19,30 @@
         border-radius: 16px;
         padding: 12px;
     }
+    .diet-summary-weight {
+        background: linear-gradient(135deg, #eefaf0 0%, #ddf4e3 100%);
+        border-color: #b7e1c2;
+    }
+    .diet-summary-milk {
+        background: linear-gradient(135deg, #eef6ff 0%, #deebff 100%);
+        border-color: #bbd4ff;
+    }
+    .diet-summary-dmi {
+        background: linear-gradient(135deg, #fff7e8 0%, #ffedc9 100%);
+        border-color: #f5d394;
+    }
+    .diet-summary-gap {
+        background: linear-gradient(135deg, #fff1f1 0%, #ffdede 100%);
+        border-color: #f2b3b3;
+    }
+    .diet-summary-dry {
+        background: linear-gradient(135deg, #f5efff 0%, #e8ddff 100%);
+        border-color: #cdb8ff;
+    }
+    .diet-summary-feed {
+        background: linear-gradient(135deg, #eaf9f6 0%, #d7f1ec 100%);
+        border-color: #a6ddd2;
+    }
     .diet-summary-label {
         color: #6d7a6c;
         font-size: 12px;
