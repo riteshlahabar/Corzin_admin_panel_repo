@@ -36,6 +36,7 @@ class DietPlanListController extends Controller
             ->orderBy('name')
             ->get();
         $feedTypes = FeedType::query()
+            ->with(['subtypes' => fn ($query) => $query->where('is_active', true)])
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -53,11 +54,11 @@ class DietPlanListController extends Controller
     public function store(Request $request)
     {
         $data = $this->validatePayload($request);
-        $subtypes = $this->parseSubtypeLines($data['subtype_details_text']);
+        $subtypes = $this->extractSubtypePayload($request);
 
         if (empty($subtypes)) {
             return back()->withErrors([
-                'subtype_details_text' => 'Please enter subtype details in Name|Quantity|DM% format.',
+                'subtype_details' => 'Please add at least one subtype with quantity and DM%.',
             ])->withInput();
         }
 
@@ -116,11 +117,11 @@ class DietPlanListController extends Controller
     public function update(Request $request, FeedDietPlan $plan)
     {
         $data = $this->validatePayload($request);
-        $subtypes = $this->parseSubtypeLines($data['subtype_details_text']);
+        $subtypes = $this->extractSubtypePayload($request);
 
         if (empty($subtypes)) {
             return back()->withErrors([
-                'subtype_details_text' => 'Please enter subtype details in Name|Quantity|DM% format.',
+                'subtype_details' => 'Please add at least one subtype with quantity and DM%.',
             ])->withInput();
         }
 
@@ -198,7 +199,11 @@ class DietPlanListController extends Controller
             'target_dmi' => ['required', 'numeric', 'min:0'],
             'days_count' => ['nullable', 'integer', 'min:1', 'max:365'],
             'unit' => ['required', 'string', 'max:30'],
-            'subtype_details_text' => ['required', 'string'],
+            'subtype_details_text' => ['nullable', 'string'],
+            'subtype_details' => ['nullable', 'array'],
+            'subtype_details.*.name' => ['nullable', 'string', 'max:255'],
+            'subtype_details.*.quantity' => ['nullable', 'numeric', 'min:0'],
+            'subtype_details.*.dm_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'is_active' => ['nullable', 'boolean'],
         ]);
     }
@@ -239,5 +244,38 @@ class DietPlanListController extends Controller
         }
 
         return $rows;
+    }
+
+    /**
+     * @return array<int, array<string, float|string>>
+     */
+    private function extractSubtypePayload(Request $request): array
+    {
+        $structured = collect((array) $request->input('subtype_details', []))
+            ->map(function ($item) {
+                $name = trim((string) data_get($item, 'name', ''));
+                $quantity = round((float) data_get($item, 'quantity', 0), 2);
+                $dmPercent = round((float) data_get($item, 'dm_percent', 0), 2);
+
+                if ($name === '' || $quantity <= 0 || $dmPercent <= 0 || $dmPercent > 100) {
+                    return null;
+                }
+
+                return [
+                    'name' => $name,
+                    'quantity' => $quantity,
+                    'dm_percent' => $dmPercent,
+                    'dry_matter_quantity' => round(($quantity * $dmPercent) / 100, 2),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        if (! empty($structured)) {
+            return $structured;
+        }
+
+        return $this->parseSubtypeLines((string) $request->input('subtype_details_text', ''));
     }
 }
