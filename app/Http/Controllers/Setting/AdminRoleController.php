@@ -30,6 +30,13 @@ class AdminRoleController extends Controller
         return view('settings.roles', compact('roles', 'permissionGroups'));
     }
 
+    public function create()
+    {
+        $permissionGroups = AdminAccess::groups();
+
+        return view('settings.role_create', compact('permissionGroups'));
+    }
+
     public function store(Request $request)
     {
         $data = $this->validateRole($request);
@@ -44,7 +51,9 @@ class AdminRoleController extends Controller
             'is_system' => false,
         ]);
 
-        return back()->with('success', 'Role created successfully.');
+        return redirect()
+            ->route('settings.roles.index')
+            ->with('success', 'Role created successfully.');
     }
 
     public function update(Request $request, AdminRole $role)

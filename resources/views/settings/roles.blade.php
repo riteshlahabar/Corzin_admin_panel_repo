@@ -16,9 +16,9 @@
             <p class="text-muted mb-0">Create admin roles and decide exactly which screens and actions they can use.</p>
         </div>
         @perm('settings_roles.add')
-        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+        <a href="{{ route('settings.roles.create') }}" class="btn btn-success">
             <i class="fa-solid fa-plus me-1"></i> Create Role
-        </button>
+        </a>
         @endperm
     </div>
 
@@ -163,77 +163,6 @@
     </div>
 </div>
 
-@perm('settings_roles.add')
-<div class="modal fade" id="createRoleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable role-modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{{ route('settings.roles.store') }}">
-                @csrf
-                <div class="modal-header role-modal-header">
-                    <h5 class="modal-title">Create Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Role Name</label>
-                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
-                            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Slug (Optional)</label>
-                            <input type="text" name="slug" class="form-control @error('slug') is-invalid @enderror" value="{{ old('slug') }}" placeholder="auto-created-from-name">
-                            @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Description</label>
-                            <textarea name="description" rows="2" class="form-control @error('description') is-invalid @enderror">{{ old('description') }}</textarea>
-                            @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="role_active" name="is_active" checked>
-                                <label class="form-check-label" for="role_active">Active Role</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="border rounded-3 p-3 bg-light-subtle permission-matrix-wrap">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0">Permission Matrix</h6>
-                                    <small class="text-muted">Module-wise access</small>
-                                </div>
-                                @foreach($permissionGroups as $groupKey => $group)
-                                    <div class="border rounded-3 bg-white p-2 mb-2">
-                                        <div class="fw-semibold text-dark mb-2">{{ $group['label'] }}</div>
-                                        @foreach($group['resources'] as $resourceKey => $resource)
-                                            <div class="permission-row py-2 border-top {{ $loop->first ? 'border-top-0' : '' }}">
-                                                <div class="small fw-semibold text-dark mb-1">{{ $resource['label'] }}</div>
-                                                <div class="d-flex flex-wrap gap-2">
-                                                    @foreach($resource['actions'] as $actionKey => $actionLabel)
-                                                        @php($permissionKey = \App\Services\AdminAccess::permissionKey($resourceKey, $actionKey))
-                                                        <label class="permission-chip">
-                                                            <input type="checkbox" name="permissions[]" value="{{ $permissionKey }}" {{ in_array($permissionKey, old('permissions', []), true) ? 'checked' : '' }}>
-                                                            <span>{{ $actionLabel }}</span>
-                                                        </label>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save Role</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endperm
 @endsection
 
 @push('styles')

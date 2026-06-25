@@ -160,6 +160,7 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/templates/{template}/toggle', [NotificationTemplateController::class, 'toggle'])->middleware('permission:settings_templates.status')->name('templates.toggle');
 
         Route::get('/roles', [AdminRoleController::class, 'index'])->middleware('permission:settings_roles.view')->name('roles.index');
+        Route::get('/roles/create', [AdminRoleController::class, 'create'])->middleware('permission:settings_roles.add')->name('roles.create');
         Route::post('/roles', [AdminRoleController::class, 'store'])->middleware('permission:settings_roles.add')->name('roles.store');
         Route::put('/roles/{role}', [AdminRoleController::class, 'update'])->middleware('permission:settings_roles.edit')->name('roles.update');
         Route::post('/roles/{role}/toggle', [AdminRoleController::class, 'toggle'])->middleware('permission:settings_roles.status')->name('roles.toggle');
