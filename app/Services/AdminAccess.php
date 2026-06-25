@@ -68,6 +68,9 @@ class AdminAccess
                         'label' => 'Diet Plan',
                         'actions' => [
                             'view' => 'View',
+                            'add' => 'Add',
+                            'edit' => 'Edit',
+                            'delete' => 'Delete',
                             'export' => 'Export',
                         ],
                     ],

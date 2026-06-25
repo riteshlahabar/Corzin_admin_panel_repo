@@ -56,7 +56,7 @@
                 <li class="menu-item"><a href="{{ route('farmer.feeding') }}" class="nav-link"><i class="iconoir-leaf me-2"></i> Feeding</a></li>
                 @endif
                 @if($currentUser?->hasPermission('diet_plan.view'))
-                <li class="menu-item"><a href="{{ route('farmer.diet-plan') }}" class="nav-link"><i class="iconoir-bowl-food me-2"></i> Diet Plan</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.diet-plan') }}" class="nav-link"><i class="fa-solid fa-utensils me-2"></i> Diet Plan</a></li>
                 @endif
                 @if($currentUser?->hasPermission('pregnancy.view'))
                 <li class="menu-item"><a href="{{ route('farmer.pregnancy') }}" class="nav-link"><i class="iconoir-healthcare me-2"></i> Pregnancy</a></li>
