@@ -560,21 +560,6 @@ public function dmiList(Request $request, $farmerId)
             return 0.0;
         }
 
-        $pan = $animal->pan;
-        $panType = trim(strtolower((string) ($pan->pan_type ?? '')));
-        if ($pan && $panType === 'milking') {
-            $milkShifts = is_array($pan->milk_shifts) ? $pan->milk_shifts : [];
-            $shiftCount = collect($milkShifts)
-                ->map(fn ($shift) => trim((string) $shift))
-                ->filter(fn ($shift) => in_array($shift, ['Morning', 'Afternoon', 'Evening'], true))
-                ->unique()
-                ->count();
-
-            if ($shiftCount > 0) {
-                return round(((float) ($animal->default_milk_per_session ?? 0)) * $shiftCount, 2);
-            }
-        }
-
         return round((float) MilkProduction::query()
             ->where('animal_id', $animal->id)
             ->whereDate('date', $date)

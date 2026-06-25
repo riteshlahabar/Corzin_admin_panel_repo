@@ -1212,16 +1212,6 @@ class FeedingController extends Controller
             return 0.0;
         }
 
-        if ($pan && $this->normalizePanType((string) ($pan->pan_type ?? 'milking')) === 'milking') {
-            $shiftCount = count($this->normalizeMilkShifts($pan->milk_shifts ?? []));
-            if ($shiftCount > 0) {
-                $perShiftTotal = collect($animals)
-                    ->sum(fn (Animal $animal) => (float) ($animal->default_milk_per_session ?? 0));
-
-                return round($perShiftTotal * $shiftCount, 2);
-            }
-        }
-
         $animalIds = collect($animals)
             ->map(fn (Animal $animal) => (int) $animal->id)
             ->filter(fn ($id) => $id > 0)
