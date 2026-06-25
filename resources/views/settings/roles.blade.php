@@ -87,12 +87,12 @@
 
                             @perm('settings_roles.edit')
                             <div class="modal fade" id="editRole{{ $role->id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-dialog modal-xl modal-dialog-scrollable role-modal-dialog">
                                     <div class="modal-content">
                                         <form method="POST" action="{{ route('settings.roles.update', $role) }}">
                                             @csrf
                                             @method('PUT')
-                                            <div class="modal-header">
+                                            <div class="modal-header role-modal-header">
                                                 <h5 class="modal-title">Edit Role</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
@@ -165,11 +165,11 @@
 
 @perm('settings_roles.add')
 <div class="modal fade" id="createRoleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable role-modal-dialog">
         <div class="modal-content">
             <form method="POST" action="{{ route('settings.roles.store') }}">
                 @csrf
-                <div class="modal-header">
+                <div class="modal-header role-modal-header">
                     <h5 class="modal-title">Create Role</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -238,6 +238,19 @@
 
 @push('styles')
 <style>
+    .role-modal-dialog .modal-content {
+        max-height: calc(100vh - 2rem);
+    }
+    .role-modal-dialog .modal-body {
+        overflow-y: auto;
+    }
+    .role-modal-header {
+        background: #448100;
+        color: #fff;
+    }
+    .role-modal-header .btn-close {
+        filter: brightness(0) invert(1);
+    }
     .permission-chip {
         display: inline-flex;
         align-items: center;
