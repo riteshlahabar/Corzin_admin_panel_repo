@@ -26,6 +26,9 @@ class BackupController extends Controller
     public function download()
     {
         $tables = collect(Schema::getTableListing())
+            ->map(fn ($table) => $this->normalizeTableName((string) $table))
+            ->filter()
+            ->unique()
             ->sort()
             ->values();
 
@@ -126,5 +129,27 @@ class BackupController extends Controller
         }
 
         return DB::connection()->getPdo()->quote((string) $value);
+    }
+
+    private function normalizeTableName(string $table): string
+    {
+        $table = trim($table);
+        if ($table === '') {
+            return '';
+        }
+
+        $currentDatabase = (string) DB::connection()->getDatabaseName();
+        $prefix = $currentDatabase !== '' ? $currentDatabase . '.' : '';
+
+        if ($prefix !== '' && str_starts_with($table, $prefix)) {
+            return substr($table, strlen($prefix));
+        }
+
+        if (str_contains($table, '.')) {
+            $parts = explode('.', $table);
+            return trim((string) end($parts));
+        }
+
+        return $table;
     }
 }
