@@ -1200,8 +1200,11 @@ class FeedingController extends Controller
         if ($bodyWeight <= 0) {
             return 0;
         }
-        if ($isNonMilking || $milkProduction <= 0) {
+        if ($isNonMilking) {
             return $bodyWeight * 0.025;
+        }
+        if ($milkProduction <= 0) {
+            return 0;
         }
         return ($bodyWeight * 0.02) + ($milkProduction * 0.33);
     }

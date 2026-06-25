@@ -389,9 +389,11 @@ public function dmiList(Request $request, $farmerId)
                     $isMilking = ! $isNonMilkingType
                         && (str_contains($typeName, 'milking') || $totalMilk > 0);
 
-                    $requiredDmi = $isMilking
-                        ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
-                        : round(($bodyWeight * 0.025), 2);
+                    $requiredDmi = $isNonMilkingType
+                        ? round(($bodyWeight * 0.025), 2)
+                        : ($totalMilk > 0
+                            ? round(($bodyWeight * 0.02) + ($totalMilk * 0.33), 2)
+                            : 0.0);
                     $dmiDifference = round($actualDmi - $requiredDmi, 2);
                     $alertStatus = abs($dmiDifference) <= 0.5
                         ? 'Balanced'
@@ -443,7 +445,7 @@ public function dmiList(Request $request, $farmerId)
         $isMilking = (float) $data['total_milk'] > 0;
         $requiredDmi = $isMilking
             ? round(($data['body_weight'] * 0.02) + ($data['total_milk'] * 0.33), 2)
-            : round($data['body_weight'] * 0.025, 2);
+            : 0.0;
         $difference = round($data['actual_dmi'] - $requiredDmi, 2);
         $status = abs($difference) <= 0.5 ? 'Balanced' : ($difference < 0 ? 'Low' : 'High');
 
