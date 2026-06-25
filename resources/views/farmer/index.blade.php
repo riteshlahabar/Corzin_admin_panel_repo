@@ -43,9 +43,11 @@
                         <i class="fa-solid fa-file-excel text-success"></i>
                     </button>
 
+                    @perm('farmer_list.add')
                     <a href="{{ route('farmer.create') }}" class="btn btn-primary">
                         <i class="fa-solid fa-plus me-1"></i> Add Farmer
                     </a>
+                    @endperm
                 </div>
             </div>
         </div>
@@ -115,15 +117,19 @@
                                 @endif
                             </td>
                             <td class="text-end">
+                                @perm('farmer_list.edit')
                                 <a href="{{ route('farmer.edit', $farmer) }}" class="btn btn-sm btn-light border me-1" title="Edit Farmer">
                                     <i class="las la-pen text-primary fs-18"></i>
                                 </a>
+                                @endperm
+                                @perm('farmer_list.status')
                                 <form method="POST" action="{{ route('farmer.toggle', $farmer) }}" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm {{ $farmer->is_active ? 'btn-success' : 'btn-danger' }}" title="{{ $farmer->is_active ? 'Set Inactive' : 'Set Active' }}">
                                         <i class="las {{ $farmer->is_active ? 'la-check-circle' : 'la-times-circle' }} fs-18"></i>
                                     </button>
                                 </form>
+                                @endperm
                             </td>
                         </tr>
                         @empty

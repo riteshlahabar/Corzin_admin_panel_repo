@@ -110,9 +110,11 @@
                     <button type="button" class="btn btn-light border doctor-action-btn" id="exportDoctorExcel" title="Export Excel">
                         <i class="fa-solid fa-file-excel text-success"></i>
                     </button>
+                    @perm('doctor_registration.add')
                     <a href="{{ route('doctor.create') }}" class="btn btn-success doctor-add-btn">
                         <i class="fa-solid fa-plus me-1"></i> Add Doctor
                     </a>
+                    @endperm
                 </div>
             </div>
         </div>
@@ -172,6 +174,7 @@
                                     </span>
                                 </td>
                                 <td>
+                                    @perm('doctor_list.status')
                                     <form method="POST" action="{{ route('doctor.toggle_approval', $doctor) }}" class="doctor-approval-form d-inline-flex align-items-center gap-2" data-doctor="{{ $doctor->full_name ?: $doctor->name }}">
                                         @csrf
                                         <input type="hidden" name="status" value="{{ ($doctor->status ?? 'pending') === 'approved' ? 'pending' : 'approved' }}">
@@ -184,6 +187,9 @@
                                             >
                                         </div>
                                     </form>
+                                    @else
+                                    <span class="text-muted">-</span>
+                                    @endperm
                                 </td>
                                 <td>
                                     <span class="badge {{ ($doctor->is_active_for_appointments ?? false) ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">

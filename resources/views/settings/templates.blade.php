@@ -39,19 +39,24 @@
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
+                                        @perm('settings_templates.status')
                                         <form method="POST" action="{{ route('settings.templates.toggle', $template) }}" class="m-0">
                                             @csrf
                                             <button type="submit" class="btn btn-sm {{ $template->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}">
                                                 {{ $template->is_active ? 'Disable' : 'Enable' }}
                                             </button>
                                         </form>
+                                        @endperm
+                                        @perm('settings_templates.edit')
                                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTemplate{{ $template->id }}">
                                             Edit
                                         </button>
+                                        @endperm
                                     </div>
                                 </td>
                             </tr>
 
+                            @perm('settings_templates.edit')
                             <div class="modal fade" id="editTemplate{{ $template->id }}" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog modal-lg">
                                     <div class="modal-content">
@@ -99,6 +104,7 @@
                                     </div>
                                 </div>
                             </div>
+                            @endperm
                         @empty
                             <tr>
                                 <td colspan="5" class="text-center text-muted py-4">No templates available.</td>

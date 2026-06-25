@@ -29,9 +29,11 @@
                 <button type="button" class="btn btn-light border" onclick="exportPanTableToExcel('panTableExport', 'pan-list')" title="Download Excel">
                     <i class="fa-solid fa-file-excel text-success"></i>
                 </button>
+                @perm('pan_list.add')
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPanModal">
                     <i class="fa-solid fa-plus me-1"></i> Create PAN
                 </button>
+                @endperm
             </div>
         </div>
     </div>
@@ -84,6 +86,7 @@
                             </td>
                             <td class="text-end text-nowrap">
                                 <div class="d-inline-flex gap-1 flex-nowrap">
+                                    @perm('pan_list.transfer')
                                     <button
                                         type="button"
                                         class="btn btn-sm btn-light border open-transfer-pan"
@@ -93,6 +96,8 @@
                                         title="Transfer Animal">
                                         <i class="las la-random text-primary fs-18"></i>
                                     </button>
+                                    @endperm
+                                    @perm('pan_list.delete')
                                     <form method="POST" action="{{ route('farmer.pans.destroy', $pan) }}" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this PAN?');">
                                         @csrf
                                         @method('DELETE')
@@ -100,6 +105,7 @@
                                             <i class="las la-trash text-danger fs-18"></i>
                                         </button>
                                     </form>
+                                    @endperm
                                 </div>
                             </td>
                         </tr>
@@ -113,6 +119,7 @@
     </div>
 </div>
 
+@perm('pan_list.add')
 <div class="modal fade" id="createPanModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <form method="POST" action="{{ route('farmer.pans.store') }}" class="modal-content">
@@ -177,7 +184,9 @@
         </form>
     </div>
 </div>
+@endperm
 
+@perm('pan_list.transfer')
 <div class="modal fade" id="transferPanModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <form method="POST" action="{{ route('farmer.pans.transfer') }}" class="modal-content">
@@ -212,6 +221,7 @@
         </form>
     </div>
 </div>
+@endperm
 
 @php
     $panAnimalsMap = $pans->mapWithKeys(function ($pan) {

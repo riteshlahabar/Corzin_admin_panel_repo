@@ -16,6 +16,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="fw-semibold mb-3">Create Feed Type</h6>
+                    @perm('settings_feed_types.add')
                     <form method="POST" action="{{ route('settings.feed-types.store') }}" class="row g-2">
                         @csrf
                         <div class="col-12">
@@ -43,6 +44,9 @@
                             <button type="submit" class="btn btn-success">Save Feed Type</button>
                         </div>
                     </form>
+                    @else
+                    <div class="alert alert-light border mb-0">You have view access only.</div>
+                    @endperm
                 </div>
             </div>
         </div>
@@ -93,6 +97,7 @@
                                             </span>
                                         </td>
                                         <td>
+                                            @perm('settings_feed_types.edit')
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-outline-primary"
@@ -101,13 +106,17 @@
                                             >
                                                 Edit
                                             </button>
+                                            @endperm
+                                            @perm('settings_feed_types.status')
                                             <form method="POST" action="{{ route('settings.feed-types.toggle', $feedType) }}" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn btn-sm btn-outline-dark">
                                                     {{ $feedType->is_active ? 'Disable' : 'Enable' }}
                                                 </button>
                                             </form>
+                                            @endperm
 
+                                            @perm('settings_feed_types.edit')
                                             <div class="modal fade" id="editFeedType{{ $feedType->id }}" tabindex="-1" aria-hidden="true">
                                                 <div class="modal-dialog">
                                                     <div class="modal-content">
@@ -144,6 +153,7 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            @endperm
                                         </td>
                                     </tr>
                                 @empty

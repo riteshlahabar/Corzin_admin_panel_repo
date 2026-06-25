@@ -32,17 +32,22 @@
 
                             <!-- Form -->
                             <div class="card-body pt-0">
+                                @if(session('error'))
+                                    <div class="alert alert-danger py-2">{{ session('error') }}</div>
+                                @endif
                                 <form method="POST" action="{{ route('login') }}">
                                     @csrf
 
                                     <div class="form-group mb-2">
                                         <label class="form-label">Email</label>
-                                        <input type="text" name="email" class="form-control" placeholder="Enter email">
+                                        <input type="text" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="Enter email" value="{{ old('email') }}">
+                                        @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
 
                                     <div class="form-group">
                                         <label class="form-label">Password</label>
-                                        <input type="password" name="password" class="form-control" placeholder="Enter password">
+                                        <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Enter password">
+                                        @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
 
                                     <div class="form-group row mt-3">

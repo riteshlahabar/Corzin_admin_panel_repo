@@ -72,9 +72,12 @@
                 </div>
             </div>
             <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                @perm('animal_list.import')
                 <a href="{{ route('animal.import.template') }}" class="btn btn-light border" title="Download Animal Import Template">
                     <i class="fa-solid fa-download me-1 text-primary"></i> Template
                 </a>
+                @endperm
+                @perm('animal_list.import')
                 <form method="POST" action="{{ route('animal.import') }}" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
                     @csrf
                     <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.txt,.xls,.xlsx" required style="max-width:220px;">
@@ -82,15 +85,18 @@
                         <i class="fa-solid fa-upload me-1"></i> Upload List
                     </button>
                 </form>
+                @endperm
                 <button type="button" class="btn btn-light border" onclick="exportTableToPdf('animalTableExport', 'Animal List')" title="Download PDF">
                     <i class="fa-solid fa-file-pdf text-danger"></i>
                 </button>
                 <button type="button" class="btn btn-light border" onclick="exportTableToExcel('animalTableExport', 'animal-list')" title="Download Excel">
                     <i class="fa-solid fa-file-excel text-success"></i>
                 </button>
+                @perm('animal_list.add')
                 <a href="{{ route('animal.create') }}" class="btn btn-primary">
                     <i class="fa-solid fa-plus me-1"></i> Add Animal
                 </a>
+                @endperm
             </div>
         </div>
     </div>
@@ -170,15 +176,19 @@
                             </td>
                             <td class="text-end text-nowrap">
                                 <div class="d-inline-flex align-items-center gap-1 flex-nowrap">
+                                    @perm('animal_list.edit')
                                     <a href="{{ route('animal.edit', $animal) }}" class="btn btn-sm btn-light border" title="Edit Animal">
                                         <i class="las la-pen text-primary fs-18"></i>
                                     </a>
+                                    @endperm
+                                    @perm('animal_list.status')
                                     <form method="POST" action="{{ route('animal.toggle', $animal) }}" class="d-inline m-0">
                                         @csrf
                                         <button type="submit" class="btn btn-sm {{ $animal->is_active ? 'btn-success' : 'btn-danger' }}" title="{{ $animal->is_active ? 'Set Inactive' : 'Set Active' }}">
                                             <i class="las {{ $animal->is_active ? 'la-check-circle' : 'la-times-circle' }} fs-18"></i>
                                         </button>
                                     </form>
+                                    @endperm
                                 </div>
                             </td>
                         </tr>
