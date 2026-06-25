@@ -77,6 +77,7 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/feeding', [FeedingListController::class, 'store'])->middleware('permission:feeding.add')->name('farmer.feeding.store');
         Route::get('/diet-plan', [DietPlanListController::class, 'index'])->middleware('permission:diet_plan.view')->name('farmer.diet-plan');
         Route::get('/diet-plan/create', [DietPlanListController::class, 'create'])->middleware('permission:diet_plan.add')->name('farmer.diet-plan.create');
+        Route::get('/diet-plan/{plan}/edit', [DietPlanListController::class, 'edit'])->middleware('permission:diet_plan.edit')->name('farmer.diet-plan.edit');
         Route::post('/diet-plan', [DietPlanListController::class, 'store'])->middleware('permission:diet_plan.add')->name('farmer.diet-plan.store');
         Route::put('/diet-plan/{plan}', [DietPlanListController::class, 'update'])->middleware('permission:diet_plan.edit')->name('farmer.diet-plan.update');
         Route::delete('/diet-plan/{plan}', [DietPlanListController::class, 'destroy'])->middleware('permission:diet_plan.delete')->name('farmer.diet-plan.destroy');

@@ -264,9 +264,9 @@
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     @perm('diet_plan.edit')
-                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDietPlan{{ $plan->id }}">
+                                    <a href="{{ route('farmer.diet-plan.edit', $plan) }}" class="btn btn-sm btn-outline-primary">
                                         Edit
-                                    </button>
+                                    </a>
                                     @endperm
                                     @perm('diet_plan.delete')
                                     <form method="POST" action="{{ route('farmer.diet-plan.destroy', $plan) }}" onsubmit="return confirm('Delete this diet plan?');">
@@ -279,121 +279,6 @@
                             </td>
                         </tr>
 
-                        @perm('diet_plan.edit')
-                        <div class="modal fade" id="editDietPlan{{ $plan->id }}" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-xl modal-dialog-centered">
-                                <div class="modal-content">
-                                    <form method="POST" action="{{ route('farmer.diet-plan.update', $plan) }}" class="diet-plan-form">
-                                        @csrf
-                                        @method('PUT')
-                                        <div class="modal-header bg-success text-white">
-                                            <h5 class="modal-title">Edit Diet Plan</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <label class="form-label">Farmer</label>
-                                                    <select name="farmer_id" class="form-select diet-plan-farmer" required>
-                                                        <option value="">Select farmer</option>
-                                                        @foreach($farmers as $farmer)
-                                                            <option value="{{ $farmer->id }}" {{ (int) $plan->farmer_id === (int) $farmer->id ? 'selected' : '' }}>
-                                                                {{ trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) }} - {{ $farmer->mobile }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label">Animal</label>
-                                                    <select name="animal_id" class="form-select diet-plan-animal" required>
-                                                        <option value="">Select animal</option>
-                                                        @foreach($animals as $animal)
-                                                            <option
-                                                                value="{{ $animal->id }}"
-                                                                data-farmer-id="{{ $animal->farmer_id }}"
-                                                                {{ (int) $plan->animal_id === (int) $animal->id ? 'selected' : '' }}
-                                                            >
-                                                                {{ $animal->animal_name }}{{ $animal->tag_number ? ' - '.$animal->tag_number : '' }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label">Pen</label>
-                                                    <select name="pan_id" class="form-select diet-plan-pan">
-                                                        <option value="">No pen</option>
-                                                        @foreach($pans as $pan)
-                                                            <option
-                                                                value="{{ $pan->id }}"
-                                                                data-farmer-id="{{ $pan->farmer_id }}"
-                                                                {{ (int) ($plan->pan_id ?? 0) === (int) $pan->id ? 'selected' : '' }}
-                                                            >
-                                                                {{ $pan->name }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label">Diet Plan Name</label>
-                                                    <input type="text" name="diet_plan_name" class="form-control" value="{{ $plan->diet_plan_name }}" required>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label">Feed Type</label>
-                                                    <select name="feed_type_id" class="form-select" required>
-                                                        <option value="">Select feed type</option>
-                                                        @foreach($feedTypes as $feedTypeItem)
-                                                            <option value="{{ $feedTypeItem->id }}" {{ (int) $plan->feed_type_id === (int) $feedTypeItem->id ? 'selected' : '' }}>
-                                                                {{ $feedTypeItem->name }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label">Reference Date</label>
-                                                    <input type="date" name="reference_date" class="form-control" value="{{ optional($plan->reference_date)->format('Y-m-d') }}" required>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label">Body Weight</label>
-                                                    <input type="number" step="0.01" min="0" name="body_weight" class="form-control" value="{{ number_format((float) ($plan->body_weight ?? 0), 2, '.', '') }}" required>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label">Milk Production</label>
-                                                    <input type="number" step="0.01" min="0" name="milk_production" class="form-control" value="{{ number_format((float) ($plan->milk_production ?? 0), 2, '.', '') }}" required>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label">Required DMI</label>
-                                                    <input type="number" step="0.01" min="0" name="target_dmi" class="form-control" value="{{ number_format((float) ($plan->target_dmi ?? 0), 2, '.', '') }}" required>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label">Days Count</label>
-                                                    <input type="number" min="1" max="365" name="days_count" class="form-control" value="{{ $plan->days_count }}">
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <label class="form-label">Unit</label>
-                                                    <input type="text" name="unit" class="form-control" value="{{ $plan->unit ?: 'Kg' }}" required>
-                                                </div>
-                                                <div class="col-md-9">
-                                                    <label class="form-label">Subtype Details</label>
-                                                    <textarea name="subtype_details_text" rows="5" class="form-control" required>{{ $subtypeText }}</textarea>
-                                                    <small class="text-muted">One line per item: <code>Name|Quantity|DM%</code></small>
-                                                </div>
-                                                <div class="col-12">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="1" id="dietActive{{ $plan->id }}" name="is_active" {{ $plan->is_active ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="dietActive{{ $plan->id }}">Active</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="submit" class="btn btn-success">Update Diet Plan</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        @endperm
                         @empty
                         <tr>
                             <td colspan="13" class="text-center text-muted">No diet plans found</td>
