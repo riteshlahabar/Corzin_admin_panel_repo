@@ -64,6 +64,13 @@ class AdminAccess
                             'add' => 'Add',
                         ],
                     ],
+                    'diet_plan' => [
+                        'label' => 'Diet Plan',
+                        'actions' => [
+                            'view' => 'View',
+                            'export' => 'Export',
+                        ],
+                    ],
                     'pregnancy' => [
                         'label' => 'Pregnancy',
                         'actions' => [
@@ -128,6 +135,13 @@ class AdminAccess
                     ],
                     'health_mastitis' => [
                         'label' => 'Mastitis',
+                        'actions' => [
+                            'view' => 'View',
+                            'add' => 'Add',
+                        ],
+                    ],
+                    'health_vaccination' => [
+                        'label' => 'Vaccination',
                         'actions' => [
                             'view' => 'View',
                             'add' => 'Add',
@@ -252,6 +266,15 @@ class AdminAccess
                             'status' => 'Status',
                         ],
                     ],
+                    'settings_vaccines' => [
+                        'label' => 'Add Vaccine',
+                        'actions' => [
+                            'view' => 'View',
+                            'add' => 'Add',
+                            'edit' => 'Edit',
+                            'status' => 'Status',
+                        ],
+                    ],
                     'settings_templates' => [
                         'label' => 'Edit Templates',
                         'actions' => [
@@ -276,6 +299,13 @@ class AdminAccess
                             'add' => 'Add',
                             'edit' => 'Edit',
                             'status' => 'Status',
+                        ],
+                    ],
+                    'settings_backup' => [
+                        'label' => 'Backup Data',
+                        'actions' => [
+                            'view' => 'View',
+                            'export' => 'Download Backup',
                         ],
                     ],
                 ],
@@ -333,6 +363,7 @@ class AdminAccess
             'pan_list.view' => 'farmer.pans',
             'milk_production.view' => 'farmer.milk',
             'feeding.view' => 'farmer.feeding',
+            'diet_plan.view' => 'farmer.diet-plan',
             'pregnancy.view' => 'farmer.pregnancy',
             'dairy.view' => 'farmer.dairy',
             'doctor_list.view' => 'doctor.index',
@@ -340,8 +371,10 @@ class AdminAccess
             'shop_products.view' => 'shop.index',
             'analytics_farmer.view' => 'analytics.farmer',
             'settings_diseases.view' => 'settings.diseases.index',
+            'settings_vaccines.view' => 'settings.vaccines.index',
             'settings_roles.view' => 'settings.roles.index',
             'settings_users.view' => 'settings.users.index',
+            'health_vaccination.view' => 'health.vaccination',
         ];
 
         foreach ($map as $permission => $routeName) {

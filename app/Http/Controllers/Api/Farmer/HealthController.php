@@ -4,18 +4,40 @@ namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
+use App\Models\Farmer\AnimalVaccination;
 use App\Models\Farmer\DmiRecord;
 use App\Models\Farmer\FeedDietPlan;
 use App\Models\Farmer\FeedingRecord;
 use App\Models\Farmer\MastitisRecord;
 use App\Models\Farmer\MedicalRecord;
 use App\Models\Farmer\MilkProduction;
+use App\Models\Farmer\Vaccine;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class HealthController extends Controller
 {
+    public function vaccineList()
+    {
+        $rows = Vaccine::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Vaccine $row) => [
+                'id' => $row->id,
+                'name' => $row->name,
+                'description' => $row->description,
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Vaccines fetched successfully',
+            'data' => $rows,
+        ]);
+    }
+
     public function medicalList($farmerId)
     {
         $rows = MedicalRecord::with('animal')
@@ -56,6 +78,93 @@ class HealthController extends Controller
 
         $row = MedicalRecord::create($validator->validated());
         return response()->json(['status' => true, 'message' => 'Medical record saved successfully', 'data' => $row], 201);
+    }
+
+    public function vaccinationList($farmerId)
+    {
+        $rows = AnimalVaccination::with(['animal.animalType', 'vaccine'])
+            ->where('farmer_id', $farmerId)
+            ->latest('vaccination_date')
+            ->latest('id')
+            ->get()
+            ->map(fn (AnimalVaccination $row) => [
+                'id' => $row->id,
+                'animal_id' => $row->animal_id,
+                'animal_name' => $row->animal->animal_name ?? '-',
+                'tag_number' => $row->animal->tag_number ?? '-',
+                'animal_type_name' => optional(optional($row->animal)->animalType)->name ?? '',
+                'pan_id' => (int) ($row->pan_id ?? 0),
+                'pan_name' => $row->pan_name ?: (optional(optional($row->animal)->pan)->name ?? ''),
+                'vaccine_id' => (int) $row->vaccine_id,
+                'vaccine_name' => $row->vaccine->name ?? '-',
+                'doses' => $row->doses,
+                'date' => optional($row->vaccination_date)->format('d/m/Y'),
+                'notes' => $row->notes,
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Vaccination records fetched successfully',
+            'data' => $rows,
+        ]);
+    }
+
+    public function storeVaccination(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'farmer_id' => 'required|exists:farmers,id',
+            'animal_id' => 'required|exists:animals,id',
+            'vaccine_id' => 'required|exists:vaccines,id',
+            'doses' => 'required|string|max:255',
+            'vaccination_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $animal = Animal::with('pan')
+            ->where('id', $data['animal_id'])
+            ->where('farmer_id', $data['farmer_id'])
+            ->first();
+
+        if (! $animal) {
+            return response()->json([
+                'status' => false,
+                'message' => ['animal_id' => ['Selected animal is invalid.']],
+            ], 422);
+        }
+
+        $vaccine = Vaccine::query()
+            ->where('id', $data['vaccine_id'])
+            ->where('is_active', true)
+            ->first();
+
+        if (! $vaccine) {
+            return response()->json([
+                'status' => false,
+                'message' => ['vaccine_id' => ['Selected vaccine is invalid.']],
+            ], 422);
+        }
+
+        $row = AnimalVaccination::create([
+            'farmer_id' => (int) $data['farmer_id'],
+            'animal_id' => (int) $animal->id,
+            'pan_id' => $animal->pan_id,
+            'pan_name' => optional($animal->pan)->name,
+            'vaccine_id' => (int) $vaccine->id,
+            'doses' => trim((string) $data['doses']),
+            'vaccination_date' => $data['vaccination_date'] ?? now()->toDateString(),
+            'notes' => trim((string) ($data['notes'] ?? '')),
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Vaccination record saved successfully',
+            'data' => $row,
+        ], 201);
     }
 
     public function mastitisList($farmerId)

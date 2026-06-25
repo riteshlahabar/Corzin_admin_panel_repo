@@ -29,7 +29,7 @@
 
     @if($currentUser?->hasAnyPermission([
         'farmer_list.view','animal_list.view','pan_list.view','milk_production.view','feeding.view',
-        'pregnancy.view','dairy.view','farmer_settings.view','farmer_referred.view','farmer_plan.view',
+        'diet_plan.view','pregnancy.view','dairy.view','farmer_settings.view','farmer_referred.view','farmer_plan.view',
         'farmer_subscription.view'
     ]))
     <li class="nav-item">
@@ -54,6 +54,9 @@
                 @endif
                 @if($currentUser?->hasPermission('feeding.view'))
                 <li class="menu-item"><a href="{{ route('farmer.feeding') }}" class="nav-link"><i class="iconoir-leaf me-2"></i> Feeding</a></li>
+                @endif
+                @if($currentUser?->hasPermission('diet_plan.view'))
+                <li class="menu-item"><a href="{{ route('farmer.diet-plan') }}" class="nav-link"><i class="iconoir-bowl-food me-2"></i> Diet Plan</a></li>
                 @endif
                 @if($currentUser?->hasPermission('pregnancy.view'))
                 <li class="menu-item"><a href="{{ route('farmer.pregnancy') }}" class="nav-link"><i class="iconoir-healthcare me-2"></i> Pregnancy</a></li>
@@ -106,7 +109,7 @@
     </li>
     @endif
 
-    @if($currentUser?->hasAnyPermission(['health_dmi.view','health_mastitis.view']))
+    @if($currentUser?->hasAnyPermission(['health_dmi.view','health_mastitis.view','health_vaccination.view']))
     <li class="nav-item">
         <a class="nav-link" href="#healthMenu" data-bs-toggle="collapse" role="button">
             <i class="iconoir-health-shield menu-icon me-2"></i>
@@ -120,6 +123,9 @@
                 @endif
                 @if($currentUser?->hasPermission('health_mastitis.view'))
                 <li><a href="{{ route('health.mastitis') }}" class="nav-link"><i class="fa-solid fa-briefcase-medical me-2"></i> Mastitis</a></li>
+                @endif
+                @if($currentUser?->hasPermission('health_vaccination.view'))
+                <li><a href="{{ route('health.vaccination') }}" class="nav-link"><i class="fa-solid fa-syringe me-2"></i> Vaccination</a></li>
                 @endif
             </ul>
         </div>
@@ -281,7 +287,7 @@
     @endif
 
     @if($currentUser?->hasAnyPermission([
-        'settings_diseases.view','settings_feed_types.view','settings_templates.view','settings_roles.view','settings_users.view'
+        'settings_diseases.view','settings_feed_types.view','settings_vaccines.view','settings_templates.view','settings_roles.view','settings_users.view','settings_backup.view'
     ]))
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" href="#settingsMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('settings.*') ? 'true' : 'false' }}">
@@ -319,10 +325,24 @@
                     </a>
                 </li>
                 @endif
+                @if($currentUser?->hasPermission('settings_vaccines.view'))
+                <li class="menu-item">
+                    <a href="{{ route('settings.vaccines.index') }}" class="nav-link {{ request()->routeIs('settings.vaccines.*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-syringe me-2"></i> Add Vaccine
+                    </a>
+                </li>
+                @endif
                 @if($currentUser?->hasPermission('settings_templates.view'))
                 <li class="menu-item">
                     <a href="{{ route('settings.templates.index') }}" class="nav-link {{ request()->routeIs('settings.templates.*') ? 'active' : '' }}">
                         <i class="iconoir-edit-pencil me-2"></i> Edit Templates
+                    </a>
+                </li>
+                @endif
+                @if($currentUser?->hasPermission('settings_backup.view'))
+                <li class="menu-item">
+                    <a href="{{ route('settings.backup.index') }}" class="nav-link {{ request()->routeIs('settings.backup.*') ? 'active' : '' }}">
+                        <i class="iconoir-database-backup me-2"></i> Backup Data
                     </a>
                 </li>
                 @endif

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
+use App\Models\Farmer\AnimalVaccination;
 use App\Models\Farmer\DmiRecord;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\MastitisRecord;
 use App\Models\Farmer\MedicalRecord;
 use App\Models\Farmer\MilkProduction;
+use App\Models\Farmer\Vaccine;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -92,8 +94,53 @@ class HealthManagementController extends Controller
 
     MastitisRecord::create($data);
 
-    return redirect()->route('health.mastitis')->with('success', 'Mastitis record added successfully.');
+        return redirect()->route('health.mastitis')->with('success', 'Mastitis record added successfully.');
 }
+
+    public function vaccination()
+    {
+        $rows = AnimalVaccination::with(['farmer', 'animal', 'vaccine'])
+            ->latest('vaccination_date')
+            ->latest('id')
+            ->get();
+
+        return view('health.vaccination', [
+            'title' => 'Vaccination',
+            'rows' => $rows,
+            'animals' => Animal::with(['farmer', 'pan'])->orderBy('animal_name')->get(),
+            'vaccines' => Vaccine::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
+        ]);
+    }
+
+    public function storeVaccination(Request $request)
+    {
+        $data = $request->validate([
+            'animal_id' => 'required|exists:animals,id',
+            'vaccine_id' => 'required|exists:vaccines,id',
+            'doses' => 'required|string|max:255',
+            'vaccination_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $animal = Animal::with('pan')->findOrFail($data['animal_id']);
+
+        AnimalVaccination::create([
+            'farmer_id' => $animal->farmer_id,
+            'animal_id' => $animal->id,
+            'pan_id' => $animal->pan_id,
+            'pan_name' => optional($animal->pan)->name,
+            'vaccine_id' => (int) $data['vaccine_id'],
+            'doses' => trim((string) $data['doses']),
+            'vaccination_date' => $data['vaccination_date'] ?? now()->toDateString(),
+            'notes' => trim((string) ($data['notes'] ?? '')),
+        ]);
+
+        return redirect()->route('health.vaccination')->with('success', 'Vaccination record added successfully.');
+    }
 
     public function dmi(Request $request)
     {

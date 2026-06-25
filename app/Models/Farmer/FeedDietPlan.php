@@ -56,4 +56,9 @@ class FeedDietPlan extends Model
     {
         return $this->belongsTo(FeedType::class, 'feed_type_id');
     }
+
+    public function pan()
+    {
+        return $this->belongsTo(FarmerPan::class, 'pan_id');
+    }
 }

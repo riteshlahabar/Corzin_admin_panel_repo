@@ -97,8 +97,11 @@ Route::prefix('dairy')->group(function () {
 });
 
 Route::prefix('health')->group(function () {
+    Route::get('/vaccines', [HealthController::class, 'vaccineList']);
     Route::get('/medical/{farmer_id}', [HealthController::class, 'medicalList']);
     Route::post('/medical', [HealthController::class, 'storeMedical']);
+    Route::get('/vaccination/{farmer_id}', [HealthController::class, 'vaccinationList']);
+    Route::post('/vaccination', [HealthController::class, 'storeVaccination']);
     Route::get('/mastitis/{farmer_id}', [HealthController::class, 'mastitisList']);
     Route::post('/mastitis', [HealthController::class, 'storeMastitis']);
     Route::post('/mastitis/update/{record}', [HealthController::class, 'updateMastitis']);

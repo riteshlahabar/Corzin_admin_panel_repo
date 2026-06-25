@@ -15,6 +15,7 @@ use App\Http\Controllers\Doctor\DoctorVisitedController;
 use App\Http\Controllers\Farmer\AnimalLifecycleController;
 use App\Http\Controllers\Farmer\AnimalListController;
 use App\Http\Controllers\Farmer\DairyListController;
+use App\Http\Controllers\Farmer\DietPlanListController;
 use App\Http\Controllers\Farmer\FarmerListController;
 use App\Http\Controllers\Farmer\FarmerPlanController;
 use App\Http\Controllers\Farmer\FarmerReferralController;
@@ -26,9 +27,11 @@ use App\Http\Controllers\Farmer\MilkProduceListController;
 use App\Http\Controllers\Farmer\PregnancyListController;
 use App\Http\Controllers\Setting\AdminRoleController;
 use App\Http\Controllers\Setting\AdminUserController;
+use App\Http\Controllers\Setting\BackupController;
 use App\Http\Controllers\Setting\DiseaseController;
 use App\Http\Controllers\Setting\FeedTypeController;
 use App\Http\Controllers\Setting\NotificationTemplateController;
+use App\Http\Controllers\Setting\VaccineController;
 use App\Http\Controllers\Shop\AnimalBuySellController;
 use App\Http\Controllers\Shop\ShopProductController;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +75,7 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::get('/milk-production', [MilkProduceListController::class, 'index'])->middleware('permission:milk_production.view')->name('farmer.milk');
         Route::get('/feeding', [FeedingListController::class, 'index'])->middleware('permission:feeding.view')->name('farmer.feeding');
         Route::post('/feeding', [FeedingListController::class, 'store'])->middleware('permission:feeding.add')->name('farmer.feeding.store');
+        Route::get('/diet-plan', [DietPlanListController::class, 'index'])->middleware('permission:diet_plan.view')->name('farmer.diet-plan');
         Route::get('/pregnancy', [PregnancyListController::class, 'index'])->middleware('permission:pregnancy.view')->name('farmer.pregnancy');
         Route::get('/dairy', [DairyListController::class, 'index'])->middleware('permission:dairy.view')->name('farmer.dairy');
         Route::post('/dairy', [DairyListController::class, 'store'])->middleware('permission:dairy.add')->name('farmer.dairy.store');
@@ -99,6 +103,8 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/medical', [HealthManagementController::class, 'storeMedical'])->middleware('permission:health_mastitis.add')->name('health.medical.store');
         Route::get('/mastitis', [HealthManagementController::class, 'mastitis'])->middleware('permission:health_mastitis.view')->name('health.mastitis');
         Route::post('/mastitis', [HealthManagementController::class, 'storeMastitis'])->middleware('permission:health_mastitis.add')->name('health.mastitis.store');
+        Route::get('/vaccination', [HealthManagementController::class, 'vaccination'])->middleware('permission:health_vaccination.view')->name('health.vaccination');
+        Route::post('/vaccination', [HealthManagementController::class, 'storeVaccination'])->middleware('permission:health_vaccination.add')->name('health.vaccination.store');
         Route::get('/dmi', [HealthManagementController::class, 'dmi'])->middleware('permission:health_dmi.view')->name('health.dmi');
         Route::post('/dmi', [HealthManagementController::class, 'storeDmi'])->middleware('permission:health_dmi.add')->name('health.dmi.store');
     });
@@ -155,6 +161,11 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::put('/feed-types/{feedType}', [FeedTypeController::class, 'update'])->middleware('permission:settings_feed_types.edit')->name('feed-types.update');
         Route::post('/feed-types/{feedType}/toggle', [FeedTypeController::class, 'toggle'])->middleware('permission:settings_feed_types.status')->name('feed-types.toggle');
 
+        Route::get('/vaccines', [VaccineController::class, 'index'])->middleware('permission:settings_vaccines.view')->name('vaccines.index');
+        Route::post('/vaccines', [VaccineController::class, 'store'])->middleware('permission:settings_vaccines.add')->name('vaccines.store');
+        Route::put('/vaccines/{vaccine}', [VaccineController::class, 'update'])->middleware('permission:settings_vaccines.edit')->name('vaccines.update');
+        Route::post('/vaccines/{vaccine}/toggle', [VaccineController::class, 'toggle'])->middleware('permission:settings_vaccines.status')->name('vaccines.toggle');
+
         Route::get('/templates', [NotificationTemplateController::class, 'index'])->middleware('permission:settings_templates.view')->name('templates.index');
         Route::put('/templates/{template}', [NotificationTemplateController::class, 'update'])->middleware('permission:settings_templates.edit')->name('templates.update');
         Route::post('/templates/{template}/toggle', [NotificationTemplateController::class, 'toggle'])->middleware('permission:settings_templates.status')->name('templates.toggle');
@@ -169,5 +180,8 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/users', [AdminUserController::class, 'store'])->middleware('permission:settings_users.add')->name('users.store');
         Route::put('/users/{user}', [AdminUserController::class, 'update'])->middleware('permission:settings_users.edit')->name('users.update');
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggle'])->middleware('permission:settings_users.status')->name('users.toggle');
+
+        Route::get('/backup', [BackupController::class, 'index'])->middleware('permission:settings_backup.view')->name('backup.index');
+        Route::get('/backup/download', [BackupController::class, 'download'])->middleware('permission:settings_backup.export')->name('backup.download');
     });
 });
