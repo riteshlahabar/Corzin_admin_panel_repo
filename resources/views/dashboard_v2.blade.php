@@ -145,12 +145,6 @@
             </div>
             <div class="card-body pt-0">
                 <div id="customers" class="apex-charts"></div>
-                <div class="bg-light py-3 px-2 mb-0 mt-3 text-center rounded">
-                    <h6 class="mb-0">
-                        <i class="icofont-calendar fs-5 me-1"></i>
-                        {{ now()->startOfYear()->format('d F Y') }} to {{ now()->endOfYear()->format('d F Y') }}
-                    </h6>
-                </div>
             </div>
         </div>
     </div>
@@ -303,6 +297,66 @@
                 @else
                     <div id="animal_type_subdistrict_chart" class="apex-charts" style="min-height: {{ $animalTypeChart['height'] }}px;"></div>
                 @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h4 class="card-title">Farmer Expiring Subscriptions</h4>
+                        <p class="text-muted mb-0" style="font-size: 12px;">Showing active farmer subscriptions expiring within 10 days.</p>
+                    </div>
+                    <div class="col-auto">
+                        <span class="badge bg-warning-subtle text-warning">Next 10 Days</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Farmer</th>
+                                <th>Mobile</th>
+                                <th>Taluka</th>
+                                <th>Plan</th>
+                                <th>Due Date</th>
+                                <th>Days Left</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($expiringFarmerSubscriptions as $subscription)
+                                <tr>
+                                    <td class="fw-semibold">{{ $subscription['farmer_name'] }}</td>
+                                    <td>{{ $subscription['mobile'] }}</td>
+                                    <td>{{ $subscription['taluka'] }}</td>
+                                    <td>{{ $subscription['plan_name'] }}</td>
+                                    <td>{{ $subscription['due_date'] }}</td>
+                                    <td>
+                                        <span class="badge {{ ($subscription['days_left'] ?? 0) <= 3 ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning' }}">
+                                            {{ max(0, (int) ($subscription['days_left'] ?? 0)) }} Days
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success text-capitalize">
+                                            {{ $subscription['status'] }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">No farmer subscriptions are expiring within 10 days.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

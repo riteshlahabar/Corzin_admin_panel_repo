@@ -71,6 +71,7 @@ class DashboardController extends Controller
         $distributionLabels = ['Farmers', 'Doctors', 'Animals', 'Dairies'];
         $distributionSeries = [$totalFarmers, $totalDoctors, $totalAnimals, $totalDairies];
         $animalTypeChart = $this->animalTypeTalukaChart($selectedFromDate, $selectedToDate);
+        $expiringFarmerSubscriptions = $this->expiringFarmerSubscriptions();
 
         $topStatesQuery = Farmer::query();
         if ($hasCustomRange) {
@@ -153,7 +154,8 @@ class DashboardController extends Controller
             'trendLabel',
             'selectedFromDate',
             'selectedToDate',
-            'animalTypeChart'
+            'animalTypeChart',
+            'expiringFarmerSubscriptions'
         ));
     }
 
@@ -388,6 +390,39 @@ class DashboardController extends Controller
         }
 
         return $query->count();
+    }
+
+    private function expiringFarmerSubscriptions(): Collection
+    {
+        if (! Schema::hasTable('farmer_subscriptions')) {
+            return collect();
+        }
+
+        $today = now()->startOfDay();
+        $lastDate = $today->copy()->addDays(10)->endOfDay();
+
+        return FarmerSubscription::query()
+            ->with(['farmer', 'plan'])
+            ->where('status', 'active')
+            ->whereNotNull('due_date')
+            ->whereBetween('due_date', [$today->toDateString(), $lastDate->toDateString()])
+            ->orderBy('due_date')
+            ->get()
+            ->map(function (FarmerSubscription $subscription) use ($today) {
+                $farmer = $subscription->farmer;
+                $dueDate = $subscription->due_date?->copy()->startOfDay();
+                $daysLeft = $dueDate ? $today->diffInDays($dueDate, false) : null;
+
+                return [
+                    'farmer_name' => trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) ?: 'Farmer #'.$subscription->farmer_id,
+                    'mobile' => $farmer->mobile ?? '-',
+                    'taluka' => $farmer->taluka ?: '-',
+                    'plan_name' => $subscription->plan->name ?? '-',
+                    'due_date' => $dueDate?->format('d-m-Y') ?? '-',
+                    'days_left' => $daysLeft,
+                    'status' => (string) ($subscription->status ?? 'active'),
+                ];
+            });
     }
 
     private function resolveDashboardRange(Request $request, Carbon $now): array
