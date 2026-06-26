@@ -57,7 +57,7 @@
 
 <div class="row">
     <div class="col-sm-12">
-        <div class="page-title-box d-md-flex justify-content-md-between align-items-center border-bottom pb-3 mb-4">
+        <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
             <h4 class="page-title">Dashboard</h4>
             <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end justify-content-end" style="min-width: min(100%, 520px);">
                 <div class="col-sm-4">

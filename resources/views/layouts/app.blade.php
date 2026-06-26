@@ -60,6 +60,13 @@
             font-weight: 800;
             line-height: 1.2;
         }
+        .container-fluid > .row:has(.page-title):not(:has(.card-header .page-title)),
+        .container-fluid > div.d-flex:has(> .page-title),
+        .container-fluid > .doctor-page-heading:has(.page-title) {
+            border-bottom: 1px solid #e7edf3;
+            padding-bottom: 1rem;
+            margin-bottom: 1.35rem !important;
+        }
     </style>
     @stack('styles')
 </head>
