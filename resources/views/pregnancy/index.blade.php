@@ -21,11 +21,6 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Cow Pregnancy / Reproduction</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                @perm('pregnancy.add')
-                <a href="{{ route('farmer.pregnancy.create') }}" class="btn btn-success">
-                    <i class="fa-solid fa-plus me-1"></i> Add Pregnancy
-                </a>
-                @endperm
                 <select id="pregnancySearchField" class="form-select" style="width:220px;">
                     <option value="all">All Columns</option>
                     <option value="farmer">Farmer</option>
@@ -47,6 +42,11 @@
                 <button type="button" class="btn btn-light border" onclick="exportTableToExcel('pregnancyTableExport', 'pregnancy-records')" title="Download Excel">
                     <i class="fa-solid fa-file-excel text-success"></i>
                 </button>
+                @perm('pregnancy.add')
+                <a href="{{ route('farmer.pregnancy.create') }}" class="btn btn-success">
+                    <i class="fa-solid fa-plus me-1"></i> Add Pregnancy
+                </a>
+                @endperm
             </div>
         </div>
     </div>
@@ -69,6 +69,7 @@
                             <th>Status</th>
                             <th>Current</th>
                             <th>Notes</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -169,9 +170,25 @@
                             <td><span class="badge bg-success-subtle text-success">{{ $status }}</span></td>
                             <td>{{ $current }}</td>
                             <td>{{ $notes }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    @perm('pregnancy.edit')
+                                    <a href="{{ route('farmer.pregnancy.edit', $record) }}" class="btn btn-sm btn-outline-primary">
+                                        Edit
+                                    </a>
+                                    @endperm
+                                    @perm('pregnancy.delete')
+                                    <form method="POST" action="{{ route('farmer.pregnancy.destroy', $record) }}" onsubmit="return confirm('Delete this pregnancy record?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                    @endperm
+                                </div>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="12" class="text-center text-muted py-4">No pregnancy records found.</td></tr>
+                        <tr><td colspan="13" class="text-center text-muted py-4">No pregnancy records found.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

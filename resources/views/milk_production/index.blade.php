@@ -41,11 +41,6 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Milk Production</h4>
             <div class="d-flex align-items-center gap-2 flex-nowrap overflow-auto">
-                @perm('milk_production.add')
-                <a href="{{ route('farmer.milk.create') }}" class="btn btn-success">
-                    <i class="fa-solid fa-plus me-1"></i> Add Milk
-                </a>
-                @endperm
                 <div class="btn-group" role="group">
                     <input type="checkbox" class="btn-check shift-filter" id="morningCheck" value="morning" checked>
                     <label class="btn btn-outline-primary active" for="morningCheck">Morning</label>
@@ -80,6 +75,11 @@
                 <button type="button" class="btn btn-light border" onclick="exportTableToExcel('milkTableExport', 'milk-production')" title="Download Excel">
                     <i class="fa-solid fa-file-excel text-success"></i>
                 </button>
+                @perm('milk_production.add')
+                <a href="{{ route('farmer.milk.create') }}" class="btn btn-success">
+                    <i class="fa-solid fa-plus me-1"></i> Add Milk
+                </a>
+                @endperm
             </div>
         </div>
     </div>

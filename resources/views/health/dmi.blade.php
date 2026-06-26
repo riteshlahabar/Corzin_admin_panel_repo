@@ -1,25 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-@php
-    $recordCount = count($rows ?? []);
-    $totalRequired = 0;
-    $totalActual = 0;
-    $needsAttention = 0;
-
-    foreach (($rows ?? []) as $entry) {
-        $totalRequired += (float) ($entry->required_dmi ?? 0);
-        $totalActual += (float) ($entry->actual_dmi ?? 0);
-        $status = strtolower((string) ($entry->alert_status ?? ''));
-        if (!str_contains($status, 'balanced') && !str_contains($status, 'auto')) {
-            $needsAttention++;
-        }
-    }
-
-    $avgRequired = $recordCount > 0 ? $totalRequired / $recordCount : 0;
-    $avgActual = $recordCount > 0 ? $totalActual / $recordCount : 0;
-@endphp
-
 <div class="container-fluid">
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -52,41 +33,6 @@
                 <button type="button" class="btn btn-light border" onclick="exportTableToExcel('healthTableExport', 'dmi-records')" title="Download Excel">
                     <i class="fa-solid fa-file-excel text-success"></i>
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-3">
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Total Records</p>
-                    <h4 class="mb-0">{{ $recordCount }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Avg Required DMI</p>
-                    <h4 class="mb-0">{{ number_format($avgRequired, 2) }} <small class="text-muted fs-6">Kg</small></h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Avg Actual DMI</p>
-                    <h4 class="mb-0">{{ number_format($avgActual, 2) }} <small class="text-muted fs-6">Kg</small></h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Needs Attention</p>
-                    <h4 class="mb-0">{{ $needsAttention }}</h4>
-                </div>
             </div>
         </div>
     </div>

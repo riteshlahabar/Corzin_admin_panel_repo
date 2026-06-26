@@ -51,20 +51,16 @@ class PregnancyListController extends Controller
         return view('pregnancy.create', compact('animals', 'animalDefaults'));
     }
 
+    public function edit(AnimalPregnancy $pregnancy)
+    {
+        $pregnancy->load(['animal.farmer', 'farmer']);
+
+        return view('pregnancy.edit', compact('pregnancy'));
+    }
+
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'animal_id' => ['required', 'exists:animals,id'],
-            'lactation_number' => ['nullable', 'integer', 'min:0'],
-            'heat_date' => ['nullable', 'date'],
-            'ai_date' => ['required', 'date'],
-            'service_type' => ['required', 'in:ai,natural'],
-            'bull_name' => ['nullable', 'string', 'max:120'],
-            'semen_no' => ['nullable', 'string', 'max:120'],
-            'doctor_name' => ['nullable', 'string', 'max:120'],
-            'pregnancy_check_due_date' => ['required', 'date'],
-            'notes' => ['nullable', 'string'],
-        ]);
+        $data = $this->validatedData($request);
 
         $animal = Animal::query()->find((int) $data['animal_id']);
         if (! $animal) {
@@ -110,6 +106,53 @@ class PregnancyListController extends Controller
             ->with('success', 'Pregnancy record saved successfully.');
     }
 
+    public function update(Request $request, AnimalPregnancy $pregnancy)
+    {
+        $data = $this->validatedData($request);
+
+        $animal = Animal::query()->find((int) $data['animal_id']);
+        if (! $animal) {
+            return back()->withErrors([
+                'animal_id' => 'Animal not found.',
+            ])->withInput();
+        }
+
+        $this->syncAnimalLactationNumber($animal, $request);
+
+        $aiDate = Carbon::parse($data['ai_date']);
+        $pregnancy->update([
+            'farmer_id' => $animal->farmer_id,
+            'animal_id' => $animal->id,
+            'heat_date' => $data['heat_date'] ?? null,
+            'ai_date' => $aiDate->toDateString(),
+            'service_type' => $data['service_type'],
+            'bull_name' => $data['bull_name'] ?? null,
+            'semen_no' => $data['semen_no'] ?? null,
+            'doctor_name' => $data['doctor_name'] ?? null,
+            'pregnancy_check_due_date' => $data['pregnancy_check_due_date'],
+            'expected_calving_date' => $aiDate->copy()->addDays(283)->toDateString(),
+            'dry_off_date' => $aiDate->copy()->addDays(223)->toDateString(),
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        if ($pregnancy->is_current) {
+            $this->closeOtherCurrentRecords($animal->id, $pregnancy->id);
+        }
+
+        return redirect()
+            ->route('farmer.pregnancy')
+            ->with('success', 'Pregnancy record updated successfully.');
+    }
+
+    public function destroy(AnimalPregnancy $pregnancy)
+    {
+        $pregnancy->delete();
+
+        return redirect()
+            ->route('farmer.pregnancy')
+            ->with('success', 'Pregnancy record deleted successfully.');
+    }
+
     private function nextNumbers(int $animalId): array
     {
         $latest = AnimalPregnancy::where('animal_id', $animalId)
@@ -139,6 +182,22 @@ class PregnancyListController extends Controller
             ->where('is_current', true)
             ->when($exceptId, fn ($query) => $query->where('id', '!=', $exceptId))
             ->update(['is_current' => false]);
+    }
+
+    private function validatedData(Request $request): array
+    {
+        return $request->validate([
+            'animal_id' => ['required', 'exists:animals,id'],
+            'lactation_number' => ['nullable', 'integer', 'min:0'],
+            'heat_date' => ['nullable', 'date'],
+            'ai_date' => ['required', 'date'],
+            'service_type' => ['required', 'in:ai,natural'],
+            'bull_name' => ['nullable', 'string', 'max:120'],
+            'semen_no' => ['nullable', 'string', 'max:120'],
+            'doctor_name' => ['nullable', 'string', 'max:120'],
+            'pregnancy_check_due_date' => ['required', 'date'],
+            'notes' => ['nullable', 'string'],
+        ]);
     }
 
     private function syncAnimalLactationNumber(Animal $animal, Request $request): void

@@ -80,6 +80,8 @@ class AdminAccess
                         'actions' => [
                             'view' => 'View',
                             'add' => 'Add',
+                            'edit' => 'Edit',
+                            'delete' => 'Delete',
                         ],
                     ],
                     'dairy' => [

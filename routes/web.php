@@ -86,6 +86,9 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::get('/pregnancy', [PregnancyListController::class, 'index'])->middleware('permission:pregnancy.view')->name('farmer.pregnancy');
         Route::get('/pregnancy/create', [PregnancyListController::class, 'create'])->middleware('permission:pregnancy.add')->name('farmer.pregnancy.create');
         Route::post('/pregnancy', [PregnancyListController::class, 'store'])->middleware('permission:pregnancy.add')->name('farmer.pregnancy.store');
+        Route::get('/pregnancy/{pregnancy}/edit', [PregnancyListController::class, 'edit'])->middleware('permission:pregnancy.edit')->name('farmer.pregnancy.edit');
+        Route::put('/pregnancy/{pregnancy}', [PregnancyListController::class, 'update'])->middleware('permission:pregnancy.edit')->name('farmer.pregnancy.update');
+        Route::delete('/pregnancy/{pregnancy}', [PregnancyListController::class, 'destroy'])->middleware('permission:pregnancy.delete')->name('farmer.pregnancy.destroy');
         Route::get('/dairy', [DairyListController::class, 'index'])->middleware('permission:dairy.view')->name('farmer.dairy');
         Route::post('/dairy', [DairyListController::class, 'store'])->middleware('permission:dairy.add')->name('farmer.dairy.store');
         Route::put('/dairy/{dairy}', [DairyListController::class, 'update'])->middleware('permission:dairy.edit')->name('farmer.dairy.update');
