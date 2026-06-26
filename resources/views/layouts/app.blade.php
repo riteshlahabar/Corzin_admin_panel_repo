@@ -52,7 +52,7 @@
         }
         .page-title {
             margin-bottom: 0;
-            font-weight: 800;
+            font-weight: 600;
             line-height: 1.2;
             color: #182b1d;
         }
