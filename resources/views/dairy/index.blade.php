@@ -83,6 +83,7 @@
                             <th>State</th>
                             <th>Pincode</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -116,10 +117,104 @@
                                         {{ $dairy->is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        @perm('dairy.edit')
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editDairyModal{{ $dairy->id }}">
+                                            Edit
+                                        </button>
+                                        @endperm
+                                        @perm('dairy.delete')
+                                        <form method="POST" action="{{ route('farmer.dairy.destroy', $dairy) }}" onsubmit="return confirm('Delete this dairy?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                        @endperm
+                                    </div>
+                                </td>
                             </tr>
+
+                            @perm('dairy.edit')
+                            <div class="modal fade" id="editDairyModal{{ $dairy->id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <form method="POST" action="{{ route('farmer.dairy.update', $dairy) }}">
+                                            @csrf
+                                            @method('PUT')
+                                            <div class="modal-header bg-success text-white">
+                                                <h5 class="modal-title text-white">Edit Dairy</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Farmer</label>
+                                                        <select name="farmer_id" class="form-select" required>
+                                                            <option value="">Select farmer</option>
+                                                            @foreach($farmers as $farmer)
+                                                                <option value="{{ $farmer->id }}" {{ (int) $dairy->farmer_id === (int) $farmer->id ? 'selected' : '' }}>
+                                                                    {{ trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) }} - {{ $farmer->mobile }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Dairy Name</label>
+                                                        <input type="text" name="dairy_name" class="form-control" value="{{ $dairy->dairy_name }}" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">GST No.</label>
+                                                        <input type="text" name="gst_no" class="form-control" value="{{ $dairy->gst_no }}">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Contact Number</label>
+                                                        <input type="text" name="contact_number" class="form-control" value="{{ $dairy->contact_number }}">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label">Address</label>
+                                                        <textarea name="address" rows="3" class="form-control">{{ $dairy->address }}</textarea>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">City</label>
+                                                        <input type="text" name="city" class="form-control" value="{{ $dairy->city }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Taluka</label>
+                                                        <input type="text" name="taluka" class="form-control" value="{{ $dairy->taluka }}">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">District</label>
+                                                        <input type="text" name="district" class="form-control" value="{{ $dairy->district }}">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">State</label>
+                                                        <input type="text" name="state" class="form-control" value="{{ $dairy->state }}">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Pincode</label>
+                                                        <input type="text" name="pincode" class="form-control" value="{{ $dairy->pincode }}">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editDairyActive{{ $dairy->id }}" {{ $dairy->is_active ? 'checked' : '' }}>
+                                                            <label class="form-check-label" for="editDairyActive{{ $dairy->id }}">Active</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Update Dairy</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            @endperm
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center text-muted">No dairies found</td>
+                                <td colspan="13" class="text-center text-muted">No dairies found</td>
                             </tr>
                         @endforelse
                     </tbody>

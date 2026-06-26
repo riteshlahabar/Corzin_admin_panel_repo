@@ -55,6 +55,7 @@ class AdminAccess
                         'label' => 'Milk Production',
                         'actions' => [
                             'view' => 'View',
+                            'add' => 'Add',
                         ],
                     ],
                     'feeding' => [
@@ -78,6 +79,7 @@ class AdminAccess
                         'label' => 'Pregnancy',
                         'actions' => [
                             'view' => 'View',
+                            'add' => 'Add',
                         ],
                     ],
                     'dairy' => [
@@ -85,6 +87,8 @@ class AdminAccess
                         'actions' => [
                             'view' => 'View',
                             'add' => 'Add',
+                            'edit' => 'Edit',
+                            'delete' => 'Delete',
                         ],
                     ],
                     'farmer_settings' => [

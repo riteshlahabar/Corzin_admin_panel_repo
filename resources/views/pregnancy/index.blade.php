@@ -21,6 +21,11 @@
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Cow Pregnancy / Reproduction</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                @perm('pregnancy.add')
+                <a href="{{ route('farmer.pregnancy.create') }}" class="btn btn-success">
+                    <i class="fa-solid fa-plus me-1"></i> Add Pregnancy
+                </a>
+                @endperm
                 <select id="pregnancySearchField" class="form-select" style="width:220px;">
                     <option value="all">All Columns</option>
                     <option value="farmer">Farmer</option>

@@ -73,6 +73,8 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/animals/{animal}/toggle', [AnimalListController::class, 'toggle'])->middleware('permission:animal_list.status')->name('animal.toggle');
 
         Route::get('/milk-production', [MilkProduceListController::class, 'index'])->middleware('permission:milk_production.view')->name('farmer.milk');
+        Route::get('/milk-production/create', [MilkProduceListController::class, 'create'])->middleware('permission:milk_production.add')->name('farmer.milk.create');
+        Route::post('/milk-production', [MilkProduceListController::class, 'store'])->middleware('permission:milk_production.add')->name('farmer.milk.store');
         Route::get('/feeding', [FeedingListController::class, 'index'])->middleware('permission:feeding.view')->name('farmer.feeding');
         Route::post('/feeding', [FeedingListController::class, 'store'])->middleware('permission:feeding.add')->name('farmer.feeding.store');
         Route::get('/diet-plan', [DietPlanListController::class, 'index'])->middleware('permission:diet_plan.view')->name('farmer.diet-plan');
@@ -82,8 +84,12 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::put('/diet-plan/{plan}', [DietPlanListController::class, 'update'])->middleware('permission:diet_plan.edit')->name('farmer.diet-plan.update');
         Route::delete('/diet-plan/{plan}', [DietPlanListController::class, 'destroy'])->middleware('permission:diet_plan.delete')->name('farmer.diet-plan.destroy');
         Route::get('/pregnancy', [PregnancyListController::class, 'index'])->middleware('permission:pregnancy.view')->name('farmer.pregnancy');
+        Route::get('/pregnancy/create', [PregnancyListController::class, 'create'])->middleware('permission:pregnancy.add')->name('farmer.pregnancy.create');
+        Route::post('/pregnancy', [PregnancyListController::class, 'store'])->middleware('permission:pregnancy.add')->name('farmer.pregnancy.store');
         Route::get('/dairy', [DairyListController::class, 'index'])->middleware('permission:dairy.view')->name('farmer.dairy');
         Route::post('/dairy', [DairyListController::class, 'store'])->middleware('permission:dairy.add')->name('farmer.dairy.store');
+        Route::put('/dairy/{dairy}', [DairyListController::class, 'update'])->middleware('permission:dairy.edit')->name('farmer.dairy.update');
+        Route::delete('/dairy/{dairy}', [DairyListController::class, 'destroy'])->middleware('permission:dairy.delete')->name('farmer.dairy.destroy');
         Route::get('/settings', [FarmerSettingController::class, 'index'])->middleware('permission:farmer_settings.view')->name('farmer.settings');
         Route::post('/settings/support-contact', [FarmerSettingController::class, 'updateSupportContact'])->middleware('permission:farmer_settings.edit')->name('farmer.settings.support-contact.update');
         Route::post('/settings/banner', [FarmerSettingController::class, 'uploadBanner'])->middleware('permission:farmer_settings.edit')->name('farmer.settings.banner.upload');

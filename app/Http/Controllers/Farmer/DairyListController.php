@@ -25,7 +25,40 @@ class DairyListController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $data = $this->validatedData($request);
+
+        Dairy::create([
+            ...$data,
+            'village' => $data['city'] ?? null,
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        return redirect()->route('farmer.dairy')->with('success', 'Dairy saved successfully.');
+    }
+
+    public function update(Request $request, Dairy $dairy)
+    {
+        $data = $this->validatedData($request);
+
+        $dairy->update([
+            ...$data,
+            'village' => $data['city'] ?? null,
+            'is_active' => $request->boolean('is_active', false),
+        ]);
+
+        return redirect()->route('farmer.dairy')->with('success', 'Dairy updated successfully.');
+    }
+
+    public function destroy(Dairy $dairy)
+    {
+        $dairy->delete();
+
+        return redirect()->route('farmer.dairy')->with('success', 'Dairy deleted successfully.');
+    }
+
+    private function validatedData(Request $request): array
+    {
+        return $request->validate([
             'farmer_id' => 'required|exists:farmers,id',
             'dairy_name' => 'required|string|max:255',
             'gst_no' => 'nullable|string|max:50',
@@ -38,13 +71,5 @@ class DairyListController extends Controller
             'pincode' => 'nullable|string|max:20',
             'is_active' => 'nullable|boolean',
         ]);
-
-        Dairy::create([
-            ...$data,
-            'village' => $data['city'] ?? null,
-            'is_active' => $request->boolean('is_active', true),
-        ]);
-
-        return redirect()->route('farmer.dairy')->with('success', 'Dairy saved successfully.');
     }
 }
