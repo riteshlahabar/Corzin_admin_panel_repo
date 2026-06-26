@@ -213,13 +213,16 @@
     @endif
 
     @if($currentUser?->hasAnyPermission(['shop_products.view','shop_orders.view']))
+    @php
+        $isShopMenuActive = request()->routeIs('shop.*') && !request()->routeIs('shop.animal_buy_sell');
+    @endphp
     <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('shop.*') ? 'active' : '' }}" href="#shopMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('shop.*') ? 'true' : 'false' }}">
+        <a class="nav-link {{ $isShopMenuActive ? 'active' : '' }}" href="#shopMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ $isShopMenuActive ? 'true' : 'false' }}">
             <i class="iconoir-cart menu-icon me-2"></i>
             <span>Shop</span>
             <span class="menu-arrow"></span>
         </a>
-        <div class="collapse {{ request()->routeIs('shop.*') ? 'show' : '' }}" id="shopMenu">
+        <div class="collapse {{ $isShopMenuActive ? 'show' : '' }}" id="shopMenu">
             <ul class="nav flex-column ms-4">
                 @if($currentUser?->hasPermission('shop_products.view'))
                 <li class="menu-item">
