@@ -25,7 +25,7 @@
             'iconBg' => 'rgba(255, 255, 255, 0.16)',
             'textClass' => 'text-white',
             'subClass' => 'text-white-50',
-            'icon' => 'iconoir-stethoscope',
+            'icon' => 'fa-solid fa-user-doctor',
             'image' => 'assets/images/extra/bar.png',
         ],
         [
@@ -59,18 +59,20 @@
     <div class="col-sm-12">
         <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
             <h4 class="page-title">Dashboard</h4>
-            <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-center gap-2 flex-wrap">
-                <div>
+            <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end justify-content-end" style="min-width: min(100%, 520px);">
+                <div class="col-sm-4">
                     <label class="form-label mb-1 small text-muted">From Date</label>
                     <input type="date" name="from_date" class="form-control" value="{{ optional($selectedFromDate)->toDateString() }}">
                 </div>
-                <div>
+                <div class="col-sm-4">
                     <label class="form-label mb-1 small text-muted">To Date</label>
                     <input type="date" name="to_date" class="form-control" value="{{ optional($selectedToDate)->toDateString() }}">
                 </div>
-                <div class="d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-success">Filter</button>
-                    <a href="{{ route('dashboard') }}" class="btn btn-light border">Reset</a>
+                <div class="col-sm-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success flex-grow-1">Filter</button>
+                        <a href="{{ route('dashboard') }}" class="btn btn-light border flex-grow-1">Reset</a>
+                    </div>
                 </div>
             </form>
         </div>
@@ -383,24 +385,28 @@
                 toolbar: { show: false }
             },
             series: @json($animalTypeChart['series'] ?? []),
-            xaxis: {
-                categories: @json($animalTypeChart['labels'] ?? []),
-                title: { text: 'Taluka / Subdistrict' }
-            },
             yaxis: {
                 title: { text: 'Animals' }
             },
             plotOptions: {
                 bar: {
-                    horizontal: true,
+                    horizontal: false,
                     borderRadius: 4,
-                    barHeight: '58%'
+                    columnWidth: '58%'
                 }
             },
             dataLabels: { enabled: false },
             legend: {
                 position: 'top',
                 horizontalAlign: 'left'
+            },
+            xaxis: {
+                categories: @json($animalTypeChart['labels'] ?? []),
+                title: { text: 'Taluka / Subdistrict' },
+                labels: {
+                    rotate: -35,
+                    trim: true
+                }
             },
             colors: ['#16a34a', '#0284c7', '#f59e0b', '#7c3aed'],
             grid: {
