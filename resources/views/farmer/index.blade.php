@@ -1,70 +1,18 @@
 @extends('layouts.app')
 
-@push('styles')
-<style>
-    .farmer-page-hero {
-        border: 0;
-        border-radius: 22px;
-        background: linear-gradient(135deg, #f7fff7 0%, #eefaf0 48%, #e2f6e7 100%);
-        box-shadow: 0 14px 30px rgba(34, 97, 47, 0.08);
-        overflow: hidden;
-    }
-    .farmer-page-hero::after {
-        content: '';
-        position: absolute;
-        inset: auto -40px -50px auto;
-        width: 180px;
-        height: 180px;
-        background: radial-gradient(circle, rgba(34, 197, 94, 0.16) 0%, rgba(34, 197, 94, 0) 72%);
-        pointer-events: none;
-    }
-    .farmer-page-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 7px 12px;
-        border-radius: 999px;
-        background: rgba(22, 163, 74, 0.12);
-        color: #15803d;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-    }
-    .farmer-page-title {
-        color: #14351b;
-        font-size: 28px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 10px 0 8px;
-    }
-    .farmer-page-subtitle {
-        color: #587060;
-        font-size: 14px;
-        margin: 0;
-        max-width: 620px;
-    }
-</style>
-@endpush
-
 @section('content')
 <div class="container-fluid">
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="card farmer-page-hero position-relative mt-4 mb-4">
-        <div class="card-body p-4">
-            <div class="row g-3 align-items-start">
-                <div class="col-xl-5">
-                    <span class="farmer-page-badge">
-                        <i class="fa-solid fa-users"></i>
-                        Farmer Management
-                    </span>
-                    <h1 class="farmer-page-title">Farmer List</h1>
-                    <p class="farmer-page-subtitle">Manage farmer profiles, track their latest app activity, and quickly search by location or contact details from one screen.</p>
-                </div>
-                <div class="col-xl-7">
-                    <div class="d-flex align-items-center justify-content-xl-end gap-2 flex-wrap">
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h4 class="page-title mb-0">
+                    <span class="d-inline-block px-3 py-2 rounded-3 fw-bold" style="background:#e8f7eb; color:#14532d;">Farmer List</span>
+                </h4>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <select id="farmerSearchField" class="form-select" style="width:190px;">
                         <option value="all">All Columns</option>
                         <option value="mobile">Mobile</option>
@@ -101,7 +49,6 @@
                         <i class="fa-solid fa-plus me-1"></i> Add Farmer
                     </a>
                     @endperm
-                    </div>
                 </div>
             </div>
         </div>
