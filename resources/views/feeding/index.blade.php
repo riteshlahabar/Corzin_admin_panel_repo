@@ -6,33 +6,6 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row g-3 mb-4 mt-2">
-        <div class="col-md-4">
-            <div class="card bg-primary-subtle border-0">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Total Entries</p>
-                    <h3 class="mb-0">{{ $summary['total'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-success-subtle border-0">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Today Feeding</p>
-                    <h3 class="mb-0">{{ number_format($summary['today'], 2) }} Kg</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-warning-subtle border-0">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Feed Types</p>
-                    <h3 class="mb-0">{{ $summary['types'] }}</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Feeding Management</h4>
