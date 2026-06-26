@@ -7,51 +7,51 @@ use App\Models\Doctor\Doctor;
 use App\Models\Doctor\DoctorAppointment;
 use App\Models\Doctor\DoctorSubscription;
 use App\Models\Farmer\Animal;
+use App\Models\Farmer\AnimalType;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\FarmerSubscription;
 use App\Models\Farmer\MilkProduction;
 use App\Models\Shop\ShopProduct;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $now = now();
-        $monthStart = $now->copy()->startOfMonth();
-        $monthEnd = $now->copy()->endOfMonth();
-        $prevMonthStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
-        $prevMonthEnd = $now->copy()->subMonthNoOverflow()->endOfMonth();
+        [$selectedFromDate, $selectedToDate, $currentStart, $currentEnd, $previousStart, $previousEnd, $hasCustomRange] = $this->resolveDashboardRange($request, $now);
+        $trendLabel = $hasCustomRange ? 'vs previous range' : 'vs last month';
 
-        $totalFarmers = Farmer::count();
-        $totalDoctors = Doctor::count();
-        $totalAnimals = Animal::count();
-        $totalAppointments = DoctorAppointment::count();
-        $totalDairies = Dairy::count();
+        $totalFarmers = $this->countForDashboard(Farmer::query(), 'created_at', $hasCustomRange, $currentStart, $currentEnd);
+        $totalDoctors = $this->countForDashboard(Doctor::query(), 'created_at', $hasCustomRange, $currentStart, $currentEnd);
+        $totalAnimals = $this->countForDashboard(Animal::query(), 'created_at', $hasCustomRange, $currentStart, $currentEnd);
+        $totalAppointments = $this->countForDashboard(DoctorAppointment::query(), 'created_at', $hasCustomRange, $currentStart, $currentEnd);
+        $totalDairies = $this->countForDashboard(Dairy::query(), 'created_at', $hasCustomRange, $currentStart, $currentEnd);
 
-        $thisMonthFarmers = Farmer::whereBetween('created_at', [$monthStart, $monthEnd])->count();
-        $prevMonthFarmers = Farmer::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])->count();
+        $thisMonthFarmers = Farmer::whereBetween('created_at', [$currentStart, $currentEnd])->count();
+        $prevMonthFarmers = Farmer::whereBetween('created_at', [$previousStart, $previousEnd])->count();
         $farmersTrend = $this->percentChange($thisMonthFarmers, $prevMonthFarmers);
 
-        $thisMonthDoctors = Doctor::whereBetween('created_at', [$monthStart, $monthEnd])->count();
-        $prevMonthDoctors = Doctor::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])->count();
+        $thisMonthDoctors = Doctor::whereBetween('created_at', [$currentStart, $currentEnd])->count();
+        $prevMonthDoctors = Doctor::whereBetween('created_at', [$previousStart, $previousEnd])->count();
         $doctorsTrend = $this->percentChange($thisMonthDoctors, $prevMonthDoctors);
 
-        $thisMonthAppointments = DoctorAppointment::whereBetween('created_at', [$monthStart, $monthEnd])->count();
-        $prevMonthAppointments = DoctorAppointment::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])->count();
+        $thisMonthAppointments = DoctorAppointment::whereBetween('created_at', [$currentStart, $currentEnd])->count();
+        $prevMonthAppointments = DoctorAppointment::whereBetween('created_at', [$previousStart, $previousEnd])->count();
         $appointmentsTrend = $this->percentChange($thisMonthAppointments, $prevMonthAppointments);
 
-        $thisMonthVisitAvg = (float) DoctorAppointment::whereBetween('created_at', [$monthStart, $monthEnd])
+        $thisMonthVisitAvg = (float) DoctorAppointment::whereBetween('created_at', [$currentStart, $currentEnd])
             ->whereNotNull('charges')
             ->avg('charges');
-        $prevMonthVisitAvg = (float) DoctorAppointment::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])
+        $prevMonthVisitAvg = (float) DoctorAppointment::whereBetween('created_at', [$previousStart, $previousEnd])
             ->whereNotNull('charges')
             ->avg('charges');
         $visitAvgTrend = $this->percentChange($thisMonthVisitAvg, $prevMonthVisitAvg);
 
-        $series = $this->monthlyRevenueSeries($now);
+        $series = $this->monthlyRevenueSeries($now, $selectedFromDate, $selectedToDate);
         $monthlyLabels = $series['labels'];
         $monthlyMilkRevenue = $series['milk'];
         $monthlyVisitRevenue = $series['visits'];
@@ -62,10 +62,22 @@ class DashboardController extends Controller
         $revenueTrend = $this->percentChange($thisMonthRevenue, $prevMonthRevenue);
 
         $activeSubscriptions = $this->activeSubscriptionsCount();
+        $farmerActiveSubscriptions = $this->activeFarmerSubscriptionsCount($selectedFromDate, $selectedToDate);
+        $previousFarmerActiveSubscriptions = $this->activeFarmerSubscriptionsCount($previousStart, $previousEnd);
+        $farmerActiveSubscriptionTrend = $this->percentChange($farmerActiveSubscriptions, $previousFarmerActiveSubscriptions);
+        $farmerSubscriptionRevenue = $this->farmerSubscriptionRevenue($selectedFromDate, $selectedToDate);
+        $previousFarmerSubscriptionRevenue = $this->farmerSubscriptionRevenue($previousStart, $previousEnd);
+        $farmerSubscriptionRevenueTrend = $this->percentChange($farmerSubscriptionRevenue, $previousFarmerSubscriptionRevenue);
         $distributionLabels = ['Farmers', 'Doctors', 'Animals', 'Dairies'];
         $distributionSeries = [$totalFarmers, $totalDoctors, $totalAnimals, $totalDairies];
+        $animalTypeChart = $this->animalTypeTalukaChart($selectedFromDate, $selectedToDate);
 
-        $topStates = Farmer::query()
+        $topStatesQuery = Farmer::query();
+        if ($hasCustomRange) {
+            $topStatesQuery->whereBetween('created_at', [$currentStart, $currentEnd]);
+        }
+
+        $topStates = $topStatesQuery
             ->selectRaw("COALESCE(NULLIF(TRIM(state), ''), 'Unknown') as state_name, COUNT(*) as total")
             ->groupBy('state_name')
             ->orderByDesc('total')
@@ -81,11 +93,15 @@ class DashboardController extends Controller
             });
 
         $topMilkProducer = null;
-        $topMilkProducerRow = MilkProduction::query()
+        $topMilkProducerQuery = MilkProduction::query()
             ->join('animals', 'animals.id', '=', 'milk_productions.animal_id')
             ->selectRaw('animals.farmer_id as farmer_id, COALESCE(SUM(milk_productions.total_milk), 0) as total_milk')
             ->whereNotNull('animals.farmer_id')
-            ->groupBy('animals.farmer_id')
+            ->groupBy('animals.farmer_id');
+        if ($hasCustomRange) {
+            $topMilkProducerQuery->whereBetween('milk_productions.date', [$selectedFromDate->toDateString(), $selectedToDate->toDateString()]);
+        }
+        $topMilkProducerRow = $topMilkProducerQuery
             ->orderByDesc('total_milk')
             ->first();
 
@@ -105,8 +121,6 @@ class DashboardController extends Controller
             ->take(6)
             ->get();
 
-        $recentActivities = $this->recentActivities();
-
         return view('dashboard_v2', compact(
             'totalRevenue',
             'thisMonthRevenue',
@@ -115,6 +129,10 @@ class DashboardController extends Controller
             'thisMonthAppointments',
             'appointmentsTrend',
             'activeSubscriptions',
+            'farmerActiveSubscriptions',
+            'farmerSubscriptionRevenue',
+            'farmerActiveSubscriptionTrend',
+            'farmerSubscriptionRevenueTrend',
             'totalFarmers',
             'thisMonthFarmers',
             'farmersTrend',
@@ -132,26 +150,42 @@ class DashboardController extends Controller
             'topStates',
             'topMilkProducer',
             'popularProducts',
-            'recentActivities'
+            'trendLabel',
+            'selectedFromDate',
+            'selectedToDate',
+            'animalTypeChart'
         ));
     }
 
-    private function monthlyRevenueSeries(Carbon $now): array
+    private function monthlyRevenueSeries(Carbon $now, ?Carbon $fromDate = null, ?Carbon $toDate = null): array
     {
-        $fromDate = $now->copy()->subMonths(11)->startOfMonth()->toDateString();
-        $months = collect(range(11, 0))
-            ->map(fn ($offset) => $now->copy()->subMonths($offset)->format('Y-m'))
-            ->values();
+        if ($fromDate && $toDate) {
+            $queryFromDate = $fromDate->copy()->startOfDay()->toDateString();
+            $queryToDate = $toDate->copy()->endOfDay()->toDateString();
+            $cursor = $fromDate->copy()->startOfMonth();
+            $lastMonth = $toDate->copy()->startOfMonth();
+            $months = collect();
+            while ($cursor->lte($lastMonth)) {
+                $months->push($cursor->format('Y-m'));
+                $cursor->addMonth();
+            }
+        } else {
+            $queryFromDate = $now->copy()->subMonths(11)->startOfMonth()->toDateString();
+            $queryToDate = $now->copy()->endOfMonth()->toDateString();
+            $months = collect(range(11, 0))
+                ->map(fn ($offset) => $now->copy()->subMonths($offset)->format('Y-m'))
+                ->values();
+        }
 
         $milkByMonth = MilkProduction::query()
             ->selectRaw("DATE_FORMAT(`date`, '%Y-%m') as month_key, COALESCE(SUM(total_milk * COALESCE(rate, 0)), 0) as revenue")
-            ->whereDate('date', '>=', $fromDate)
+            ->whereBetween('date', [$queryFromDate, $queryToDate])
             ->groupBy('month_key')
             ->pluck('revenue', 'month_key');
 
         $visitByMonth = DoctorAppointment::query()
             ->selectRaw("DATE_FORMAT(`created_at`, '%Y-%m') as month_key, COALESCE(SUM(COALESCE(charges, 0)), 0) as revenue")
-            ->whereDate('created_at', '>=', $fromDate)
+            ->whereBetween('created_at', [$queryFromDate, $queryToDate])
             ->groupBy('month_key')
             ->pluck('revenue', 'month_key');
 
@@ -259,6 +293,147 @@ class DashboardController extends Controller
             ->sortByDesc(fn ($item) => $item['time']?->timestamp ?? 0)
             ->values()
             ->take(8);
+    }
+
+    private function activeFarmerSubscriptionsCount(?Carbon $fromDate = null, ?Carbon $toDate = null): int
+    {
+        $today = now()->toDateString();
+
+        if (! Schema::hasTable('farmer_subscriptions')) {
+            return 0;
+        }
+
+        $query = FarmerSubscription::query()
+            ->where('status', 'active')
+            ->where(function ($query) use ($today) {
+                $query->whereNull('due_date')
+                    ->orWhereDate('due_date', '>=', $today);
+            });
+
+        if ($fromDate && $toDate) {
+            $query->whereBetween('start_date', [$fromDate->toDateString(), $toDate->toDateString()]);
+        }
+
+        return $query->count();
+    }
+
+    private function farmerSubscriptionRevenue(?Carbon $fromDate = null, ?Carbon $toDate = null): float
+    {
+        if (! Schema::hasTable('farmer_subscriptions') || ! Schema::hasTable('farmer_plans')) {
+            return 0;
+        }
+
+        $query = FarmerSubscription::query()
+            ->join('farmer_plans', 'farmer_plans.id', '=', 'farmer_subscriptions.farmer_plan_id')
+            ->selectRaw('COALESCE(SUM(farmer_plans.price), 0) as total');
+
+        if ($fromDate && $toDate) {
+            $query->whereBetween('farmer_subscriptions.start_date', [$fromDate->toDateString(), $toDate->toDateString()]);
+        }
+
+        return (float) $query->value('total');
+    }
+
+    private function animalTypeTalukaChart(?Carbon $fromDate = null, ?Carbon $toDate = null): array
+    {
+        $types = AnimalType::query()
+            ->orderBy('id')
+            ->take(4)
+            ->pluck('name')
+            ->filter(fn ($name) => trim((string) $name) !== '')
+            ->values();
+
+        $query = Animal::query()
+            ->join('farmers', 'farmers.id', '=', 'animals.farmer_id')
+            ->join('animal_types', 'animal_types.id', '=', 'animals.animal_type_id')
+            ->selectRaw("COALESCE(NULLIF(TRIM(farmers.taluka), ''), 'Unknown') as taluka_name, animal_types.name as animal_type_name, COUNT(*) as total");
+
+        if ($fromDate && $toDate) {
+            $query->whereBetween('animals.created_at', [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
+        }
+
+        if ($types->isNotEmpty()) {
+            $query->whereIn('animal_types.name', $types->all());
+        }
+
+        $rows = $query
+            ->groupBy('taluka_name', 'animal_type_name')
+            ->orderBy('taluka_name')
+            ->get();
+
+        $labels = $rows->pluck('taluka_name')->unique()->values();
+        $series = $types->map(function ($type) use ($rows, $labels) {
+            $typeRows = $rows->where('animal_type_name', $type);
+
+            return [
+                'name' => $type,
+                'data' => $labels->map(function ($label) use ($typeRows) {
+                    $match = $typeRows->firstWhere('taluka_name', $label);
+                    return (int) ($match->total ?? 0);
+                })->values()->all(),
+            ];
+        })->values()->all();
+
+        return [
+            'labels' => $labels->all(),
+            'series' => $series,
+            'height' => max(320, count($labels) * 42),
+        ];
+    }
+
+    private function countForDashboard($query, string $column, bool $hasCustomRange, Carbon $currentStart, Carbon $currentEnd): int
+    {
+        if ($hasCustomRange) {
+            $query->whereBetween($column, [$currentStart, $currentEnd]);
+        }
+
+        return $query->count();
+    }
+
+    private function resolveDashboardRange(Request $request, Carbon $now): array
+    {
+        $fromInput = trim((string) $request->query('from_date', ''));
+        $toInput = trim((string) $request->query('to_date', ''));
+
+        $selectedFromDate = $fromInput !== '' ? Carbon::parse($fromInput)->startOfDay() : null;
+        $selectedToDate = $toInput !== '' ? Carbon::parse($toInput)->endOfDay() : null;
+
+        if ($selectedFromDate && $selectedToDate && $selectedFromDate->gt($selectedToDate)) {
+            [$selectedFromDate, $selectedToDate] = [$selectedToDate->copy()->startOfDay(), $selectedFromDate->copy()->endOfDay()];
+        }
+
+        if (! $selectedFromDate && $selectedToDate) {
+            $selectedFromDate = $selectedToDate->copy()->startOfDay();
+        }
+
+        if ($selectedFromDate && ! $selectedToDate) {
+            $selectedToDate = $selectedFromDate->copy()->endOfDay();
+        }
+
+        $hasCustomRange = $selectedFromDate !== null && $selectedToDate !== null;
+
+        if ($hasCustomRange) {
+            $currentStart = $selectedFromDate->copy()->startOfDay();
+            $currentEnd = $selectedToDate->copy()->endOfDay();
+            $days = max(1, $currentStart->diffInDays($currentEnd) + 1);
+            $previousEnd = $currentStart->copy()->subDay()->endOfDay();
+            $previousStart = $previousEnd->copy()->subDays($days - 1)->startOfDay();
+        } else {
+            $currentStart = $now->copy()->startOfMonth();
+            $currentEnd = $now->copy()->endOfMonth();
+            $previousStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
+            $previousEnd = $now->copy()->subMonthNoOverflow()->endOfMonth();
+        }
+
+        return [
+            $selectedFromDate?->copy()->startOfDay(),
+            $selectedToDate?->copy()->endOfDay(),
+            $currentStart,
+            $currentEnd,
+            $previousStart,
+            $previousEnd,
+            $hasCustomRange,
+        ];
     }
 
     private function percentChange(float|int $current, float|int $previous): float

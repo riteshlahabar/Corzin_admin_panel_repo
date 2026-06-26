@@ -5,49 +5,53 @@
 @php
     $kpiCards = [
         [
-            'title' => 'Total Revenue',
-            'value' => 'Rs '.number_format((float) $totalRevenue, 2),
-            'sub' => 'This month: Rs '.number_format((float) $thisMonthRevenue, 2),
-            'change' => $revenueTrend,
-            'iconBg' => 'bg-primary-subtle text-primary',
-            'icon' => 'iconoir-dollar-circle',
+            'title' => 'Total Farmer',
+            'value' => number_format((int) $totalFarmers),
+            'sub' => 'Registered farmers',
+            'change' => $farmersTrend,
+            'bg' => 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
+            'iconBg' => 'rgba(255, 255, 255, 0.16)',
+            'textClass' => 'text-white',
+            'subClass' => 'text-white-50',
+            'icon' => 'iconoir-user',
             'image' => 'assets/images/extra/line-chart.png',
         ],
         [
-            'title' => 'Appointments',
-            'value' => number_format((int) $totalAppointments),
-            'sub' => 'This month: '.number_format((int) $thisMonthAppointments),
-            'change' => $appointmentsTrend,
-            'iconBg' => 'bg-info-subtle text-info',
-            'icon' => 'iconoir-calendar',
+            'title' => 'Total Doctor',
+            'value' => number_format((int) $totalDoctors),
+            'sub' => 'Registered doctors',
+            'change' => $doctorsTrend,
+            'bg' => 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+            'iconBg' => 'rgba(255, 255, 255, 0.16)',
+            'textClass' => 'text-white',
+            'subClass' => 'text-white-50',
+            'icon' => 'iconoir-stethoscope',
             'image' => 'assets/images/extra/bar.png',
         ],
         [
-            'title' => 'Active Subscriptions',
-            'value' => number_format((int) $activeSubscriptions),
-            'sub' => 'Farmer + Doctor plans',
-            'change' => $farmersTrend,
-            'iconBg' => 'bg-warning-subtle text-warning',
+            'title' => 'Farmer Active Subscription',
+            'value' => number_format((int) $farmerActiveSubscriptions),
+            'sub' => 'Only active farmer plans',
+            'change' => $farmerActiveSubscriptionTrend,
+            'bg' => 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
+            'iconBg' => 'rgba(255, 255, 255, 0.16)',
+            'textClass' => 'text-white',
+            'subClass' => 'text-white-50',
             'icon' => 'iconoir-percentage-circle',
             'image' => 'assets/images/extra/donut.png',
         ],
         [
-            'title' => 'Avg. Visit Charge',
-            'value' => 'Rs '.number_format((float) $thisMonthVisitAvg, 2),
-            'sub' => 'Doctor appointments this month',
-            'change' => $visitAvgTrend,
-            'iconBg' => 'bg-danger-subtle text-danger',
+            'title' => 'Total Revenue',
+            'value' => 'Rs '.number_format((float) $farmerSubscriptionRevenue, 2),
+            'sub' => 'Farmer subscription amount',
+            'change' => $farmerSubscriptionRevenueTrend,
+            'bg' => 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+            'iconBg' => 'rgba(255, 255, 255, 0.16)',
+            'textClass' => 'text-white',
+            'subClass' => 'text-white-50',
             'icon' => 'iconoir-wallet',
             'image' => 'assets/images/extra/tree.png',
         ],
-    ];
-    $flags = [
-        'assets/images/flags/us_flag.jpg',
-        'assets/images/flags/spain_flag.jpg',
-        'assets/images/flags/french_flag.jpg',
-        'assets/images/flags/germany_flag.jpg',
-        'assets/images/flags/baha_flag.jpg',
-        'assets/images/flags/russia_flag.jpg',
     ];
 @endphp
 
@@ -55,12 +59,20 @@
     <div class="col-sm-12">
         <div class="page-title-box d-md-flex justify-content-md-between align-items-center">
             <h4 class="page-title">Dashboard</h4>
-            <div>
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Corzin</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div>
+            <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-center gap-2 flex-wrap">
+                <div>
+                    <label class="form-label mb-1 small text-muted">From Date</label>
+                    <input type="date" name="from_date" class="form-control" value="{{ optional($selectedFromDate)->toDateString() }}">
+                </div>
+                <div>
+                    <label class="form-label mb-1 small text-muted">To Date</label>
+                    <input type="date" name="to_date" class="form-control" value="{{ optional($selectedToDate)->toDateString() }}">
+                </div>
+                <div class="d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-success">Filter</button>
+                    <a href="{{ route('dashboard') }}" class="btn btn-light border">Reset</a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -71,28 +83,28 @@
             $isPositive = $card['change'] >= 0;
         @endphp
         <div class="col-md-6 col-lg-3">
-            <div class="card" style="overflow: hidden;">
+            <div class="card border-0 shadow-sm" style="overflow: hidden; background: {{ $card['bg'] }};">
                 <div class="card-body d-flex flex-column justify-content-between p-3">
                     <div class="d-flex align-items-start gap-2 mb-1">
-                        <div class="flex-shrink-0 {{ $card['iconBg'] }} rounded-circle d-flex align-items-center justify-content-center" style="height: 34px; width: 34px;">
+                        <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white" style="height: 34px; width: 34px; background: {{ $card['iconBg'] }};">
                             <i class="{{ $card['icon'] }}" style="font-size: 17px;"></i>
                         </div>
                         <div class="flex-grow-1" style="min-width: 0;">
-                            <p class="text-dark mb-1 fw-semibold text-truncate" style="font-size: 12px; line-height: 1.2;">{{ $card['title'] }}</p>
-                            <p class="mb-0 text-truncate text-muted" style="font-size: 11px; line-height: 1.2;">
-                                <span class="{{ $isPositive ? 'text-success' : 'text-danger' }}">
+                            <p class="mb-1 fw-semibold text-truncate {{ $card['textClass'] }}" style="font-size: 12px; line-height: 1.2;">{{ $card['title'] }}</p>
+                            <p class="mb-0 text-truncate {{ $card['subClass'] }}" style="font-size: 11px; line-height: 1.2;">
+                                <span class="fw-semibold {{ $isPositive ? 'text-warning' : 'text-light' }}">
                                     {{ $isPositive ? '+' : '' }}{{ number_format((float) $card['change'], 1) }}%
                                 </span>
-                                vs last month
+                                {{ $trendLabel }}
                             </p>
                         </div>
                     </div>
                     <div class="d-flex align-items-end justify-content-between gap-2">
                         <div style="min-width: 0;">
-                            <h5 class="mb-0 fw-bold text-truncate" style="font-size: 17px; line-height: 1.2;">{{ $card['value'] }}</h5>
-                            <small class="text-muted d-block text-truncate" style="font-size: 10.5px;">{{ $card['sub'] }}</small>
+                            <h5 class="mb-0 fw-bold text-truncate {{ $card['textClass'] }}" style="font-size: 17px; line-height: 1.2;">{{ $card['value'] }}</h5>
+                            <small class="d-block text-truncate {{ $card['subClass'] }}" style="font-size: 10.5px;">{{ $card['sub'] }}</small>
                         </div>
-                        <img src="{{ asset($card['image']) }}" alt="" class="flex-shrink-0" style="max-width: 38px; opacity: .8;">
+                        <img src="{{ asset($card['image']) }}" alt="" class="flex-shrink-0" style="max-width: 38px; opacity: .28; filter: brightness(0) invert(1);">
                     </div>
                 </div>
             </div>
@@ -271,23 +283,29 @@
     <div class="col-lg-12">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title">Recent Activities</h4>
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h4 class="card-title">Subdistrict Wise Animal Types</h4>
+                        <p class="text-muted mb-0" style="font-size: 12px;">Taluka-wise count of the four animal types.</p>
+                    </div>
+                    <div class="col-auto">
+                        <span class="badge bg-success-subtle text-success">
+                            {{ $selectedFromDate && $selectedToDate ? optional($selectedFromDate)->format('d M Y').' to '.optional($selectedToDate)->format('d M Y') : 'All records' }}
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <ul class="list-group">
-                    @forelse($recentActivities as $activity)
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="{{ $activity['icon'] }} me-2 text-primary"></i>{{ $activity['text'] }}</span>
-                            <small class="text-muted">{{ optional($activity['time'])->diffForHumans() }}</small>
-                        </li>
-                    @empty
-                        <li class="list-group-item text-muted">No recent activity yet.</li>
-                    @endforelse
-                </ul>
+            <div class="card-body pt-0">
+                @if(empty($animalTypeChart['labels']))
+                    <div class="text-center text-muted py-5">No animal data found for the selected range.</div>
+                @else
+                    <div id="animal_type_subdistrict_chart" class="apex-charts" style="min-height: {{ $animalTypeChart['height'] }}px;"></div>
+                @endif
             </div>
         </div>
     </div>
 </div>
+
 @endsection
 
 @push('scripts')
@@ -357,6 +375,44 @@
             }
         };
 
+        const animalTypeTalukaOptions = {
+            chart: {
+                type: 'bar',
+                height: {{ (int) ($animalTypeChart['height'] ?? 320) }},
+                stacked: true,
+                toolbar: { show: false }
+            },
+            series: @json($animalTypeChart['series'] ?? []),
+            xaxis: {
+                categories: @json($animalTypeChart['labels'] ?? []),
+                title: { text: 'Taluka / Subdistrict' }
+            },
+            yaxis: {
+                title: { text: 'Animals' }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: true,
+                    borderRadius: 4,
+                    barHeight: '58%'
+                }
+            },
+            dataLabels: { enabled: false },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'left'
+            },
+            colors: ['#16a34a', '#0284c7', '#f59e0b', '#7c3aed'],
+            grid: {
+                borderColor: '#edf2f7'
+            },
+            tooltip: {
+                y: {
+                    formatter: function(value) { return Number(value).toFixed(0) + ' animals'; }
+                }
+            }
+        };
+
         const incomeEl = document.querySelector('#monthly_income');
         if (incomeEl) {
             new ApexCharts(incomeEl, monthlyOptions).render();
@@ -365,6 +421,11 @@
         const customersEl = document.querySelector('#customers');
         if (customersEl) {
             new ApexCharts(customersEl, customerOptions).render();
+        }
+
+        const animalTypeTalukaEl = document.querySelector('#animal_type_subdistrict_chart');
+        if (animalTypeTalukaEl) {
+            new ApexCharts(animalTypeTalukaEl, animalTypeTalukaOptions).render();
         }
     });
 </script>
