@@ -222,13 +222,33 @@
         <div class="collapse {{ request()->routeIs('shop.*') ? 'show' : '' }}" id="shopMenu">
             <ul class="nav flex-column ms-4">
                 @if($currentUser?->hasPermission('shop_products.view'))
-                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'add-product']) }}" class="nav-link {{ request('tab', 'add-product') === 'add-product' ? 'active' : '' }}">Product List</a></li>
+                <li class="menu-item">
+                    <a href="{{ route('shop.index', ['tab' => 'add-product']) }}" class="nav-link {{ request('tab', 'add-product') === 'add-product' ? 'active' : '' }}">
+                        <i class="iconoir-box me-2"></i> Product List
+                    </a>
+                </li>
                 @endif
                 @if($currentUser?->hasPermission('shop_orders.view'))
-                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'new-order']) }}" class="nav-link {{ request('tab') === 'new-order' ? 'active' : '' }}">New Order</a></li>
-                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'in-progress']) }}" class="nav-link {{ request('tab') === 'in-progress' ? 'active' : '' }}">Order In Progress</a></li>
-                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'completed']) }}" class="nav-link {{ request('tab') === 'completed' ? 'active' : '' }}">Order Completed</a></li>
-                <li class="menu-item"><a href="{{ route('shop.index', ['tab' => 'payment']) }}" class="nav-link {{ request('tab') === 'payment' ? 'active' : '' }}">Order Payment</a></li>
+                <li class="menu-item">
+                    <a href="{{ route('shop.index', ['tab' => 'new-order']) }}" class="nav-link {{ request('tab') === 'new-order' ? 'active' : '' }}">
+                        <i class="iconoir-cart-plus me-2"></i> New Order
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ route('shop.index', ['tab' => 'in-progress']) }}" class="nav-link {{ request('tab') === 'in-progress' ? 'active' : '' }}">
+                        <i class="iconoir-refresh-circle me-2"></i> Order In Progress
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ route('shop.index', ['tab' => 'completed']) }}" class="nav-link {{ request('tab') === 'completed' ? 'active' : '' }}">
+                        <i class="iconoir-check-circle me-2"></i> Order Completed
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ route('shop.index', ['tab' => 'payment']) }}" class="nav-link {{ request('tab') === 'payment' ? 'active' : '' }}">
+                        <i class="iconoir-wallet me-2"></i> Order Payment
+                    </a>
+                </li>
                 @endif
             </ul>
         </div>
