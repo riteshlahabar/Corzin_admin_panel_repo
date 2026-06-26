@@ -56,12 +56,20 @@
             line-height: 1.2;
             color: #182b1d;
         }
+        html[data-bs-theme="dark"] .page-title {
+            color: #f8fafc;
+        }
         .container-fluid > .row:has(.page-title):not(:has(.card-header .page-title)),
         .container-fluid > div.d-flex:has(> .page-title),
         .container-fluid > .doctor-page-heading:has(.page-title) {
             border-bottom: 1px solid #e7edf3;
             padding-bottom: 1rem;
             margin-bottom: 1.35rem !important;
+        }
+        html[data-bs-theme="dark"] .container-fluid > .row:has(.page-title):not(:has(.card-header .page-title)),
+        html[data-bs-theme="dark"] .container-fluid > div.d-flex:has(> .page-title),
+        html[data-bs-theme="dark"] .container-fluid > .doctor-page-heading:has(.page-title) {
+            border-bottom-color: rgba(226, 232, 240, 0.18);
         }
     </style>
     @stack('styles')
