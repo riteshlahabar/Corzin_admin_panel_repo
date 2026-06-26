@@ -16,7 +16,7 @@
     <div class="startbar-menu" >
         <div class="startbar-collapse" id="startbarCollapse" data-simplebar>
             <div class="d-flex align-items-start flex-column w-100">
-              <ul class="navbar-nav mb-auto w-100">
+              <ul class="navbar-nav mb-auto w-100" style="padding-top: 10px;">
 
     @if($currentUser?->hasPermission('dashboard.view'))
     <li class="nav-item">
