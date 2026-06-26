@@ -108,7 +108,7 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row mb-4">
+    <div class="row mb-4 mt-4 pt-2">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Diet Plan List</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
