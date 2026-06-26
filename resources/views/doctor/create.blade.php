@@ -15,7 +15,7 @@
     @endif
 
     <div class="doctor-page-heading">
-        <h3 class="text-dark mb-0">Register Doctor</h3>
+        <h4 class="page-title mb-0">Register Doctor</h4>
     </div>
 
     <div class="card border-0 shadow-sm">

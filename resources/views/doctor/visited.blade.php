@@ -22,7 +22,7 @@
     </style>
 
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 mt-4 pt-2">
-        <h4 class="mb-0 text-dark">Visited</h4>
+        <h4 class="page-title mb-0">Visited</h4>
     </div>
 
     <div class="card border-0 shadow-sm">

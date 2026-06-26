@@ -26,7 +26,7 @@
     @endif
 
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 mt-4 pt-2">
-        <h4 class="mb-0 text-dark">Appointment</h4>
+        <h4 class="page-title mb-0">Appointment</h4>
     </div>
 
     <div class="row g-3 mb-3">

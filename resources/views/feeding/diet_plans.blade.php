@@ -108,33 +108,6 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row g-3 mb-4 mt-2">
-        <div class="col-md-4">
-            <div class="card bg-primary-subtle border-0">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Total Diet Plans</p>
-                    <h3 class="mb-0">{{ $summary['total'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-success-subtle border-0">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Active Plans</p>
-                    <h3 class="mb-0">{{ $summary['active'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-warning-subtle border-0">
-                <div class="card-body">
-                    <p class="text-muted mb-1">Package Quantity</p>
-                    <h3 class="mb-0">{{ number_format($summary['planned_quantity'], 2) }} Kg</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h4 class="page-title mb-0">Diet Plan List</h4>
