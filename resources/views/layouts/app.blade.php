@@ -51,14 +51,10 @@
             display: none !important;
         }
         .page-title {
-            display: inline-block;
             margin-bottom: 0;
-            padding: 0.5rem 0.9rem;
-            border-radius: 0.85rem;
-            background: #e8f7eb;
-            color: #14532d;
             font-weight: 800;
             line-height: 1.2;
+            color: #182b1d;
         }
         .container-fluid > .row:has(.page-title):not(:has(.card-header .page-title)),
         .container-fluid > div.d-flex:has(> .page-title),
