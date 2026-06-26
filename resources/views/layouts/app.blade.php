@@ -71,6 +71,44 @@
         html[data-bs-theme="dark"] .container-fluid > .doctor-page-heading:has(.page-title) {
             border-bottom-color: rgba(226, 232, 240, 0.18);
         }
+        html[data-bs-theme="dark"] .card {
+            border-color: rgba(148, 163, 184, 0.18) !important;
+        }
+        html[data-bs-theme="dark"] .card .text-muted {
+            color: #cbd5e1 !important;
+        }
+        html[data-bs-theme="dark"] .bg-primary-subtle {
+            background: rgba(59, 130, 246, 0.2) !important;
+            color: #dbeafe !important;
+        }
+        html[data-bs-theme="dark"] .bg-success-subtle {
+            background: rgba(34, 197, 94, 0.18) !important;
+            color: #dcfce7 !important;
+        }
+        html[data-bs-theme="dark"] .bg-warning-subtle {
+            background: rgba(245, 158, 11, 0.2) !important;
+            color: #fef3c7 !important;
+        }
+        html[data-bs-theme="dark"] .bg-info-subtle {
+            background: rgba(14, 165, 233, 0.2) !important;
+            color: #dbeafe !important;
+        }
+        html[data-bs-theme="dark"] .bg-secondary-subtle {
+            background: rgba(148, 163, 184, 0.18) !important;
+            color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="dark"] .bg-danger-subtle {
+            background: rgba(239, 68, 68, 0.18) !important;
+            color: #fee2e2 !important;
+        }
+        html[data-bs-theme="dark"] .card.bg-primary-subtle .text-muted,
+        html[data-bs-theme="dark"] .card.bg-success-subtle .text-muted,
+        html[data-bs-theme="dark"] .card.bg-warning-subtle .text-muted,
+        html[data-bs-theme="dark"] .card.bg-info-subtle .text-muted,
+        html[data-bs-theme="dark"] .card.bg-secondary-subtle .text-muted,
+        html[data-bs-theme="dark"] .card.bg-danger-subtle .text-muted {
+            color: rgba(248, 250, 252, 0.78) !important;
+        }
     </style>
     @stack('styles')
 </head>
