@@ -374,7 +374,7 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
-<script src="{{ asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+
 
 <style>
 .sidebar-divider {
