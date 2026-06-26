@@ -50,6 +50,16 @@
         .corzin-page-hidden {
             display: none !important;
         }
+        .page-title {
+            display: inline-block;
+            margin-bottom: 0;
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.85rem;
+            background: #e8f7eb;
+            color: #14532d;
+            font-weight: 800;
+            line-height: 1.2;
+        }
     </style>
     @stack('styles')
 </head>
