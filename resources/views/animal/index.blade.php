@@ -4,15 +4,16 @@
 <style>
     .animal-type-card {
         border: 0;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
     }
-    html[data-bs-theme="dark"] .animal-type-card {
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        box-shadow: none;
+    .animal-type-card .card-body h5,
+    .animal-type-card .card-body h2 {
+        color: #fff;
     }
-    html[data-bs-theme="dark"] .animal-type-card .card-body h5,
-    html[data-bs-theme="dark"] .animal-type-card .card-body h2 {
-        color: #f8fafc;
+    .animal-type-card .card-body small {
+        color: rgba(255, 255, 255, 0.72);
     }
 </style>
 @endpush
@@ -37,12 +38,18 @@
     @endif
 
     @php
-        $cardStyles = ['bg-warning-subtle', 'bg-info-subtle', 'bg-secondary-subtle', 'bg-success-subtle', 'bg-primary-subtle'];
+        $cardStyles = [
+            'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+            'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+            'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
+            'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+        ];
     @endphp
     <div class="row g-3 mb-4 mt-2">
         @foreach($animalTypes as $index => $type)
             <div class="col-md-6 col-lg-3">
-                <div class="card animal-type-card {{ $cardStyles[$index % count($cardStyles)] }}">
+                <div class="card animal-type-card" style="background: {{ $cardStyles[$index % count($cardStyles)] }};">
                     <div class="card-body text-center">
                         <h5 class="fw-bold mb-1" style="font-size:18px;">{{ $type->name }}</h5>
                         <h2 class="fw-bold mb-0">{{ (int) ($typeCounts[$type->id] ?? 0) }}</h2>

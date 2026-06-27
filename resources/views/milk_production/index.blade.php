@@ -1,10 +1,25 @@
 @extends('layouts.app')
 
+@push('styles')
+<style>
+    .milk-summary-card {
+        border: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    }
+    .milk-summary-card .card-body h5,
+    .milk-summary-card .card-body h2 {
+        color: #fff;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid">
     <div class="row g-3 mb-4 mt-2">
         <div class="col-md-6 col-lg-3">
-            <div class="card bg-warning-subtle">
+            <div class="card milk-summary-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Morning Milk</h5>
                     <h2 class="fw-bold mb-0" id="summaryMorning">{{ number_format($summary['morning'], 1) }} L</h2>
@@ -12,7 +27,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-3">
-            <div class="card bg-info-subtle">
+            <div class="card milk-summary-card" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Afternoon Milk</h5>
                     <h2 class="fw-bold mb-0" id="summaryAfternoon">{{ number_format($summary['afternoon'], 1) }} L</h2>
@@ -20,7 +35,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-3">
-            <div class="card bg-secondary-subtle">
+            <div class="card milk-summary-card" style="background: linear-gradient(135deg, #64748b 0%, #475569 100%);">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Evening Milk</h5>
                     <h2 class="fw-bold mb-0" id="summaryEvening">{{ number_format($summary['evening'], 1) }} L</h2>
@@ -28,7 +43,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-3">
-            <div class="card bg-success-subtle">
+            <div class="card milk-summary-card" style="background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);">
                 <div class="card-body text-center">
                     <h5 class="fw-bold mb-1" style="font-size:18px;">Avg FAT</h5>
                     <h2 class="fw-bold mb-0" id="summaryFat">{{ number_format($summary['fat'], 1) }} %</h2>

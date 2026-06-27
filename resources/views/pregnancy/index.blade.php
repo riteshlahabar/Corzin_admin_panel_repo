@@ -1,19 +1,37 @@
 @extends('layouts.app')
 
+@push('styles')
+<style>
+    .pregnancy-summary-card {
+        border: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    }
+    .pregnancy-summary-card .card-body p,
+    .pregnancy-summary-card .card-body h3 {
+        color: #fff !important;
+    }
+    .pregnancy-summary-card .card-body p {
+        opacity: 0.78;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container-fluid">
     <div class="row g-3 mb-4 mt-2">
         <div class="col-md-3">
-            <div class="card bg-primary-subtle border-0"><div class="card-body"><p class="text-muted mb-1">Total Records</p><h3 class="mb-0">{{ $summary['total'] }}</h3></div></div>
+            <div class="card pregnancy-summary-card" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);"><div class="card-body"><p class="mb-1">Total Records</p><h3 class="mb-0">{{ $summary['total'] }}</h3></div></div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success-subtle border-0"><div class="card-body"><p class="text-muted mb-1">Current</p><h3 class="mb-0">{{ $summary['current'] }}</h3></div></div>
+            <div class="card pregnancy-summary-card" style="background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);"><div class="card-body"><p class="mb-1">Current</p><h3 class="mb-0">{{ $summary['current'] }}</h3></div></div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning-subtle border-0"><div class="card-body"><p class="text-muted mb-1">Pregnant</p><h3 class="mb-0">{{ $summary['pregnant'] }}</h3></div></div>
+            <div class="card pregnancy-summary-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"><div class="card-body"><p class="mb-1">Pregnant</p><h3 class="mb-0">{{ $summary['pregnant'] }}</h3></div></div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info-subtle border-0"><div class="card-body"><p class="text-muted mb-1">Calved</p><h3 class="mb-0">{{ $summary['calved'] }}</h3></div></div>
+            <div class="card pregnancy-summary-card" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);"><div class="card-body"><p class="mb-1">Calved</p><h3 class="mb-0">{{ $summary['calved'] }}</h3></div></div>
         </div>
     </div>
 
