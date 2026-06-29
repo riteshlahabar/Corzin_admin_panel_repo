@@ -103,27 +103,40 @@ function exportPanTableToPdf(tableId, title) {
 
 function populateAssignableAnimals() {
     const farmerId = document.getElementById('createPanFarmer')?.value || '';
-    const select = document.getElementById('createPanAnimals');
-    if (!select) return;
+    const container = document.getElementById('createPanAnimals');
+    if (!container) return;
 
-    select.innerHTML = '';
-    if (!farmerId) return;
+    container.innerHTML = '';
+    if (!farmerId) {
+        container.innerHTML = '<div class="text-muted small">Select farmer first.</div>';
+        return;
+    }
 
     const list = (window.assignableAnimalsMap && window.assignableAnimalsMap[farmerId]) || [];
     if (!Array.isArray(list) || list.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No unassigned active animals available';
-        option.disabled = true;
-        select.appendChild(option);
+        container.innerHTML = '<div class="text-muted small">No unassigned active animals available.</div>';
         return;
     }
 
     list.forEach((animal) => {
-        const option = document.createElement('option');
-        option.value = animal.id;
-        option.textContent = `${animal.name || '-'} (${animal.tag || '-'})${animal.type ? ` - ${animal.type}` : ''}`;
-        select.appendChild(option);
+        const row = document.createElement('div');
+        row.className = 'form-check mb-2';
+
+        const input = document.createElement('input');
+        input.className = 'form-check-input';
+        input.type = 'checkbox';
+        input.name = 'animal_ids[]';
+        input.value = animal.id;
+        input.id = `create-pan-animal-${animal.id}`;
+
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = input.id;
+        label.textContent = `${animal.name || '-'} (${animal.tag || '-'})${animal.type ? ` - ${animal.type}` : ''}`;
+
+        row.appendChild(input);
+        row.appendChild(label);
+        container.appendChild(row);
     });
 }
 

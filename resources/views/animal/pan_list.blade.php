@@ -124,9 +124,9 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <form method="POST" action="{{ route('farmer.pans.store') }}" class="modal-content">
             @csrf
-            <div class="modal-header">
+            <div class="modal-header bg-success text-white">
                 <h5 class="modal-title">Create PAN</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-3">
@@ -170,9 +170,8 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Assign Animals (Optional)</label>
-                        <select name="animal_ids[]" id="createPanAnimals" class="form-select" multiple size="8">
-                        </select>
+                        <label class="form-label">Select Animal (Optional)</label>
+                        <div id="createPanAnimals" class="border rounded-3 bg-light-subtle p-3" style="min-height: 120px;"></div>
                         <small class="text-muted">Only unassigned active animals are shown for selected farmer.</small>
                     </div>
                 </div>
