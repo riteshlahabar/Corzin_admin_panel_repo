@@ -103,6 +103,7 @@ function exportPanTableToPdf(tableId, title) {
 
 function populateAssignableAnimals() {
     const farmerId = document.getElementById('createPanFarmer')?.value || '';
+    const panType = document.getElementById('createPanType')?.value || 'milking';
     const container = document.getElementById('createPanAnimals');
     if (!container) return;
 
@@ -112,9 +113,16 @@ function populateAssignableAnimals() {
         return;
     }
 
-    const list = (window.assignableAnimalsMap && window.assignableAnimalsMap[farmerId]) || [];
+    const rawList = (window.assignableAnimalsMap && window.assignableAnimalsMap[farmerId]) || [];
+    const list = rawList.filter((animal) => {
+        const isMilking = Boolean(animal.is_milking);
+        return panType === 'non_milking' ? !isMilking : isMilking;
+    });
+
     if (!Array.isArray(list) || list.length === 0) {
-        container.innerHTML = '<div class="text-muted small">No unassigned active animals available.</div>';
+        container.innerHTML = panType === 'non_milking'
+            ? '<div class="text-muted small">No unassigned non-milking cows available.</div>'
+            : '<div class="text-muted small">No unassigned milking cows available.</div>';
         return;
     }
 
@@ -189,7 +197,10 @@ function openTransferModal(button) {
 
 document.getElementById('panSearch')?.addEventListener('input', filterPanRows);
 document.getElementById('createPanFarmer')?.addEventListener('change', populateAssignableAnimals);
-document.getElementById('createPanType')?.addEventListener('change', toggleCreatePanShift);
+document.getElementById('createPanType')?.addEventListener('change', function () {
+    toggleCreatePanShift();
+    populateAssignableAnimals();
+});
 
 document.querySelectorAll('.open-transfer-pan').forEach((button) => {
     button.addEventListener('click', function () {

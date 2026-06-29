@@ -238,11 +238,20 @@
     });
     $assignableAnimalsMap = $assignableAnimals->groupBy('farmer_id')->map(function ($rows) {
         return $rows->map(function ($animal) {
+            $typeName = (string) optional($animal->animalType)->name;
+            $normalizedType = mb_strtolower(trim($typeName));
+            $isMilking = $normalizedType === ''
+                || str_contains($normalizedType, 'milking')
+                || str_contains($normalizedType, 'milky')
+                || str_contains($normalizedType, 'dudh')
+                || str_contains($normalizedType, 'dugh')
+                || str_contains($normalizedType, 'milk');
             return [
                 'id' => $animal->id,
                 'name' => $animal->animal_name,
                 'tag' => $animal->tag_number,
-                'type' => optional($animal->animalType)->name,
+                'type' => $typeName,
+                'is_milking' => $isMilking,
             ];
         })->values();
     });

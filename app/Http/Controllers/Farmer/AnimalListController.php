@@ -90,6 +90,34 @@ class AnimalListController extends Controller
             ->unique()
             ->values();
 
+        if ($animalIds->isNotEmpty()) {
+            $selectedAnimals = Animal::query()
+                ->with('animalType')
+                ->where('farmer_id', $farmerId)
+                ->whereIn('id', $animalIds)
+                ->where('is_active', true)
+                ->where(function ($query) {
+                    $query->whereNull('pan_id')->orWhere('pan_id', 0);
+                })
+                ->get();
+
+            $invalidAnimals = $selectedAnimals->filter(function (Animal $animal) use ($panType) {
+                $isMilking = $this->isMilkingAnimalTypeName((string) optional($animal->animalType)->name);
+                return $panType === 'milking' ? ! $isMilking : $isMilking;
+            });
+
+            if ($selectedAnimals->count() !== $animalIds->count() || $invalidAnimals->isNotEmpty()) {
+                return redirect()
+                    ->route('farmer.pans')
+                    ->withErrors([
+                        'animal_ids' => $panType === 'milking'
+                            ? 'Please select only milking cows that are not already assigned to another PAN.'
+                            : 'Please select only non-milking cows that are not already assigned to another PAN.',
+                    ])
+                    ->withInput();
+            }
+        }
+
         try {
             DB::transaction(function () use ($data, $farmerId, $panType, $milkShifts, $animalIds) {
                 $pan = FarmerPan::query()->create([
@@ -104,6 +132,7 @@ class AnimalListController extends Controller
                 }
 
                 $animals = Animal::query()
+                    ->with('animalType')
                     ->where('farmer_id', $farmerId)
                     ->whereIn('id', $animalIds)
                     ->where('is_active', true)
@@ -672,6 +701,20 @@ class AnimalListController extends Controller
             }
         }
         return true;
+    }
+
+    private function isMilkingAnimalTypeName(string $typeName): bool
+    {
+        $value = trim(strtolower($typeName));
+        if ($value === '') {
+            return true;
+        }
+
+        return str_contains($value, 'milking')
+            || str_contains($value, 'milky')
+            || str_contains($value, 'dudh')
+            || str_contains($value, 'dugh')
+            || str_contains($value, 'milk');
     }
 
     private function logPanTransferHistory(Animal $animal, ?int $fromPanId, ?int $toPanId, ?string $notes = null): void
