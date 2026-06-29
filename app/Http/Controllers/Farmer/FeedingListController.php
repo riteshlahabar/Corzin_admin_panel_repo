@@ -42,6 +42,8 @@ class FeedingListController extends Controller
             'pan_id' => 'nullable|exists:farmer_pans,id',
             'diet_plan_id' => 'required|exists:feed_diet_plans,id',
             'quantity' => 'required|numeric|min:0.01',
+            'rate_per_unit' => 'required|numeric|min:0',
+            'feeding_cost' => 'nullable|numeric|min:0',
             'feeding_time' => 'required|in:Morning,Afternoon,Evening',
             'date' => 'required|date',
             'notes' => 'nullable|string',
@@ -86,6 +88,13 @@ class FeedingListController extends Controller
         }
 
         $feedingQuantity = round((float) $data['quantity'], 2);
+        $ratePerUnit = round((float) $data['rate_per_unit'], 2);
+        $feedingCost = round(
+            $request->filled('feeding_cost')
+                ? (float) $data['feeding_cost']
+                : ($feedingQuantity * $ratePerUnit),
+            2
+        );
         $packageQuantity = round((float) ($dietPlan->plan_quantity ?? 0), 2);
         $balanceQuantity = max(round($packageQuantity - $feedingQuantity, 2), 0);
 
@@ -99,8 +108,8 @@ class FeedingListController extends Controller
             'package_quantity' => $packageQuantity,
             'feeding_quantity' => $feedingQuantity,
             'balance_quantity' => $balanceQuantity,
-            'rate_per_unit' => 0,
-            'feeding_cost' => 0,
+            'rate_per_unit' => $ratePerUnit,
+            'feeding_cost' => $feedingCost,
             'unit' => $dietPlan->unit ?: 'Kg',
             'feeding_time' => $data['feeding_time'],
             'date' => $data['date'],

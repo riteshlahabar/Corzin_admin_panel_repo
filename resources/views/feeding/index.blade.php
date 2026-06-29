@@ -167,7 +167,15 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Feeding Quantity</label>
-                            <input type="number" step="0.01" min="0.01" name="quantity" class="form-control" required>
+                            <input type="number" step="0.01" min="0.01" name="quantity" id="feedingQuantityInput" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Rate/Unit</label>
+                            <input type="number" step="0.01" min="0" name="rate_per_unit" id="feedingRateInput" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Feeding Cost</label>
+                            <input type="number" step="0.01" min="0" name="feeding_cost" id="feedingCostInput" class="form-control" readonly>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Date</label>
@@ -198,8 +206,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const animalSelect = document.getElementById('feedingAnimalSelect');
     const panSelect = document.getElementById('feedingPanSelect');
     const dietPlanSelect = document.getElementById('feedingDietPlanSelect');
+    const quantityInput = document.getElementById('feedingQuantityInput');
+    const rateInput = document.getElementById('feedingRateInput');
+    const costInput = document.getElementById('feedingCostInput');
 
-    if (!farmerSelect || !animalSelect || !panSelect || !dietPlanSelect) {
+    if (!farmerSelect || !animalSelect || !panSelect || !dietPlanSelect || !quantityInput || !rateInput || !costInput) {
         return;
     }
 
@@ -310,6 +321,12 @@ document.addEventListener('DOMContentLoaded', function () {
         dietPlanSelectr = initSearchableSelect(dietPlanSelect, 'Select diet plan');
     };
 
+    const updateFeedingCost = () => {
+        const quantity = parseFloat(quantityInput.value || '0') || 0;
+        const rate = parseFloat(rateInput.value || '0') || 0;
+        costInput.value = (quantity * rate).toFixed(2);
+    };
+
     farmerSelect.addEventListener('change', function () {
         refreshAnimalSelect();
         refreshPanSelect();
@@ -330,10 +347,14 @@ document.addEventListener('DOMContentLoaded', function () {
         refreshDietPlanSelect();
     });
 
+    quantityInput.addEventListener('input', updateFeedingCost);
+    rateInput.addEventListener('input', updateFeedingCost);
+
     farmerSelectr = initSearchableSelect(farmerSelect, 'Select farmer');
     refreshAnimalSelect();
     refreshPanSelect();
     refreshDietPlanSelect();
+    updateFeedingCost();
 });
 </script>
 @endpush
