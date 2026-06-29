@@ -145,6 +145,7 @@
                                         $ownerLabel = !empty($plan->pan_id)
                                             ? 'Pen - '.(optional($plan->pan)->name ?? '-')
                                             : 'Animal - '.trim((optional($plan->animal)->animal_name ?? '').(!empty(optional($plan->animal)->tag_number) ? ' - '.optional($plan->animal)->tag_number : ''));
+                                        $planQuantityLabel = number_format((float) ($plan->plan_quantity ?? 0), 2).' '.($plan->unit ?: 'Kg');
                                     @endphp
                                     <option
                                         value="{{ $plan->id }}"
@@ -152,7 +153,7 @@
                                         data-animal-id="{{ $plan->animal_id }}"
                                         data-pan-id="{{ $plan->pan_id }}"
                                     >
-                                        {{ $plan->diet_plan_name ?: 'Diet Plan #'.$plan->id }} | {{ $ownerLabel }}
+                                        {{ $plan->diet_plan_name ?: 'Diet Plan #'.$plan->id }} | {{ $planQuantityLabel }} | {{ $ownerLabel }}
                                     </option>
                                 @endforeach
                             </select>

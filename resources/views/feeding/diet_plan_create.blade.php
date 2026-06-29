@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @push('styles')
+<link href="{{ asset('assets/libs/mobius1-selectr/selectr.min.css') }}" rel="stylesheet" type="text/css" />
 <style>
     .diet-app-card {
         border: 0;
@@ -133,24 +134,34 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('assets/libs/mobius1-selectr/selectr.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const createForm = document.getElementById('dietPlanCreateForm');
     const feedBlocksContainer = document.getElementById('dietFeedBlocks');
     const addFeedBlockBtn = document.getElementById('addFeedBlockBtn');
     const feedTypes = @json($feedTypesJson);
+    const farmerSelect = createForm?.querySelector('.diet-plan-farmer');
+
+    if (farmerSelect) {
+        new Selectr(farmerSelect, {
+            searchable: true,
+            clearable: false,
+            placeholder: 'Select farmer',
+        });
+    }
 
     function syncTargetOptions(form) {
         if (!form) return;
 
-        const farmerSelect = form.querySelector('.diet-plan-farmer');
+        const formFarmerSelect = form.querySelector('.diet-plan-farmer');
         const animalSelect = form.querySelector('.diet-plan-animal');
         const panSelect = form.querySelector('.diet-plan-pan');
-        if (!farmerSelect || !animalSelect || !panSelect) {
+        if (!formFarmerSelect || !animalSelect || !panSelect) {
             return;
         }
 
-        const selectedFarmerId = farmerSelect.value;
+        const selectedFarmerId = formFarmerSelect.value;
 
         Array.from(animalSelect.options).forEach((option, index) => {
             if (index === 0) {
