@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@push('styles')
+<link href="{{ asset('assets/libs/mobius1-selectr/selectr.min.css') }}" rel="stylesheet" type="text/css" />
+@endpush
+
 @section('content')
 <div class="container-fluid">
     @if(session('success'))
@@ -15,8 +19,7 @@
                     <option value="farmer">Farmer</option>
                     <option value="animal">Animal</option>
                     <option value="feed-type">Feed Type</option>
-                    <option value="quantity">Quantity</option>
-                    <option value="unit">Unit</option>
+                    <option value="quantity">Feeding Quantity</option>
                     <option value="time">Time</option>
                     <option value="date-text">Date</option>
                     <option value="notes">Notes</option>
@@ -49,9 +52,9 @@
                             <th>#</th>
                             <th>Farmer</th>
                             <th>Animal</th>
+                            <th>Diet Plan</th>
                             <th>Feed Type</th>
-                            <th>Quantity</th>
-                            <th>Unit</th>
+                            <th>Feeding Quantity</th>
                             <th>Time</th>
                             <th>Date</th>
                             <th>Notes</th>
@@ -60,12 +63,11 @@
                     <tbody>
                         @forelse($records as $key => $record)
                         <tr class="feeding-row"
-                            data-all="{{ strtolower(trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? '').' '.($record->animal->animal_name ?? '').' '.($record->animal->tag_number ?? '').' '.($record->feedType->name ?? '').' '.($record->quantity ?? '').' '.($record->unit ?? '').' '.($record->feeding_time ?? '').' '.(optional($record->date)->format('d-m-Y') ?? '').' '.($record->notes ?? ''))) }}"
+                            data-all="{{ strtolower(trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? '').' '.($record->animal->animal_name ?? '').' '.($record->animal->tag_number ?? '').' '.($record->dietPlan->diet_plan_name ?? '').' '.($record->feedType->name ?? '').' '.($record->quantity ?? '').' '.($record->feeding_time ?? '').' '.(optional($record->date)->format('d-m-Y') ?? '').' '.($record->notes ?? ''))) }}"
                             data-farmer="{{ strtolower(trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? ''))) }}"
                             data-animal="{{ strtolower(trim(($record->animal->animal_name ?? '').' '.(!empty($record->animal->tag_number) ? 'tag '.$record->animal->tag_number : ''))) }}"
                             data-feed-type="{{ strtolower($record->feedType->name ?? '') }}"
                             data-quantity="{{ strtolower(number_format($record->quantity, 2)) }}"
-                            data-unit="{{ strtolower($record->unit ?? '') }}"
                             data-time="{{ strtolower($record->feeding_time ?? '') }}"
                             data-date-text="{{ strtolower(optional($record->date)->format('d-m-Y') ?? '') }}"
                             data-notes="{{ strtolower($record->notes ?? '') }}"
@@ -73,9 +75,9 @@
                             <td>{{ $key + 1 }}</td>
                             <td>{{ trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? '')) ?: '-' }}</td>
                             <td>{{ $record->animal->animal_name ?? '-' }}{{ !empty($record->animal->tag_number) ? ' - Tag '.$record->animal->tag_number : '' }}</td>
+                            <td>{{ $record->dietPlan->diet_plan_name ?? '-' }}</td>
                             <td>{{ $record->feedType->name ?? '-' }}</td>
                             <td>{{ number_format($record->quantity, 2) }}</td>
-                            <td>{{ $record->unit }}</td>
                             <td>{{ $record->feeding_time }}</td>
                             <td>{{ optional($record->date)->format('d-m-Y') }}</td>
                             <td>{{ $record->notes ?: '-' }}</td>
@@ -105,7 +107,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Farmer</label>
-                            <select name="farmer_id" class="form-select" required>
+                            <select name="farmer_id" id="feedingFarmerSelect" class="form-select" required>
                                 <option value="">Select farmer</option>
                                 @foreach($farmers as $farmer)
                                     <option value="{{ $farmer->id }}">{{ trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) }} - {{ $farmer->mobile }}</option>
@@ -114,31 +116,45 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Animal</label>
-                            <select name="animal_id" class="form-select" required>
+                            <select name="animal_id" id="feedingAnimalSelect" class="form-select">
                                 <option value="">Select animal</option>
                                 @foreach($animals as $animal)
-                                    <option value="{{ $animal->id }}">{{ $animal->animal_name }} - {{ $animal->tag_number }}</option>
+                                    <option value="{{ $animal->id }}" data-farmer-id="{{ $animal->farmer_id }}">
+                                        {{ $animal->animal_name }} - {{ $animal->tag_number ?: '-' }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Feed Type</label>
-                            <select name="feed_type_id" class="form-select" required>
-                                <option value="">Select feed type</option>
-                                @foreach($feedTypes as $type)
-                                    <option value="{{ $type->id }}">{{ $type->name }}</option>
+                            <label class="form-label">Pen</label>
+                            <select name="pan_id" id="feedingPanSelect" class="form-select">
+                                <option value="">Select pen</option>
+                                @foreach($pans as $pan)
+                                    <option value="{{ $pan->id }}" data-farmer-id="{{ $pan->farmer_id }}">
+                                        {{ $pan->name }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" step="0.01" min="0.01" name="quantity" class="form-control" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Unit</label>
-                            <select name="unit" class="form-select" required>
-                                <option value="Kg">Kg</option>
-                                <option value="Gram">Gram</option>
+                        <div class="col-md-6">
+                            <label class="form-label">Diet Plan</label>
+                            <select name="diet_plan_id" id="feedingDietPlanSelect" class="form-select" required>
+                                <option value="">Select diet plan</option>
+                                @foreach($dietPlans as $plan)
+                                    @php
+                                        $ownerLabel = !empty($plan->pan_id)
+                                            ? 'Pen - '.(optional($plan->pan)->name ?? '-')
+                                            : 'Animal - '.trim((optional($plan->animal)->animal_name ?? '').(!empty(optional($plan->animal)->tag_number) ? ' - '.optional($plan->animal)->tag_number : ''));
+                                    @endphp
+                                    <option
+                                        value="{{ $plan->id }}"
+                                        data-farmer-id="{{ $plan->farmer_id }}"
+                                        data-animal-id="{{ $plan->animal_id }}"
+                                        data-pan-id="{{ $plan->pan_id }}"
+                                    >
+                                        {{ $plan->diet_plan_name ?: 'Diet Plan #'.$plan->id }} | {{ $ownerLabel }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -148,6 +164,10 @@
                                 <option value="Afternoon">Afternoon</option>
                                 <option value="Evening">Evening</option>
                             </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Feeding Quantity</label>
+                            <input type="number" step="0.01" min="0.01" name="quantity" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Date</label>
@@ -171,4 +191,149 @@
 
 @push('scripts')
 <script src="{{ asset('js/feeding/index.js') }}"></script>
+<script src="{{ asset('assets/libs/mobius1-selectr/selectr.min.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const farmerSelect = document.getElementById('feedingFarmerSelect');
+    const animalSelect = document.getElementById('feedingAnimalSelect');
+    const panSelect = document.getElementById('feedingPanSelect');
+    const dietPlanSelect = document.getElementById('feedingDietPlanSelect');
+
+    if (!farmerSelect || !animalSelect || !panSelect || !dietPlanSelect) {
+        return;
+    }
+
+    const animalOptions = Array.from(animalSelect.options).map((option) => ({
+        value: option.value,
+        text: option.text,
+        farmerId: option.getAttribute('data-farmer-id') || '',
+    }));
+    const panOptions = Array.from(panSelect.options).map((option) => ({
+        value: option.value,
+        text: option.text,
+        farmerId: option.getAttribute('data-farmer-id') || '',
+    }));
+    const dietPlanOptions = Array.from(dietPlanSelect.options).map((option) => ({
+        value: option.value,
+        text: option.text,
+        farmerId: option.getAttribute('data-farmer-id') || '',
+        animalId: option.getAttribute('data-animal-id') || '',
+        panId: option.getAttribute('data-pan-id') || '',
+    }));
+
+    let farmerSelectr = null;
+    let animalSelectr = null;
+    let panSelectr = null;
+    let dietPlanSelectr = null;
+
+    const initSearchableSelect = (element, placeholderText) => new Selectr(element, {
+        searchable: true,
+        clearable: false,
+        placeholder: placeholderText,
+    });
+
+    const rebuildSelect = (select, options, placeholderText, filterFn) => {
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = placeholderText;
+        select.appendChild(placeholder);
+
+        options.forEach((optionData) => {
+            if (!optionData.value) {
+                return;
+            }
+            if (filterFn && !filterFn(optionData)) {
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = optionData.value;
+            option.textContent = optionData.text;
+            if (optionData.farmerId) option.setAttribute('data-farmer-id', optionData.farmerId);
+            if (optionData.animalId) option.setAttribute('data-animal-id', optionData.animalId);
+            if (optionData.panId) option.setAttribute('data-pan-id', optionData.panId);
+            select.appendChild(option);
+        });
+
+        select.value = '';
+    };
+
+    const refreshAnimalSelect = () => {
+        const farmerId = farmerSelect.value || '';
+        rebuildSelect(
+            animalSelect,
+            animalOptions,
+            'Select animal',
+            (optionData) => !farmerId || optionData.farmerId === farmerId,
+        );
+        if (animalSelectr) animalSelectr.destroy();
+        animalSelectr = initSearchableSelect(animalSelect, 'Select animal');
+    };
+
+    const refreshPanSelect = () => {
+        const farmerId = farmerSelect.value || '';
+        rebuildSelect(
+            panSelect,
+            panOptions,
+            'Select pen',
+            (optionData) => !farmerId || optionData.farmerId === farmerId,
+        );
+        if (panSelectr) panSelectr.destroy();
+        panSelectr = initSearchableSelect(panSelect, 'Select pen');
+    };
+
+    const refreshDietPlanSelect = () => {
+        const farmerId = farmerSelect.value || '';
+        const animalId = animalSelect.value || '';
+        const panId = panSelect.value || '';
+
+        rebuildSelect(
+            dietPlanSelect,
+            dietPlanOptions,
+            'Select diet plan',
+            (optionData) => {
+                if (farmerId && optionData.farmerId !== farmerId) {
+                    return false;
+                }
+                if (animalId) {
+                    return optionData.animalId === animalId && !optionData.panId;
+                }
+                if (panId) {
+                    return optionData.panId === panId;
+                }
+                return false;
+            },
+        );
+
+        if (dietPlanSelectr) dietPlanSelectr.destroy();
+        dietPlanSelectr = initSearchableSelect(dietPlanSelect, 'Select diet plan');
+    };
+
+    farmerSelect.addEventListener('change', function () {
+        refreshAnimalSelect();
+        refreshPanSelect();
+        refreshDietPlanSelect();
+    });
+
+    animalSelect.addEventListener('change', function () {
+        if (animalSelect.value) {
+            refreshPanSelect();
+        }
+        refreshDietPlanSelect();
+    });
+
+    panSelect.addEventListener('change', function () {
+        if (panSelect.value) {
+            refreshAnimalSelect();
+        }
+        refreshDietPlanSelect();
+    });
+
+    farmerSelectr = initSearchableSelect(farmerSelect, 'Select farmer');
+    refreshAnimalSelect();
+    refreshPanSelect();
+    refreshDietPlanSelect();
+});
+</script>
 @endpush

@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="row mb-4 mt-2">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h4 class="page-title mb-0">Pan Transfer</h4>
+            <h4 class="page-title mb-0">Pen Transfer</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <input type="text" id="lifecycleSearch" class="form-control" placeholder="Search animal..." style="width:220px;">
                 <div class="input-group" style="width:260px;">
@@ -12,7 +12,7 @@
                     <span class="input-group-text">to</span>
                     <input type="date" id="endDate" class="form-control">
                 </div>
-                <button type="button" class="btn btn-light border" onclick="exportTableToPdf('lifecycleTableExport', 'Pan Transfer')" title="Download PDF">
+                <button type="button" class="btn btn-light border" onclick="exportTableToPdf('lifecycleTableExport', 'Pen Transfer')" title="Download PDF">
                     <i class="fa-solid fa-file-pdf text-danger"></i>
                 </button>
                 <button type="button" class="btn btn-light border" onclick="exportTableToExcel('lifecycleTableExport', 'pan-transfer')" title="Download Excel">
@@ -32,8 +32,8 @@
                             <th>Farmer</th>
                             <th>Animal Name</th>
                             <th>Tag Number</th>
-                            <th>From Pan</th>
-                            <th>To Pan</th>
+                            <th>From Pen</th>
+                            <th>To Pen</th>
                             <th>Notes</th>
                             <th>Changed At</th>
                         </tr>
@@ -54,7 +54,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted">No pan transfer records found</td>
+                            <td colspan="8" class="text-center text-muted">No pen transfer records found</td>
                         </tr>
                         @endforelse
                     </tbody>

@@ -81,7 +81,7 @@ class AnimalListController extends Controller
         if ($panType === 'milking' && empty($milkShifts)) {
             return redirect()
                 ->route('farmer.pans')
-                ->withErrors(['milk_shifts' => 'Please select at least one milk shift for Milking PAN.'])
+                ->withErrors(['milk_shifts' => 'Please select at least one milk shift for Milking Pen.'])
                 ->withInput();
         }
 
@@ -111,8 +111,8 @@ class AnimalListController extends Controller
                     ->route('farmer.pans')
                     ->withErrors([
                         'animal_ids' => $panType === 'milking'
-                            ? 'Please select only milking cows that are not already assigned to another PAN.'
-                            : 'Please select only non-milking cows that are not already assigned to another PAN.',
+                            ? 'Please select only milking cows that are not already assigned to another Pen.'
+                            : 'Please select only non-milking cows that are not already assigned to another Pen.',
                     ])
                     ->withInput();
             }
@@ -145,16 +145,16 @@ class AnimalListController extends Controller
                     }
 
                     $animal->update(['pan_id' => $pan->id]);
-                    $this->logPanTransferHistory($animal->fresh(), $fromPanId, $pan->id, 'Assigned in admin PAN creation.');
+                    $this->logPanTransferHistory($animal->fresh(), $fromPanId, $pan->id, 'Assigned in admin Pen creation.');
                 }
             });
         } catch (\Throwable $exception) {
             return redirect()
                 ->route('farmer.pans')
-                ->with('error', 'Failed to create PAN. '.$exception->getMessage());
+                ->with('error', 'Failed to create Pen. '.$exception->getMessage());
         }
 
-        return redirect()->route('farmer.pans')->with('success', 'PAN created successfully.');
+        return redirect()->route('farmer.pans')->with('success', 'Pen created successfully.');
     }
 
     public function transferPanAnimal(Request $request)
@@ -175,11 +175,11 @@ class AnimalListController extends Controller
             ->first();
 
         if (! $toPan) {
-            return redirect()->route('farmer.pans')->with('error', 'Destination PAN not found for this farmer.');
+            return redirect()->route('farmer.pans')->with('error', 'Destination Pen not found for this farmer.');
         }
 
         if ((int) $animal->pan_id === (int) $toPan->id) {
-            return redirect()->route('farmer.pans')->with('success', 'Animal is already in selected PAN.');
+            return redirect()->route('farmer.pans')->with('success', 'Animal is already in selected Pen.');
         }
 
         $fromPanId = $animal->pan_id;
@@ -188,7 +188,7 @@ class AnimalListController extends Controller
             $animal->fresh(),
             $fromPanId,
             $toPan->id,
-            $data['notes'] ?? 'Transferred from admin PAN list.'
+            $data['notes'] ?? 'Transferred from admin Pen list.'
         );
 
         return redirect()->route('farmer.pans')->with('success', 'Animal transferred successfully.');
@@ -199,7 +199,7 @@ class AnimalListController extends Controller
         if ($pan->animals()->count() > 0) {
             return redirect()
                 ->route('farmer.pans')
-                ->with('error', 'Cannot delete PAN while animals are assigned. Please transfer animals first.');
+                ->with('error', 'Cannot delete Pen while animals are assigned. Please transfer animals first.');
         }
 
         $hasPanMilkEntries = DB::table('pan_milk_entries')
@@ -209,12 +209,12 @@ class AnimalListController extends Controller
         if ($hasPanMilkEntries) {
             return redirect()
                 ->route('farmer.pans')
-                ->with('error', 'Cannot delete PAN with milk records.');
+                ->with('error', 'Cannot delete Pen with milk records.');
         }
 
         $pan->delete();
 
-        return redirect()->route('farmer.pans')->with('success', 'PAN deleted successfully.');
+        return redirect()->route('farmer.pans')->with('success', 'Pen deleted successfully.');
     }
 
     public function create()

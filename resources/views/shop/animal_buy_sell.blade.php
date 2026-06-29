@@ -30,7 +30,7 @@
                         <option value="animal">Animal</option>
                         <option value="tag">Tag</option>
                         <option value="type">Type</option>
-                        <option value="pan">PAN</option>
+                        <option value="pan">Pen</option>
                         <option value="gender">Gender</option>
                         <option value="birth-date">Birth Date</option>
                         <option value="age">Age</option>
@@ -72,7 +72,7 @@
                             <th>Animal</th>
                             <th>Tag</th>
                             <th>Type</th>
-                            <th>PAN</th>
+                            <th>Pen</th>
                             <th>Gender</th>
                             <th>Birth Date</th>
                             <th>Age</th>

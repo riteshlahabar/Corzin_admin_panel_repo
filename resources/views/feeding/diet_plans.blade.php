@@ -176,7 +176,7 @@
                             $farmerName = trim((optional($plan->farmer)->first_name ?? '').' '.(optional($plan->farmer)->last_name ?? '')) ?: '-';
                             $animalName = trim((optional($plan->animal)->animal_name ?? '').(!empty(optional($plan->animal)->tag_number) ? ' ('.optional($plan->animal)->tag_number.')' : ''));
                             $panName = trim((optional($plan->pan)->name ?? ''));
-                            $target = $panName !== '' ? 'PAN - '.$panName : ($animalName !== '' ? 'Animal - '.$animalName : '-');
+                            $target = $panName !== '' ? 'Pen - '.$panName : ($animalName !== '' ? 'Animal - '.$animalName : '-');
                             $dateText = optional($plan->reference_date)->format('d-m-Y') ?: '-';
                             $dateValue = optional($plan->reference_date)->format('Y-m-d') ?: '';
                             $feedType = optional($plan->feedType)->name ?: '-';

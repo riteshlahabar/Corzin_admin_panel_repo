@@ -71,13 +71,13 @@ class MilkProduceListController extends Controller
 
         if ($animalId === 0 && $panId === 0) {
             return back()->withErrors([
-                'animal_id' => 'Please select one animal or one PAN.',
+                'animal_id' => 'Please select one animal or one Pen.',
             ])->withInput();
         }
 
         if ($animalId > 0 && $panId > 0) {
             return back()->withErrors([
-                'animal_id' => 'Please select either animal or PAN, not both.',
+                'animal_id' => 'Please select either animal or Pen, not both.',
             ])->withInput();
         }
 
@@ -144,7 +144,7 @@ class MilkProduceListController extends Controller
 
         if (! $pan) {
             return back()->withErrors([
-                'pan_id' => 'Selected PAN is not valid for this farmer.',
+                'pan_id' => 'Selected Pen is not valid for this farmer.',
             ])->withInput();
         }
 
@@ -160,7 +160,7 @@ class MilkProduceListController extends Controller
 
         if ($details->isEmpty()) {
             return back()->withErrors([
-                'cow_milk_details' => 'Please enter cow-wise milk distribution for the selected PAN.',
+                'cow_milk_details' => 'Please enter cow-wise milk distribution for the selected Pen.',
             ])->withInput();
         }
 
@@ -180,7 +180,7 @@ class MilkProduceListController extends Controller
 
         if ($animals->count() !== $details->count()) {
             return back()->withErrors([
-                'cow_milk_details' => 'Every cow milk row must belong to the selected PAN.',
+                'cow_milk_details' => 'Every cow milk row must belong to the selected Pen.',
             ])->withInput();
         }
 
@@ -191,7 +191,7 @@ class MilkProduceListController extends Controller
 
         if ($panAnimalCount !== $details->count()) {
             return back()->withErrors([
-                'cow_milk_details' => 'Please submit milk quantity for every cow in this PAN.',
+                'cow_milk_details' => 'Please submit milk quantity for every cow in this Pen.',
             ])->withInput();
         }
 
@@ -228,7 +228,7 @@ class MilkProduceListController extends Controller
                 ->all();
 
             return back()->withErrors([
-                'shift' => 'Milk entry already exists for the selected PAN cows on this date and shift: '.implode(', ', $duplicateNames),
+                'shift' => 'Milk entry already exists for the selected Pen cows on this date and shift: '.implode(', ', $duplicateNames),
             ])->withInput();
         }
 
@@ -286,7 +286,7 @@ class MilkProduceListController extends Controller
 
         return redirect()
             ->route('farmer.milk')
-            ->with('success', 'PAN milk entry added successfully.');
+            ->with('success', 'Pen milk entry added successfully.');
     }
 
     private function getCreateViewData(): array

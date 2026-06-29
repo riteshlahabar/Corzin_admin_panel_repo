@@ -80,7 +80,7 @@
                         <option value="ai-date">AI Date</option>
                         <option value="breed-name">Breed Name</option>
                         <option value="type-name">Type</option>
-                        <option value="pan-name">PAN</option>
+                        <option value="pan-name">Pen</option>
                         <option value="gender">Gender</option>
                         <option value="birth-date">Birth Date</option>
                         <option value="age">Age</option>
@@ -140,7 +140,7 @@
                             <th>AI Date</th>
                             <th>Breed Name</th>
                             <th>Type</th>
-                            <th>PAN</th>
+                            <th>Pen</th>
                             <th>Gender</th>
                             <th>Birth Date</th>
                             <th>Age</th>

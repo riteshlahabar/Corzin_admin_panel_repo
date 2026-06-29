@@ -47,7 +47,7 @@
                 <li class="menu-item"><a href="{{ route('farmer.animals') }}" class="nav-link"><i class="fas fa-cow me-2"></i> Animal List</a></li>
                 @endif
                 @if($currentUser?->hasPermission('pan_list.view'))
-                <li class="menu-item"><a href="{{ route('farmer.pans') }}" class="nav-link"><i class="iconoir-list me-2"></i> PAN List</a></li>
+                <li class="menu-item"><a href="{{ route('farmer.pans') }}" class="nav-link"><i class="iconoir-list me-2"></i> Pen List</a></li>
                 @endif
                 @if($currentUser?->hasPermission('milk_production.view'))
                 <li class="menu-item"><a href="{{ route('farmer.milk') }}" class="nav-link"><i class="iconoir-droplet me-2"></i> Milk Production</a></li>
@@ -102,7 +102,7 @@
                 <li><a href="{{ route('animal.lifecycle.death') }}" class="nav-link"><i class="iconoir-xmark me-2"></i> Death</a></li>
                 @endif
                 @if($currentUser?->hasPermission('animal_lifecycle_pan_transfer.view'))
-                <li><a href="{{ route('animal.lifecycle.pan_transfer') }}" class="nav-link"><i class="iconoir-repeat me-2"></i> Pan Transfer</a></li>
+                <li><a href="{{ route('animal.lifecycle.pan_transfer') }}" class="nav-link"><i class="iconoir-repeat me-2"></i> Pen Transfer</a></li>
                 @endif
             </ul>
         </div>

@@ -119,9 +119,9 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="milk-label">Select PAN</label>
+                            <label class="milk-label">Select Pen</label>
                             <select name="pan_id" id="milkPan" class="form-select">
-                                <option value="">Select PAN</option>
+                                <option value="">Select Pen</option>
                                 @foreach($pans as $pan)
                                     <option
                                         value="{{ $pan->id }}"
@@ -193,7 +193,7 @@
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
                             <div class="milk-label mb-1">Cow Wise Milk Distribution</div>
-                            <div class="milk-help">Enter milk quantity for every cow in selected PAN.</div>
+                            <div class="milk-help">Enter milk quantity for every cow in selected Pen.</div>
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-wrap" id="panShiftBadges"></div>
                     </div>
@@ -354,12 +354,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const panId = panSelect.value || '';
         if (!animalId && !panId) {
             event.preventDefault();
-            window.alert('Please select one animal or one PAN.');
+            window.alert('Please select one animal or one Pen.');
             return;
         }
         if (animalId && panId) {
             event.preventDefault();
-            window.alert('Please select either animal or PAN, not both.');
+            window.alert('Please select either animal or Pen, not both.');
             return;
         }
         if (panId) {

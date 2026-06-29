@@ -33,7 +33,7 @@
                             <th>Animal Name</th>
                             <th>Tag Number</th>
                             <th>Unique ID</th>
-                            <th>Pan</th>
+                            <th>Pen</th>
                             <th>Age</th>
                             <th>Gender</th>
                             <th>Weight</th>

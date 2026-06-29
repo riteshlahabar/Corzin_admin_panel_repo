@@ -20,10 +20,10 @@
 
     <div class="row mb-4 mt-2">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h4 class="page-title mb-0">PAN List</h4>
+            <h4 class="page-title mb-0">Pen List</h4>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <input type="text" id="panSearch" class="form-control" placeholder="Search Farmer / Mobile / PAN / Animal..." style="width:320px;">
-                <button type="button" class="btn btn-light border" onclick="exportPanTableToPdf('panTableExport', 'PAN List')" title="Download PDF">
+                <input type="text" id="panSearch" class="form-control" placeholder="Search Farmer / Mobile / Pen / Animal..." style="width:320px;">
+                <button type="button" class="btn btn-light border" onclick="exportPanTableToPdf('panTableExport', 'Pen List')" title="Download PDF">
                     <i class="fa-solid fa-file-pdf text-danger"></i>
                 </button>
                 <button type="button" class="btn btn-light border" onclick="exportPanTableToExcel('panTableExport', 'pan-list')" title="Download Excel">
@@ -31,7 +31,7 @@
                 </button>
                 @perm('pan_list.add')
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPanModal">
-                    <i class="fa-solid fa-plus me-1"></i> Create PAN
+                    <i class="fa-solid fa-plus me-1"></i> Create Pen
                 </button>
                 @endperm
             </div>
@@ -47,8 +47,8 @@
                             <th>#</th>
                             <th>Farmer</th>
                             <th>Mobile</th>
-                            <th>PAN Name</th>
-                            <th>PAN Type</th>
+                            <th>Pen Name</th>
+                            <th>Pen Type</th>
                             <th>Milk Shifts</th>
                             <th>Animals Count</th>
                             <th>Animals</th>
@@ -98,10 +98,10 @@
                                     </button>
                                     @endperm
                                     @perm('pan_list.delete')
-                                    <form method="POST" action="{{ route('farmer.pans.destroy', $pan) }}" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this PAN?');">
+                                    <form method="POST" action="{{ route('farmer.pans.destroy', $pan) }}" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this Pen?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-light border" title="Delete PAN">
+                                        <button type="submit" class="btn btn-sm btn-light border" title="Delete Pen">
                                             <i class="las la-trash text-danger fs-18"></i>
                                         </button>
                                     </form>
@@ -110,7 +110,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="9" class="text-center text-muted">No PAN groups found</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted">No Pen groups found</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -125,7 +125,7 @@
         <form method="POST" action="{{ route('farmer.pans.store') }}" class="modal-content">
             @csrf
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Create PAN</h5>
+                <h5 class="modal-title">Create Pen</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -142,14 +142,14 @@
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">PAN Name</label>
-                        <input type="text" name="name" class="form-control" required maxlength="255" placeholder="Enter PAN name">
+                        <label class="form-label">Pen Name</label>
+                        <input type="text" name="name" class="form-control" required maxlength="255" placeholder="Enter Pen name">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">PAN Type</label>
+                        <label class="form-label">Pen Type</label>
                         <select name="pan_type" id="createPanType" class="form-select">
-                            <option value="milking">Milking PAN</option>
-                            <option value="non_milking">Non-Milking PAN</option>
+                            <option value="milking">Milking Pen</option>
+                            <option value="non_milking">Non-Milking Pen</option>
                         </select>
                     </div>
                     <div class="col-md-6" id="createPanShiftWrap">
@@ -178,7 +178,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Create PAN</button>
+                <button type="submit" class="btn btn-primary">Create Pen</button>
             </div>
         </form>
     </div>
@@ -197,7 +197,7 @@
             <div class="modal-body">
                 <input type="hidden" id="transferFromPanId">
                 <div class="mb-3">
-                    <label class="form-label">From PAN</label>
+                    <label class="form-label">From Pen</label>
                     <input type="text" id="transferFromPanName" class="form-control" readonly>
                 </div>
                 <div class="mb-3">
@@ -205,7 +205,7 @@
                     <select name="animal_id" id="transferAnimalId" class="form-select" required></select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Transfer To PAN</label>
+                    <label class="form-label">Transfer To Pen</label>
                     <select name="to_pan_id" id="transferToPanId" class="form-select" required></select>
                 </div>
                 <div class="mb-0">
