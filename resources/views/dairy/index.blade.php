@@ -1,6 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $requiredMark = '<span class="text-danger">*</span>';
+@endphp
 <div class="container-fluid">
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -119,10 +122,10 @@
                                                 <h5 class="modal-title text-white">Edit Dairy</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
-                                            <div class="modal-body">
+                                            <div class="modal-body" data-location-form="dairy">
                                                 <div class="row g-3">
                                                     <div class="col-md-6">
-                                                        <label class="form-label">Farmer</label>
+                                                        <label class="form-label">Farmer {!! $requiredMark !!}</label>
                                                         <select name="farmer_id" class="form-select" required>
                                                             <option value="">Select farmer</option>
                                                             @foreach($farmers as $farmer)
@@ -133,7 +136,7 @@
                                                         </select>
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <label class="form-label">Dairy Name</label>
+                                                        <label class="form-label">Dairy Name {!! $requiredMark !!}</label>
                                                         <input type="text" name="dairy_name" class="form-control" value="{{ $dairy->dairy_name }}" required>
                                                     </div>
                                                     <div class="col-md-6">
@@ -148,25 +151,49 @@
                                                         <label class="form-label">Address</label>
                                                         <textarea name="address" rows="3" class="form-control">{{ $dairy->address }}</textarea>
                                                     </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">City</label>
-                                                        <input type="text" name="city" class="form-control" value="{{ $dairy->city }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">Taluka</label>
-                                                        <input type="text" name="taluka" class="form-control" value="{{ $dairy->taluka }}">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">District</label>
-                                                        <input type="text" name="district" class="form-control" value="{{ $dairy->district }}">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">State {!! $requiredMark !!}</label>
+                                                        <select
+                                                            name="state"
+                                                            class="form-select"
+                                                            data-location-role="state"
+                                                            data-selected="{{ $dairy->state }}"
+                                                            required
+                                                        >
+                                                            <option value="">Select state</option>
+                                                        </select>
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <label class="form-label">State</label>
-                                                        <input type="text" name="state" class="form-control" value="{{ $dairy->state }}">
+                                                        <label class="form-label">District {!! $requiredMark !!}</label>
+                                                        <select
+                                                            name="district"
+                                                            class="form-select"
+                                                            data-location-role="district"
+                                                            data-selected="{{ $dairy->district }}"
+                                                            required
+                                                        >
+                                                            <option value="">Select district</option>
+                                                        </select>
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <label class="form-label">Pincode</label>
-                                                        <input type="text" name="pincode" class="form-control" value="{{ $dairy->pincode }}">
+                                                        <label class="form-label">Taluka/Subdistrict {!! $requiredMark !!}</label>
+                                                        <select
+                                                            name="taluka"
+                                                            class="form-select"
+                                                            data-location-role="taluka"
+                                                            data-selected="{{ $dairy->taluka }}"
+                                                            required
+                                                        >
+                                                            <option value="">Select taluka/subdistrict</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Pincode {!! $requiredMark !!}</label>
+                                                        <input type="text" name="pincode" class="form-control" value="{{ $dairy->pincode }}" maxlength="6" required>
+                                                    </div>
+                                                    <div class="col-md-12">
+                                                        <label class="form-label">City {!! $requiredMark !!}</label>
+                                                        <input type="text" name="city" class="form-control" value="{{ $dairy->city }}" required>
                                                     </div>
                                                     <div class="col-12">
                                                         <div class="form-check">
@@ -206,10 +233,10 @@
                     <h5 class="modal-title text-white">Add Dairy</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" data-location-form="dairy">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Farmer</label>
+                            <label class="form-label">Farmer {!! $requiredMark !!}</label>
                             <select name="farmer_id" class="form-select" required>
                                 <option value="">Select farmer</option>
                                 @foreach($farmers as $farmer)
@@ -218,7 +245,7 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Dairy Name</label>
+                            <label class="form-label">Dairy Name {!! $requiredMark !!}</label>
                             <input type="text" name="dairy_name" class="form-control" required>
                         </div>
                         <div class="col-md-6">
@@ -233,25 +260,31 @@
                             <label class="form-label">Address</label>
                             <textarea name="address" rows="3" class="form-control"></textarea>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">City</label>
-                            <input type="text" name="city" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Taluka</label>
-                            <input type="text" name="taluka" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">District</label>
-                            <input type="text" name="district" class="form-control">
+                        <div class="col-md-6">
+                            <label class="form-label">State {!! $requiredMark !!}</label>
+                            <select name="state" class="form-select" data-location-role="state" required>
+                                <option value="">Select state</option>
+                            </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">State</label>
-                            <input type="text" name="state" class="form-control">
+                            <label class="form-label">District {!! $requiredMark !!}</label>
+                            <select name="district" class="form-select" data-location-role="district" required>
+                                <option value="">Select district</option>
+                            </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Pincode</label>
-                            <input type="text" name="pincode" class="form-control">
+                            <label class="form-label">Taluka/Subdistrict {!! $requiredMark !!}</label>
+                            <select name="taluka" class="form-select" data-location-role="taluka" required>
+                                <option value="">Select taluka/subdistrict</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Pincode {!! $requiredMark !!}</label>
+                            <input type="text" name="pincode" class="form-control" maxlength="6" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">City {!! $requiredMark !!}</label>
+                            <input type="text" name="city" class="form-control" required>
                         </div>
                         <div class="col-12">
                             <div class="form-check">

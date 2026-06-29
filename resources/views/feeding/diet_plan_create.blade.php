@@ -142,50 +142,95 @@ document.addEventListener('DOMContentLoaded', function () {
     const addFeedBlockBtn = document.getElementById('addFeedBlockBtn');
     const feedTypes = @json($feedTypesJson);
     const farmerSelect = createForm?.querySelector('.diet-plan-farmer');
+    const animalSelect = createForm?.querySelector('.diet-plan-animal');
+    const panSelect = createForm?.querySelector('.diet-plan-pan');
+    const originalAnimalOptions = Array.from(animalSelect?.options || []).map((option) => ({
+        value: option.value,
+        text: option.text,
+        farmerId: option.getAttribute('data-farmer-id') || '',
+        bodyWeight: option.getAttribute('data-body-weight') || '',
+        milkProduction: option.getAttribute('data-milk-production') || '',
+        targetDmi: option.getAttribute('data-target-dmi') || '',
+        isNonMilking: option.getAttribute('data-is-non-milking') || '',
+        selected: option.selected,
+    }));
+    const originalPanOptions = Array.from(panSelect?.options || []).map((option) => ({
+        value: option.value,
+        text: option.text,
+        farmerId: option.getAttribute('data-farmer-id') || '',
+        bodyWeight: option.getAttribute('data-body-weight') || '',
+        milkProduction: option.getAttribute('data-milk-production') || '',
+        targetDmi: option.getAttribute('data-target-dmi') || '',
+        primaryAnimalId: option.getAttribute('data-primary-animal-id') || '',
+        isNonMilking: option.getAttribute('data-is-non-milking') || '',
+        selected: option.selected,
+    }));
+    let farmerSelectr = null;
+    let animalSelectr = null;
+    let panSelectr = null;
 
-    if (farmerSelect) {
-        new Selectr(farmerSelect, {
+    const initSearchableSelect = (element, placeholderText) => {
+        if (!element) return null;
+        return new Selectr(element, {
             searchable: true,
             clearable: false,
-            placeholder: 'Select farmer',
+            placeholder: placeholderText,
         });
+    };
+
+    if (farmerSelect) {
+        farmerSelectr = initSearchableSelect(farmerSelect, 'Select farmer');
     }
 
-    function syncTargetOptions(form) {
-        if (!form) return;
+    function rebuildTargetSelect(select, selectrRefName, originalOptions, placeholderText, selectedFarmerId) {
+        if (!select) return;
 
-        const formFarmerSelect = form.querySelector('.diet-plan-farmer');
-        const animalSelect = form.querySelector('.diet-plan-animal');
-        const panSelect = form.querySelector('.diet-plan-pan');
-        if (!formFarmerSelect || !animalSelect || !panSelect) {
+        const previousValue = select.value || '';
+        select.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = placeholderText;
+        select.appendChild(placeholder);
+
+        originalOptions.forEach((optionData) => {
+            if (!optionData.value) {
+                return;
+            }
+            if (selectedFarmerId && optionData.farmerId !== selectedFarmerId) {
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = optionData.value;
+            option.textContent = optionData.text;
+            option.setAttribute('data-farmer-id', optionData.farmerId);
+            if (optionData.bodyWeight) option.setAttribute('data-body-weight', optionData.bodyWeight);
+            if (optionData.milkProduction) option.setAttribute('data-milk-production', optionData.milkProduction);
+            if (optionData.targetDmi) option.setAttribute('data-target-dmi', optionData.targetDmi);
+            if (optionData.primaryAnimalId) option.setAttribute('data-primary-animal-id', optionData.primaryAnimalId);
+            if (optionData.isNonMilking) option.setAttribute('data-is-non-milking', optionData.isNonMilking);
+            if (optionData.value === previousValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (selectrRefName === 'animal' && animalSelectr) animalSelectr.destroy();
+        if (selectrRefName === 'pan' && panSelectr) panSelectr.destroy();
+
+        if (selectrRefName === 'animal') animalSelectr = initSearchableSelect(select, placeholderText);
+        if (selectrRefName === 'pan') panSelectr = initSearchableSelect(select, placeholderText);
+    }
+
+    function syncTargetOptions() {
+        if (!farmerSelect || !animalSelect || !panSelect) {
             return;
         }
 
-        const selectedFarmerId = formFarmerSelect.value;
-
-        Array.from(animalSelect.options).forEach((option, index) => {
-            if (index === 0) {
-                option.hidden = false;
-                return;
-            }
-            option.hidden = selectedFarmerId !== '' && option.dataset.farmerId !== selectedFarmerId;
-        });
-
-        if (animalSelect.selectedOptions.length && animalSelect.selectedOptions[0].hidden) {
-            animalSelect.value = '';
-        }
-
-        Array.from(panSelect.options).forEach((option, index) => {
-            if (index === 0) {
-                option.hidden = false;
-                return;
-            }
-            option.hidden = selectedFarmerId !== '' && option.dataset.farmerId !== selectedFarmerId;
-        });
-
-        if (panSelect.selectedOptions.length && panSelect.selectedOptions[0].hidden) {
-            panSelect.value = '';
-        }
+        const selectedFarmerId = farmerSelect.value || '';
+        rebuildTargetSelect(animalSelect, 'animal', originalAnimalOptions, 'Select animal', selectedFarmerId);
+        rebuildTargetSelect(panSelect, 'pan', originalPanOptions, 'No pen', selectedFarmerId);
     }
 
     function setMetrics(bodyWeight, milkProduction, targetDmi) {
@@ -207,8 +252,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function syncContextSelection(source) {
         if (!createForm) return;
 
-        const animalSelect = createForm.querySelector('.diet-plan-animal');
-        const panSelect = createForm.querySelector('.diet-plan-pan');
         if (!animalSelect || !panSelect) return;
 
         if (source === 'animal' && animalSelect.value) {
@@ -462,13 +505,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!createForm) return;
 
-    const farmerSelect = createForm.querySelector('.diet-plan-farmer');
     farmerSelect?.addEventListener('change', function () {
-        syncTargetOptions(createForm);
+        syncTargetOptions();
         syncContextSelection('');
         updateCreateSummary();
     });
-    syncTargetOptions(createForm);
+    syncTargetOptions();
     syncContextSelection('');
 
     createForm.querySelector('.diet-plan-animal')?.addEventListener('change', function () {

@@ -117,6 +117,8 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/medical', [HealthManagementController::class, 'storeMedical'])->middleware('permission:health_mastitis.add')->name('health.medical.store');
         Route::get('/mastitis', [HealthManagementController::class, 'mastitis'])->middleware('permission:health_mastitis.view')->name('health.mastitis');
         Route::post('/mastitis', [HealthManagementController::class, 'storeMastitis'])->middleware('permission:health_mastitis.add')->name('health.mastitis.store');
+        Route::post('/mastitis/treatment', [HealthManagementController::class, 'storeMastitisTreatment'])->middleware('permission:health_mastitis.add')->name('health.mastitis.treatment');
+        Route::post('/mastitis/recover', [HealthManagementController::class, 'recoverMastitis'])->middleware('permission:health_mastitis.edit')->name('health.mastitis.recover');
         Route::get('/vaccination', [HealthManagementController::class, 'vaccination'])->middleware('permission:health_vaccination.view')->name('health.vaccination');
         Route::post('/vaccination', [HealthManagementController::class, 'storeVaccination'])->middleware('permission:health_vaccination.add')->name('health.vaccination.store');
         Route::get('/dmi', [HealthManagementController::class, 'dmi'])->middleware('permission:health_dmi.view')->name('health.dmi');

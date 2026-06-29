@@ -97,6 +97,96 @@ class HealthManagementController extends Controller
         return redirect()->route('health.mastitis')->with('success', 'Mastitis record added successfully.');
 }
 
+    public function storeMastitisTreatment(Request $request)
+    {
+        $data = $request->validate([
+            'mastitis_record_id' => 'required|exists:mastitis_records,id',
+            'treatment' => 'required|string|max:255',
+            'date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        $selectedRecord = MastitisRecord::with('animal')->findOrFail((int) $data['mastitis_record_id']);
+        $caseId = (int) ($selectedRecord->case_id ?: $selectedRecord->id);
+
+        $case = MastitisRecord::query()
+            ->where('id', $caseId)
+            ->where('farmer_id', (int) $selectedRecord->farmer_id)
+            ->where('animal_id', (int) $selectedRecord->animal_id)
+            ->first();
+
+        if (! $case) {
+            return back()->withErrors([
+                'treatment' => 'Active mastitis case not found.',
+            ])->withInput();
+        }
+
+        $caseStatus = strtolower(str_replace(' ', '_', (string) $case->recovery_status));
+        if (in_array($caseStatus, ['recovered', 'recoverd'], true)) {
+            return back()->withErrors([
+                'treatment' => 'This mastitis case is already recovered.',
+            ])->withInput();
+        }
+
+        MastitisRecord::create([
+            'case_id' => $case->id,
+            'farmer_id' => $case->farmer_id,
+            'animal_id' => $case->animal_id,
+            'test_result' => 'positive',
+            'treatment' => trim((string) $data['treatment']),
+            'recovery_status' => 'under_treatment',
+            'date' => $data['date'] ?? now()->toDateString(),
+            'notes' => trim((string) ($data['notes'] ?? '')),
+        ]);
+
+        $case->update([
+            'recovery_status' => 'under_treatment',
+        ]);
+
+        return redirect()->route('health.mastitis')->with('success', 'Treatment added successfully.');
+    }
+
+    public function recoverMastitis(Request $request)
+    {
+        $data = $request->validate([
+            'mastitis_record_id' => 'required|exists:mastitis_records,id',
+            'date' => 'nullable|date',
+        ]);
+
+        $selectedRecord = MastitisRecord::findOrFail((int) $data['mastitis_record_id']);
+        $caseId = (int) ($selectedRecord->case_id ?: $selectedRecord->id);
+
+        $case = MastitisRecord::query()
+            ->where('id', $caseId)
+            ->where('farmer_id', (int) $selectedRecord->farmer_id)
+            ->where('animal_id', (int) $selectedRecord->animal_id)
+            ->first();
+
+        if (! $case) {
+            return back()->withErrors([
+                'mastitis_record_id' => 'Active mastitis case not found.',
+            ]);
+        }
+
+        $case->update([
+            'test_result' => 'negative',
+            'recovery_status' => 'recovered',
+            'date' => $data['date'] ?? $case->date ?? now()->toDateString(),
+        ]);
+
+        MastitisRecord::create([
+            'case_id' => $case->id,
+            'farmer_id' => $case->farmer_id,
+            'animal_id' => $case->animal_id,
+            'test_result' => 'negative',
+            'treatment' => 'Recovered',
+            'recovery_status' => 'recovered',
+            'date' => $data['date'] ?? now()->toDateString(),
+        ]);
+
+        return redirect()->route('health.mastitis')->with('success', 'Animal marked as recovered successfully.');
+    }
+
     public function vaccination()
     {
         $rows = AnimalVaccination::with(['farmer', 'animal', 'vaccine'])

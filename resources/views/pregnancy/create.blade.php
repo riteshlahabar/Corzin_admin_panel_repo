@@ -85,30 +85,27 @@
             <form method="POST" action="{{ route('farmer.pregnancy.store') }}" id="pregnancyCreateForm">
                 @csrf
 
-                <div class="pregnancy-info-grid mb-3">
-                    <div class="pregnancy-info-box">
-                        <div class="pregnancy-info-label">Pregnancy No</div>
-                        <div class="pregnancy-info-value"><span id="pregnancyNoText">1</span></div>
-                    </div>
-                    <div class="pregnancy-info-box">
-                        <div class="pregnancy-info-label">Service No</div>
-                        <div class="pregnancy-info-value"><span id="serviceNoText">1</span></div>
-                    </div>
-                    <div class="pregnancy-info-box">
-                        <div class="pregnancy-info-label">Lactation Number</div>
-                        <div class="pregnancy-info-value"><span id="lactationText">0</span></div>
-                    </div>
-                </div>
-
                 <div class="pregnancy-section-card">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="pregnancy-label">Select Cow <span class="req">*</span></label>
+                            <label class="pregnancy-label">Farmer <span class="req">*</span></label>
+                            <select id="pregnancyFarmer" class="form-select" required>
+                                <option value="">Select farmer</option>
+                                @foreach($farmers as $farmer)
+                                    <option value="{{ $farmer->id }}">
+                                        {{ trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) }}{{ !empty($farmer->mobile) ? ' - '.$farmer->mobile : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="pregnancy-label">Select Animal <span class="req">*</span></label>
                             <select name="animal_id" id="pregnancyAnimal" class="form-select" required>
-                                <option value="">Select cow</option>
+                                <option value="">Select animal</option>
                                 @foreach($animals as $animal)
                                     <option
                                         value="{{ $animal->id }}"
+                                        data-farmer-id="{{ $animal->farmer_id }}"
                                         data-pregnancy-no="{{ (int) data_get($animalDefaults, $animal->id.'.pregnancy_no', 1) }}"
                                         data-service-no="{{ (int) data_get($animalDefaults, $animal->id.'.service_no', 1) }}"
                                         data-lactation-number="{{ (int) data_get($animalDefaults, $animal->id.'.lactation_number', 0) }}"
@@ -175,6 +172,7 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const farmerSelect = document.getElementById('pregnancyFarmer');
     const animalSelect = document.getElementById('pregnancyAnimal');
     const lactationInput = document.getElementById('lactationNumberInput');
     const aiDateInput = document.getElementById('aiDateInput');
@@ -182,13 +180,55 @@ document.addEventListener('DOMContentLoaded', function () {
     const pregnancyNoText = document.getElementById('pregnancyNoText');
     const serviceNoText = document.getElementById('serviceNoText');
     const lactationText = document.getElementById('lactationText');
+    const originalAnimalOptions = Array.from(animalSelect?.options || []).map((option) => ({
+        value: option.value,
+        text: option.text,
+        farmerId: option.getAttribute('data-farmer-id') || '',
+        pregnancyNo: option.getAttribute('data-pregnancy-no') || '1',
+        serviceNo: option.getAttribute('data-service-no') || '1',
+        lactationNumber: option.getAttribute('data-lactation-number') || '0',
+        selected: option.selected,
+    }));
+
+    function rebuildAnimalOptions() {
+        if (!farmerSelect || !animalSelect) {
+            return;
+        }
+
+        const selectedFarmerId = farmerSelect.value || '';
+        const previousValue = animalSelect.value || '';
+        animalSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select animal';
+        animalSelect.appendChild(placeholder);
+
+        originalAnimalOptions.forEach((optionData) => {
+            if (!optionData.value) {
+                return;
+            }
+            if (selectedFarmerId && optionData.farmerId !== selectedFarmerId) {
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = optionData.value;
+            option.textContent = optionData.text;
+            option.setAttribute('data-farmer-id', optionData.farmerId);
+            option.setAttribute('data-pregnancy-no', optionData.pregnancyNo);
+            option.setAttribute('data-service-no', optionData.serviceNo);
+            option.setAttribute('data-lactation-number', optionData.lactationNumber);
+            if (optionData.value === previousValue) {
+                option.selected = true;
+            }
+            animalSelect.appendChild(option);
+        });
+    }
 
     function syncAnimalDefaults() {
         const option = animalSelect?.selectedOptions?.[0];
         if (!option || !animalSelect.value) {
-            pregnancyNoText.textContent = '1';
-            serviceNoText.textContent = '1';
-            lactationText.textContent = lactationInput?.value || '0';
             return;
         }
 
@@ -196,12 +236,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const serviceNo = option.getAttribute('data-service-no') || '1';
         const lactationNumber = option.getAttribute('data-lactation-number') || '0';
 
-        pregnancyNoText.textContent = pregnancyNo;
-        serviceNoText.textContent = serviceNo;
+        if (pregnancyNoText) {
+            pregnancyNoText.textContent = pregnancyNo;
+        }
+        if (serviceNoText) {
+            serviceNoText.textContent = serviceNo;
+        }
         if (lactationInput && !lactationInput.value) {
             lactationInput.value = lactationNumber;
         }
-        lactationText.textContent = lactationInput?.value || lactationNumber;
+        if (lactationText) {
+            lactationText.textContent = lactationInput?.value || lactationNumber;
+        }
     }
 
     function autoDates() {
@@ -219,12 +265,16 @@ document.addEventListener('DOMContentLoaded', function () {
         checkDueInput.value = dueDate.toISOString().slice(0, 10);
     }
 
+    farmerSelect?.addEventListener('change', function () {
+        rebuildAnimalOptions();
+        syncAnimalDefaults();
+    });
     animalSelect?.addEventListener('change', syncAnimalDefaults);
     lactationInput?.addEventListener('input', function () {
-        lactationText.textContent = lactationInput.value || '0';
     });
     aiDateInput?.addEventListener('change', autoDates);
 
+    rebuildAnimalOptions();
     syncAnimalDefaults();
     if (!checkDueInput.value) {
         autoDates();

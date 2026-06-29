@@ -64,11 +64,11 @@ class DairyListController extends Controller
             'gst_no' => 'nullable|string|max:50',
             'contact_number' => 'nullable|string|max:30',
             'address' => 'nullable|string',
-            'city' => 'nullable|string|max:255',
-            'taluka' => 'nullable|string|max:255',
-            'district' => 'nullable|string|max:255',
-            'state' => 'nullable|string|max:255',
-            'pincode' => 'nullable|string|max:20',
+            'city' => 'required|string|max:255',
+            'taluka' => 'required|string|max:255',
+            'district' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'pincode' => 'required|digits:6',
             'is_active' => 'nullable|boolean',
         ]);
     }

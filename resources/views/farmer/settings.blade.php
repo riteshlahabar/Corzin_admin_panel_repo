@@ -58,7 +58,8 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold d-block invisible">Upload</label>
                             <button type="submit" class="btn farmer-settings-btn w-100">Upload Banner</button>
                         </div>
                     </form>

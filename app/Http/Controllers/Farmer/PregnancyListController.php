@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Farmer;
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\AnimalPregnancy;
+use App\Models\Farmer\Farmer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -31,6 +32,11 @@ class PregnancyListController extends Controller
 
     public function create()
     {
+        $farmers = Farmer::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get();
+
         $animals = Animal::query()
             ->with(['farmer', 'animalType'])
             ->orderBy('animal_name')
@@ -48,7 +54,7 @@ class PregnancyListController extends Controller
             ];
         })->all();
 
-        return view('pregnancy.create', compact('animals', 'animalDefaults'));
+        return view('pregnancy.create', compact('farmers', 'animals', 'animalDefaults'));
     }
 
     public function edit(AnimalPregnancy $pregnancy)
