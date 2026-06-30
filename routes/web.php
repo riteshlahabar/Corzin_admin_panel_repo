@@ -157,6 +157,7 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::put('/units/{unit}', [ShopProductController::class, 'updateUnit'])->middleware('permission:shop_products.edit')->name('shop.units.update');
         Route::post('/orders/{order}/status', [ShopProductController::class, 'updateOrderStatus'])->middleware('permission:shop_orders.status')->name('shop.orders.status');
         Route::get('/animal-buy-sell', [AnimalBuySellController::class, 'index'])->middleware('permission:shop_animal_buy_sell.view')->name('shop.animal_buy_sell');
+        Route::post('/animal-buy-sell/{animal}/cancel', [AnimalBuySellController::class, 'cancel'])->middleware('permission:shop_animal_buy_sell.view')->name('shop.animal_buy_sell.cancel');
     });
 
     Route::prefix('analytics')->name('analytics.')->group(function () {

@@ -38,9 +38,8 @@
                         <option value="breed">Breed</option>
                         <option value="lactation">Lactation</option>
                         <option value="ai-date">AI Date</option>
-                        <option value="mother">Mother</option>
-                        <option value="seller-name">Seller Name</option>
-                        <option value="seller-mobile">Seller Mobile</option>
+                        <option value="farmer-name">Farmer Name</option>
+                        <option value="farmer-mobile">Farmer Mobile</option>
                         <option value="listed-at">Listed At</option>
                         <option value="status">Status</option>
                     </select>
@@ -80,11 +79,11 @@
                             <th>Breed</th>
                             <th>Lactation</th>
                             <th>AI Date</th>
-                            <th>Mother</th>
-                            <th>Seller Name</th>
-                            <th>Seller Mobile</th>
+                            <th>Farmer Name</th>
+                            <th>Farmer Mobile</th>
                             <th>Listed At</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -101,10 +100,9 @@
                                 $breed = $animal->breed_name ?: '-';
                                 $lactation = $animal->lactation_number ?? '-';
                                 $aiDate = optional($animal->ai_date)->format('d-m-Y') ?: '-';
-                                $sellerMobile = optional($animal->farmer)->mobile ?: '-';
+                                $farmerMobile = optional($animal->farmer)->mobile ?: '-';
                                 $listedAt = optional($animal->listed_for_sale_at)->format('d-m-Y h:i A') ?: '-';
                                 $status = 'For Sale';
-                                $motherName = trim((optional($animal->motherAnimal)->animal_name ?? '').' '.(optional($animal->motherAnimal)->tag_number ? '('.optional($animal->motherAnimal)->tag_number.')' : '')) ?: '-';
                                 $searchText = strtolower(trim(implode(' ', [
                                     $animal->unique_id,
                                     $animal->animal_name,
@@ -118,9 +116,8 @@
                                     $breed,
                                     $lactation,
                                     $aiDate,
-                                    $motherName,
                                     $sellerName,
-                                    $sellerMobile,
+                                    $farmerMobile,
                                     $listedAt,
                                     $status,
                                 ])));
@@ -139,9 +136,8 @@
                                 data-breed="{{ strtolower($breed) }}"
                                 data-lactation="{{ strtolower((string) $lactation) }}"
                                 data-ai-date="{{ strtolower($aiDate) }}"
-                                data-mother="{{ strtolower($motherName) }}"
-                                data-seller-name="{{ strtolower($sellerName) }}"
-                                data-seller-mobile="{{ strtolower($sellerMobile) }}"
+                                data-farmer-name="{{ strtolower($sellerName) }}"
+                                data-farmer-mobile="{{ strtolower($farmerMobile) }}"
                                 data-listed-at="{{ strtolower($listedAt) }}"
                                 data-status="{{ strtolower($status) }}"
                                 data-date="{{ $listedDate }}">
@@ -167,11 +163,16 @@
                                 <td>{{ $breed }}</td>
                                 <td>{{ $lactation }}</td>
                                 <td>{{ $aiDate }}</td>
-                                <td>{{ $motherName }}</td>
                                 <td>{{ $sellerName }}</td>
-                                <td>{{ $sellerMobile }}</td>
+                                <td>{{ $farmerMobile }}</td>
                                 <td>{{ $listedAt }}</td>
                                 <td><span class="badge bg-warning-subtle text-warning">{{ $status }}</span></td>
+                                <td>
+                                    <form method="POST" action="{{ route('shop.animal_buy_sell.cancel', $animal) }}" onsubmit="return confirm('Cancel selling for this animal?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancel Selling</button>
+                                    </form>
+                                </td>
                             </tr>
                         @empty
                             <tr>

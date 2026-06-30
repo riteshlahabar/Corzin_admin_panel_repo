@@ -1037,12 +1037,25 @@ class AnimalController extends Controller
             'is_for_sale' => (bool) ($animal->is_for_sale ?? false),
             'selling_price' => $animal->selling_price !== null ? (float) $animal->selling_price : null,
             'listed_for_sale_at' => optional($animal->listed_for_sale_at)->toDateTimeString(),
-            'daily_milk_production' => $animal->milkProductions()
-                ->latest('date')
-                ->latest('id')
-                ->value('total_milk'),
+            'daily_milk_production' => $this->resolveLatestDailyMilkProduction($animal),
             'image' => $animal->image_url,
         ];
+    }
+
+    private function resolveLatestDailyMilkProduction(Animal $animal): ?float
+    {
+        $latestMilkDate = $animal->milkProductions()
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->value('date');
+
+        if (blank($latestMilkDate)) {
+            return null;
+        }
+
+        return (float) $animal->milkProductions()
+            ->whereDate('date', Carbon::parse($latestMilkDate)->toDateString())
+            ->sum('total_milk');
     }
 
     private function normalizeMilkShifts($value, bool $allowEmpty = false): array

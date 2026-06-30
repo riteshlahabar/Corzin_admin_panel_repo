@@ -4,6 +4,10 @@
 <link href="{{ asset('assets/libs/mobius1-selectr/selectr.min.css') }}" rel="stylesheet" type="text/css" />
 @endpush
 
+@php
+    $requiredMark = '<span class="text-danger">*</span>';
+@endphp
+
 @section('content')
 <div class="container-fluid">
     @if(session('success'))
@@ -59,7 +63,7 @@
                             <th>Pen Name</th>
                             <th>Vaccine</th>
                             <th>Doses</th>
-                            <th>Date</th>
+                            <th>Vaccination Date</th>
                             <th>Notes</th>
                         </tr>
                     </thead>
@@ -113,7 +117,7 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Farmer</label>
+                            <label class="form-label">Farmer {!! $requiredMark !!}</label>
                             <select name="farmer_id" id="vaccinationFarmerSelect" class="form-select" required>
                                 <option value="">Select farmer</option>
                                 @foreach($farmers as $farmer)
@@ -124,7 +128,7 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Animal</label>
+                            <label class="form-label">Animal {!! $requiredMark !!}</label>
                             <select name="animal_id" id="vaccinationAnimalSelect" class="form-select" required>
                                 <option value="">Select animal</option>
                                 @foreach($animals as $animal)
@@ -139,11 +143,7 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Pen Name</label>
-                            <input type="text" id="vaccinationPanName" class="form-control" placeholder="Pen name" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Vaccination Name</label>
+                            <label class="form-label">Vaccination Name {!! $requiredMark !!}</label>
                             <select name="vaccine_id" class="form-select" required>
                                 <option value="">Select vaccine</option>
                                 @foreach($vaccines as $vaccine)
@@ -152,11 +152,11 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Doses</label>
+                            <label class="form-label">Doses {!! $requiredMark !!}</label>
                             <input type="text" name="doses" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Date</label>
+                            <label class="form-label">Date {!! $requiredMark !!}</label>
                             <input type="date" name="vaccination_date" class="form-control" value="{{ now()->toDateString() }}" required>
                         </div>
                         <div class="col-12">
@@ -183,20 +183,18 @@
 document.addEventListener('DOMContentLoaded', function () {
     const farmerSelect = document.getElementById('vaccinationFarmerSelect');
     const animalSelect = document.getElementById('vaccinationAnimalSelect');
-    const panInput = document.getElementById('vaccinationPanName');
     const originalAnimalOptions = Array.from(animalSelect ? animalSelect.options : []).map(function (option) {
         return {
             value: option.value,
             text: option.text,
             farmerId: option.getAttribute('data-farmer-id') || '',
-            panName: option.getAttribute('data-pan-name') || '',
             selected: option.selected,
         };
     });
     let farmerSelectr = null;
     let animalSelectr = null;
 
-    if (!farmerSelect || !animalSelect || !panInput) {
+    if (!farmerSelect || !animalSelect) {
         return;
     }
 
@@ -228,12 +226,10 @@ document.addEventListener('DOMContentLoaded', function () {
             option.value = optionData.value;
             option.textContent = optionData.text;
             option.setAttribute('data-farmer-id', optionData.farmerId);
-            option.setAttribute('data-pan-name', optionData.panName);
             animalSelect.appendChild(option);
         });
 
         animalSelect.value = '';
-        panInput.value = '';
 
         if (animalSelectr) {
             animalSelectr.destroy();
@@ -241,15 +237,9 @@ document.addEventListener('DOMContentLoaded', function () {
         animalSelectr = initSearchableSelect(animalSelect);
     };
 
-    const syncPanName = () => {
-        const option = animalSelect.options[animalSelect.selectedIndex];
-        panInput.value = option ? (option.getAttribute('data-pan-name') || '') : '';
-    };
-
     farmerSelect.addEventListener('change', function () {
         rebuildAnimalSelect(farmerSelect.value);
     });
-    animalSelect.addEventListener('change', syncPanName);
 
     farmerSelectr = initSearchableSelect(farmerSelect);
     rebuildAnimalSelect(farmerSelect.value);
