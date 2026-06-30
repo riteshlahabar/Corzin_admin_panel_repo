@@ -107,6 +107,11 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
 
     Route::prefix('animal-lifecycle')->group(function () {
         Route::get('/active', [AnimalLifecycleController::class, 'active'])->middleware('permission:animal_lifecycle_active.view')->name('animal.lifecycle.active');
+        Route::post('/active/{animal}/sell', [AnimalLifecycleController::class, 'sell'])->middleware('permission:animal_lifecycle_active.view')->name('animal.lifecycle.active.sell');
+        Route::post('/active/{animal}/cancel-selling', [AnimalLifecycleController::class, 'cancelSelling'])->middleware('permission:animal_lifecycle_active.view')->name('animal.lifecycle.active.cancel_selling');
+        Route::post('/active/{animal}/sold', [AnimalLifecycleController::class, 'markSold'])->middleware('permission:animal_lifecycle_active.view')->name('animal.lifecycle.active.sold');
+        Route::post('/active/{animal}/death', [AnimalLifecycleController::class, 'markDeath'])->middleware('permission:animal_lifecycle_active.view')->name('animal.lifecycle.active.death');
+        Route::post('/active/{animal}/transfer', [AnimalLifecycleController::class, 'transferFromActive'])->middleware('permission:animal_lifecycle_active.view')->name('animal.lifecycle.active.transfer');
         Route::get('/sold', [AnimalLifecycleController::class, 'sold'])->middleware('permission:animal_lifecycle_sold.view')->name('animal.lifecycle.sold');
         Route::get('/death', [AnimalLifecycleController::class, 'death'])->middleware('permission:animal_lifecycle_death.view')->name('animal.lifecycle.death');
         Route::get('/pan-transfer', [AnimalLifecycleController::class, 'panTransfer'])->middleware('permission:animal_lifecycle_pan_transfer.view')->name('animal.lifecycle.pan_transfer');
