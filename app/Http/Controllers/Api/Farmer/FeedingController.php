@@ -502,7 +502,6 @@ class FeedingController extends Controller
             collect($subtypes)->sum(fn ($item) => (float) data_get($item, 'dry_matter_quantity', 0)),
             2
         );
-        $incomingSignature = $this->subtypeSignature($subtypes);
         $metrics = $this->resolveDietMetricsValues(
             farmerId: $farmerId,
             animalId: (int) $request->input('animal_id'),
@@ -511,62 +510,16 @@ class FeedingController extends Controller
         );
         $targetDmi = $metrics['target_dmi'];
         $dmiGap = round($plannedDryMatter - $targetDmi, 2);
-
-        $existingPlanQuery = FeedDietPlan::query()
+        $duplicateDietPlan = FeedDietPlan::query()
             ->where('farmer_id', $farmerId)
-            ->where('feed_type_id', (int) $request->input('feed_type_id'))
-            ->where('is_active', true);
+            ->whereRaw('LOWER(diet_plan_name) = ?', [mb_strtolower($dietPlanName)])
+            ->exists();
 
-        if ($selectedPanId > 0) {
-            // PAN-wise diet plan must merge only within the same PAN.
-            $existingPlanQuery->where('pan_id', $selectedPanId);
-        } else {
-            // Animal-wise diet plan must merge only within the same animal scope.
-            $existingPlanQuery
-                ->where('animal_id', (int) $animal->id)
-                ->where(function ($nested) {
-                    $nested->whereNull('pan_id')->orWhere('pan_id', 0);
-                });
-        }
-
-        $existingPlan = $existingPlanQuery
-            ->latest('id')
-            ->get()
-            ->first(function (FeedDietPlan $plan) use ($incomingSignature) {
-                $existingSubtypes = $this->normalizeSubtypeDetails((array) ($plan->subtype_details ?? []), true);
-                return $this->subtypeSignature($existingSubtypes) === $incomingSignature;
-            });
-
-        if ($existingPlan) {
-            $existingSubtypes = $this->normalizeSubtypeDetails((array) ($existingPlan->subtype_details ?? []), true);
-            $mergedSubtypes = $this->mergeSubtypeDetails($existingSubtypes, $subtypes);
-            $addedTotal = collect($subtypes)->sum(fn ($item) => (float) ($item['quantity'] ?? 0));
-            $existingPlannedDryMatter = (float) ($existingPlan->planned_dry_matter ?? 0);
-
-            $existingPlan->update([
-                'pan_id' => $selectedPanId > 0 ? $selectedPanId : $existingPlan->pan_id,
-                'diet_plan_name' => $dietPlanName,
-                'plan_quantity' => round((float) $existingPlan->plan_quantity + (float) $addedTotal, 2),
-                'remaining_quantity' => round((float) $existingPlan->remaining_quantity + (float) $addedTotal, 2),
-                'unit' => trim((string) $request->input('unit')) ?: $existingPlan->unit,
-                'subtype_details' => $mergedSubtypes,
-                'reference_date' => $referenceDate,
-                'body_weight' => $metrics['body_weight'],
-                'milk_production' => $metrics['milk_production'],
-                'target_dmi' => $targetDmi,
-                'planned_dry_matter' => round($existingPlannedDryMatter + $plannedDryMatter, 2),
-                'dmi_gap' => round(($existingPlannedDryMatter + $plannedDryMatter) - $targetDmi, 2),
-                'is_active' => true,
-            ]);
-
+        if ($duplicateDietPlan) {
             return response()->json([
-                'status' => true,
-                'message' => 'Diet plan merged into existing plan successfully.',
-                'data' => [
-                    'id' => $existingPlan->id,
-                    'merged' => true,
-                ],
-            ], 200);
+                'status' => false,
+                'message' => 'This diet plan name already exists. Please enter another diet plan name.',
+            ], 422);
         }
 
         $daysCount = $request->filled('days_count')
