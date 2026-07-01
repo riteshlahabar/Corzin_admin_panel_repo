@@ -32,10 +32,7 @@ class AnalyticsController extends Controller
         $farmerIds = $this->filteredFarmerIds($filters);
         $farmerIdArray = $this->idsOrZero($farmerIds);
 
-        $dairyIds = Dairy::query()
-            ->whereIn('farmer_id', $farmerIdArray)
-            ->when($filters['dairy_id'] > 0, fn ($query) => $query->where('id', $filters['dairy_id']))
-            ->pluck('id');
+        $dairyIds = $this->farmerScopedDairyIds($farmerIdArray, $filters['dairy_id']);
         $dairyIdArray = $this->idsOrZero($dairyIds);
 
         $animalIds = Animal::query()
@@ -759,16 +756,35 @@ class AnalyticsController extends Controller
 
     private function farmerFilterOptions(): array
     {
+        $dairyFarmerMap = MilkProduction::query()
+            ->join('animals', 'animals.id', '=', 'milk_productions.animal_id')
+            ->selectRaw('milk_productions.dairy_id as dairy_id, animals.farmer_id as farmer_id')
+            ->whereNotNull('milk_productions.dairy_id')
+            ->groupBy('milk_productions.dairy_id', 'animals.farmer_id')
+            ->get()
+            ->groupBy('dairy_id')
+            ->map(fn (Collection $rows) => $rows->pluck('farmer_id')->map(fn ($id) => (int) $id)->unique()->values()->all());
+
         return [
             'farmers' => Farmer::query()->orderBy('first_name')->get(['id', 'first_name', 'last_name'])->map(fn (Farmer $farmer) => [
                 'id' => $farmer->id,
                 'label' => trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) ?: 'Farmer #'.$farmer->id,
             ])->values(),
-            'dairies' => Dairy::query()->orderBy('dairy_name')->get(['id', 'dairy_name'])->map(fn (Dairy $dairy) => [
-                'id' => $dairy->id,
-                'farmer_id' => (int) $dairy->farmer_id,
-                'label' => $dairy->dairy_name ?: 'Dairy #'.$dairy->id,
-            ])->values(),
+            'dairies' => Dairy::query()->orderBy('dairy_name')->get(['id', 'dairy_name', 'farmer_id'])->map(function (Dairy $dairy) use ($dairyFarmerMap) {
+                $farmerIds = collect($dairyFarmerMap->get($dairy->id, []))
+                    ->prepend((int) ($dairy->farmer_id ?? 0))
+                    ->filter(fn ($id) => (int) $id > 0)
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => $dairy->id,
+                    'farmer_id' => (int) ($farmerIds[0] ?? 0),
+                    'farmer_ids' => $farmerIds,
+                    'label' => $dairy->dairy_name ?: 'Dairy #'.$dairy->id,
+                ];
+            })->values(),
             'animals' => Animal::query()->orderBy('animal_name')->get(['id', 'animal_name', 'tag_number', 'farmer_id', 'pan_id'])->map(fn (Animal $animal) => [
                 'id' => $animal->id,
                 'farmer_id' => (int) $animal->farmer_id,
@@ -824,7 +840,7 @@ class AnalyticsController extends Controller
             ->when($filters['status'] !== 'all' && Schema::hasColumn('farmers', 'is_active'), fn ($builder) => $builder->where('is_active', $filters['status'] === 'active'));
 
         if ($filters['dairy_id'] > 0) {
-            $query->whereIn('id', Dairy::query()->where('id', $filters['dairy_id'])->pluck('farmer_id'));
+            $query->whereIn('id', $this->farmerIdsForDairy((int) $filters['dairy_id']));
         }
         if ($filters['animal_id'] > 0) {
             $query->whereIn('id', Animal::query()->where('id', $filters['animal_id'])->pluck('farmer_id'));
@@ -834,6 +850,61 @@ class AnalyticsController extends Controller
         }
 
         return $query->pluck('id');
+    }
+
+    private function farmerScopedDairyIds(array $farmerIdArray, int $selectedDairyId = 0): Collection
+    {
+        if (empty(array_filter($farmerIdArray, fn ($id) => $id > 0))) {
+            return collect($selectedDairyId > 0 ? [$selectedDairyId] : []);
+        }
+
+        $directIds = Dairy::query()
+            ->whereIn('farmer_id', $farmerIdArray)
+            ->pluck('id');
+
+        $milkIds = MilkProduction::query()
+            ->join('animals', 'animals.id', '=', 'milk_productions.animal_id')
+            ->whereIn('animals.farmer_id', $farmerIdArray)
+            ->whereNotNull('milk_productions.dairy_id')
+            ->pluck('milk_productions.dairy_id');
+
+        $ids = $directIds
+            ->merge($milkIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($selectedDairyId > 0) {
+            return $ids->filter(fn ($id) => $id === $selectedDairyId)->values();
+        }
+
+        return $ids;
+    }
+
+    private function farmerIdsForDairy(int $dairyId): array
+    {
+        if ($dairyId <= 0) {
+            return [];
+        }
+
+        $directIds = Dairy::query()
+            ->where('id', $dairyId)
+            ->whereNotNull('farmer_id')
+            ->pluck('farmer_id');
+
+        $milkIds = MilkProduction::query()
+            ->join('animals', 'animals.id', '=', 'milk_productions.animal_id')
+            ->where('milk_productions.dairy_id', $dairyId)
+            ->pluck('animals.farmer_id');
+
+        return $directIds
+            ->merge($milkIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function buildVillageActivityRows(array $farmerIds, array $animalIds, array $dairyIds, array $context): Collection

@@ -396,7 +396,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const filteredDairies = farmerId === '0'
             ? dairyOptions
-            : dairyOptions.filter((item) => String(item.farmer_id || 0) === farmerId);
+            : dairyOptions.filter((item) => {
+                const farmerIds = Array.isArray(item.farmer_ids) ? item.farmer_ids.map(String) : [String(item.farmer_id || 0)];
+                return farmerIds.includes(farmerId);
+            });
         const filteredAnimals = farmerId === '0'
             ? animalOptions
             : animalOptions.filter((item) => String(item.farmer_id || 0) === farmerId);
