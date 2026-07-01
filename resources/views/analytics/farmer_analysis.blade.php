@@ -206,33 +206,38 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-6">
-                        <div class="rounded-3 bg-light p-3">
-                            <small class="text-muted d-block">Animals</small>
-                            <strong class="fs-4">{{ number_format($animalsCount) }}</strong>
+                        <div class="rounded-4 p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #0f766e, #2dd4bf);">
+                            <small class="d-block text-uppercase fw-semibold" style="color: rgba(255,255,255,.84);">Animals</small>
+                            <strong class="fs-4 d-block mt-1">{{ number_format($animalsCount) }}</strong>
+                            <span style="color: rgba(255,255,255,.78);">Tracked livestock</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="rounded-3 bg-light p-3">
-                            <small class="text-muted d-block">Dairies</small>
-                            <strong class="fs-4">{{ number_format($dairiesCount) }}</strong>
+                        <div class="rounded-4 p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #1d4ed8, #60a5fa);">
+                            <small class="d-block text-uppercase fw-semibold" style="color: rgba(255,255,255,.84);">Dairies</small>
+                            <strong class="fs-4 d-block mt-1">{{ number_format($dairiesCount) }}</strong>
+                            <span style="color: rgba(255,255,255,.78);">Linked collection points</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="rounded-3 bg-light p-3">
-                            <small class="text-muted d-block">Feedings</small>
-                            <strong class="fs-4">{{ number_format($feedingRecordsCount) }}</strong>
+                        <div class="rounded-4 p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
+                            <small class="d-block text-uppercase fw-semibold" style="color: rgba(255,255,255,.84);">Feedings</small>
+                            <strong class="fs-4 d-block mt-1">{{ number_format($feedingRecordsCount) }}</strong>
+                            <span style="color: rgba(255,255,255,.78);">Nutrition entries logged</span>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div class="rounded-3 bg-light p-3">
-                            <small class="text-muted d-block">Pregnancy</small>
-                            <strong class="fs-4">{{ number_format($pregnancyRecordsCount) }}</strong>
+                        <div class="rounded-4 p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #be123c, #fb7185);">
+                            <small class="d-block text-uppercase fw-semibold" style="color: rgba(255,255,255,.84);">Pregnancy</small>
+                            <strong class="fs-4 d-block mt-1">{{ number_format($pregnancyRecordsCount) }}</strong>
+                            <span style="color: rgba(255,255,255,.78);">Breeding follow-up records</span>
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="rounded-3 bg-light p-3">
-                            <small class="text-muted d-block">Health Records</small>
-                            <strong class="fs-4">{{ number_format($healthRecordsCount) }}</strong>
+                        <div class="rounded-4 p-3 text-white shadow-sm" style="background: linear-gradient(135deg, #b45309, #f59e0b);">
+                            <small class="d-block text-uppercase fw-semibold" style="color: rgba(255,255,255,.84);">Health Records</small>
+                            <strong class="fs-4 d-block mt-1">{{ number_format($healthRecordsCount) }}</strong>
+                            <span style="color: rgba(255,255,255,.78);">Medical, mastitis and DMI coverage</span>
                         </div>
                     </div>
                 </div>
