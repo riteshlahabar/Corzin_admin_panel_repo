@@ -96,7 +96,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Farmer</label>
-                    <select name="farmer_id" class="form-select">
+                    <select name="farmer_id" id="farmerFilter" class="form-select">
                         <option value="0">All Farmers</option>
                         @foreach($options['farmers'] as $farmer)
                             <option value="{{ $farmer['id'] }}" {{ $filters['farmer_id'] === $farmer['id'] ? 'selected' : '' }}>{{ $farmer['label'] }}</option>
@@ -105,7 +105,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Dairy</label>
-                    <select name="dairy_id" class="form-select">
+                    <select name="dairy_id" id="dairyFilter" class="form-select">
                         <option value="0">All Dairies</option>
                         @foreach($options['dairies'] as $dairy)
                             <option value="{{ $dairy['id'] }}" {{ $filters['dairy_id'] === $dairy['id'] ? 'selected' : '' }}>{{ $dairy['label'] }}</option>
@@ -114,10 +114,19 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Animal</label>
-                    <select name="animal_id" class="form-select">
+                    <select name="animal_id" id="animalFilter" class="form-select">
                         <option value="0">All Animals</option>
                         @foreach($options['animals'] as $animal)
                             <option value="{{ $animal['id'] }}" {{ $filters['animal_id'] === $animal['id'] ? 'selected' : '' }}>{{ $animal['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Pen</label>
+                    <select name="pan_id" id="panFilter" class="form-select">
+                        <option value="0">All Pens</option>
+                        @foreach($options['pans'] as $pan)
+                            <option value="{{ $pan['id'] }}" {{ $filters['pan_id'] === $pan['id'] ? 'selected' : '' }}>{{ $pan['label'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -341,6 +350,70 @@
 <script src="{{ asset('assets/libs/apexcharts/apexcharts.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const farmerSelect = document.getElementById('farmerFilter');
+    const dairySelect = document.getElementById('dairyFilter');
+    const animalSelect = document.getElementById('animalFilter');
+    const panSelect = document.getElementById('panFilter');
+
+    const dairyOptions = @json($options['dairies']);
+    const animalOptions = @json($options['animals']);
+    const panOptions = @json($options['pans']);
+
+    function populateSelect(select, items, selectedValue, defaultLabel) {
+        if (!select) return;
+
+        const currentValue = String(selectedValue ?? '0');
+        select.innerHTML = '';
+
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '0';
+        defaultOption.textContent = defaultLabel;
+        select.appendChild(defaultOption);
+
+        let matched = currentValue === '0';
+
+        items.forEach((item) => {
+            const option = document.createElement('option');
+            option.value = String(item.id);
+            option.textContent = item.label;
+            if (option.value === currentValue) {
+                option.selected = true;
+                matched = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (!matched) {
+            select.value = '0';
+        }
+    }
+
+    function syncFarmerWiseFilters() {
+        const farmerId = String(farmerSelect?.value || '0');
+        const dairyValue = dairySelect?.value || '0';
+        const animalValue = animalSelect?.value || '0';
+        const panValue = panSelect?.value || '0';
+
+        const filteredDairies = farmerId === '0'
+            ? dairyOptions
+            : dairyOptions.filter((item) => String(item.farmer_id || 0) === farmerId);
+        const filteredAnimals = farmerId === '0'
+            ? animalOptions
+            : animalOptions.filter((item) => String(item.farmer_id || 0) === farmerId);
+        const filteredPans = farmerId === '0'
+            ? panOptions
+            : panOptions.filter((item) => String(item.farmer_id || 0) === farmerId);
+
+        populateSelect(dairySelect, filteredDairies, dairyValue, 'All Dairies');
+        populateSelect(animalSelect, filteredAnimals, animalValue, 'All Animals');
+        populateSelect(panSelect, filteredPans, panValue, 'All Pens');
+    }
+
+    if (farmerSelect) {
+        farmerSelect.addEventListener('change', syncFarmerWiseFilters);
+        syncFarmerWiseFilters();
+    }
+
     const growthOptions = {
         chart: { type: 'line', height: 320, toolbar: { show: false } },
         series: [

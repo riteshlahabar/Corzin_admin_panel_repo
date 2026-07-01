@@ -11,6 +11,7 @@ use App\Models\Farmer\Animal;
 use App\Models\Farmer\AnimalPregnancy;
 use App\Models\Farmer\DmiRecord;
 use App\Models\Farmer\Farmer;
+use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\FeedingRecord;
 use App\Models\Farmer\MastitisRecord;
 use App\Models\Farmer\MedicalRecord;
@@ -39,6 +40,7 @@ class AnalyticsController extends Controller
 
         $animalIds = Animal::query()
             ->whereIn('farmer_id', $farmerIdArray)
+            ->when($filters['pan_id'] > 0, fn ($query) => $query->where('pan_id', $filters['pan_id']))
             ->when($filters['animal_id'] > 0, fn ($query) => $query->where('id', $filters['animal_id']))
             ->pluck('id');
         $animalIdArray = $this->idsOrZero($animalIds);
@@ -186,6 +188,7 @@ class AnalyticsController extends Controller
             'Farmer' => $this->optionLabel($options['farmers'], $filters['farmer_id']),
             'Dairy' => $this->optionLabel($options['dairies'], $filters['dairy_id']),
             'Animal' => $this->optionLabel($options['animals'], $filters['animal_id']),
+            'Pen' => $this->optionLabel($options['pans'], $filters['pan_id']),
             'Village' => $filters['village'],
             'District' => $filters['district'],
             'State' => $filters['state'],
@@ -723,6 +726,7 @@ class AnalyticsController extends Controller
             'farmer_id' => max((int) $request->integer('farmer_id'), 0),
             'dairy_id' => max((int) $request->integer('dairy_id'), 0),
             'animal_id' => max((int) $request->integer('animal_id'), 0),
+            'pan_id' => max((int) $request->integer('pan_id'), 0),
             'village' => trim((string) $request->input('village', '')),
             'district' => trim((string) $request->input('district', '')),
             'state' => trim((string) $request->input('state', '')),
@@ -762,11 +766,19 @@ class AnalyticsController extends Controller
             ])->values(),
             'dairies' => Dairy::query()->orderBy('dairy_name')->get(['id', 'dairy_name'])->map(fn (Dairy $dairy) => [
                 'id' => $dairy->id,
+                'farmer_id' => (int) $dairy->farmer_id,
                 'label' => $dairy->dairy_name ?: 'Dairy #'.$dairy->id,
             ])->values(),
-            'animals' => Animal::query()->orderBy('animal_name')->get(['id', 'animal_name', 'tag_number'])->map(fn (Animal $animal) => [
+            'animals' => Animal::query()->orderBy('animal_name')->get(['id', 'animal_name', 'tag_number', 'farmer_id', 'pan_id'])->map(fn (Animal $animal) => [
                 'id' => $animal->id,
+                'farmer_id' => (int) $animal->farmer_id,
+                'pan_id' => (int) ($animal->pan_id ?? 0),
                 'label' => trim(($animal->animal_name ?? '').' '.($animal->tag_number ? '('.$animal->tag_number.')' : '')) ?: 'Animal #'.$animal->id,
+            ])->values(),
+            'pans' => FarmerPan::query()->orderBy('name')->get(['id', 'name', 'farmer_id'])->map(fn (FarmerPan $pan) => [
+                'id' => $pan->id,
+                'farmer_id' => (int) $pan->farmer_id,
+                'label' => $pan->name ?: 'Pen #'.$pan->id,
             ])->values(),
             'villages' => Farmer::query()->selectRaw("COALESCE(NULLIF(TRIM(village), ''), 'Unknown') as label")->groupBy('label')->orderBy('label')->pluck('label')->values(),
             'districts' => Farmer::query()->selectRaw("COALESCE(NULLIF(TRIM(district), ''), 'Unknown') as label")->groupBy('label')->orderBy('label')->pluck('label')->values(),
@@ -816,6 +828,9 @@ class AnalyticsController extends Controller
         }
         if ($filters['animal_id'] > 0) {
             $query->whereIn('id', Animal::query()->where('id', $filters['animal_id'])->pluck('farmer_id'));
+        }
+        if ($filters['pan_id'] > 0) {
+            $query->whereIn('id', FarmerPan::query()->where('id', $filters['pan_id'])->pluck('farmer_id'));
         }
 
         return $query->pluck('id');
