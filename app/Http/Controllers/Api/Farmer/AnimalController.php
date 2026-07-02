@@ -867,7 +867,7 @@ class AnimalController extends Controller
     public function forSaleList()
     {
         $animals = Animal::query()
-            ->with(['animalType', 'pan', 'motherAnimal'])
+            ->with(['animalType', 'pan', 'motherAnimal', 'pregnancies'])
             ->where('is_for_sale', true)
             ->latest('listed_for_sale_at')
             ->latest('id')
@@ -1005,6 +1005,10 @@ class AnimalController extends Controller
 
     private function transformAnimal($animal): array
     {
+        $latestPregnancy = $animal->relationLoaded('pregnancies')
+            ? $animal->pregnancies->first()
+            : $animal->pregnancies()->latest('pregnancy_no')->latest('service_no')->first();
+
         return [
             'id' => $animal->id,
             'farmer_id' => $animal->farmer_id,
@@ -1038,6 +1042,8 @@ class AnimalController extends Controller
             'selling_price' => $animal->selling_price !== null ? (float) $animal->selling_price : null,
             'listed_for_sale_at' => optional($animal->listed_for_sale_at)->toDateTimeString(),
             'daily_milk_production' => $this->resolveLatestDailyMilkProduction($animal),
+            'pregnancy_status' => $latestPregnancy?->pregnancy_result,
+            'expected_calving_date' => optional($latestPregnancy?->expected_calving_date)->format('d/m/Y'),
             'image' => $animal->image_url,
         ];
     }
@@ -1091,4 +1097,7 @@ class AnimalController extends Controller
         return $hasMilking && ! $hasNonMilking;
     }
 }
+
+
+
 
