@@ -8,6 +8,7 @@ class FeedSubtype extends Model
 {
     protected $fillable = [
         'feed_type_id',
+        'farmer_id',
         'name',
         'is_active',
         'sort_order',
@@ -21,5 +22,9 @@ class FeedSubtype extends Model
     {
         return $this->belongsTo(FeedType::class, 'feed_type_id');
     }
-}
 
+    public function farmer()
+    {
+        return $this->belongsTo(Farmer::class, 'farmer_id');
+    }
+}

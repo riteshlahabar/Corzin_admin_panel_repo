@@ -30,11 +30,6 @@
                             @error('default_unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Subtypes (comma or new line)</label>
-                            <textarea name="subtypes_text" rows="4" class="form-control @error('subtypes_text') is-invalid @enderror" required>{{ old('subtypes_text') }}</textarea>
-                            @error('subtypes_text')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-12">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="1" id="is_active" name="is_active" checked>
                                 <label class="form-check-label" for="is_active">Active</label>
@@ -73,7 +68,6 @@
                                     <th>#</th>
                                     <th>Feed Type</th>
                                     <th>Unit</th>
-                                    <th>Subtypes</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -85,25 +79,13 @@
                                         <td class="fw-semibold">{{ $feedType->name }}</td>
                                         <td>{{ $feedType->default_unit }}</td>
                                         <td>
-                                            @if($feedType->subtypes->isEmpty())
-                                                <span class="text-muted">-</span>
-                                            @else
-                                                <span class="text-muted">{{ $feedType->subtypes->pluck('name')->implode(', ') }}</span>
-                                            @endif
-                                        </td>
-                                        <td>
                                             <span class="badge {{ $feedType->is_active ? 'bg-success' : 'bg-secondary' }}">
                                                 {{ $feedType->is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
                                         <td>
                                             @perm('settings_feed_types.edit')
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm btn-outline-primary"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#editFeedType{{ $feedType->id }}"
-                                            >
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editFeedType{{ $feedType->id }}">
                                                 Edit
                                             </button>
                                             @endperm
@@ -136,10 +118,6 @@
                                                                     <label class="form-label">Default Unit</label>
                                                                     <input type="text" name="default_unit" class="form-control" value="{{ $feedType->default_unit }}" placeholder="Ex: Kg, Gram, Bundle" required>
                                                                 </div>
-                                                                <div class="mb-2">
-                                                                    <label class="form-label">Subtypes (comma or new line)</label>
-                                                                    <textarea name="subtypes_text" rows="4" class="form-control" required>{{ $feedType->subtypes->pluck('name')->implode("\n") }}</textarea>
-                                                                </div>
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox" value="1" id="active{{ $feedType->id }}" name="is_active" {{ $feedType->is_active ? 'checked' : '' }}>
                                                                     <label class="form-check-label" for="active{{ $feedType->id }}">Active</label>
@@ -158,7 +136,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">No feed type added yet.</td>
+                                        <td colspan="5" class="text-center text-muted py-4">No feed type added yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

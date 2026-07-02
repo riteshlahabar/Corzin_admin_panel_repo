@@ -20,6 +20,7 @@ use App\Http\Controllers\Farmer\FarmerListController;
 use App\Http\Controllers\Farmer\FarmerPlanController;
 use App\Http\Controllers\Farmer\FarmerReferralController;
 use App\Http\Controllers\Farmer\FarmerSettingController;
+use App\Http\Controllers\Farmer\FeedSubtypeController;
 use App\Http\Controllers\Farmer\FarmerSubscriptionController;
 use App\Http\Controllers\Farmer\FeedingListController;
 use App\Http\Controllers\Farmer\HealthManagementController;
@@ -93,6 +94,13 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/dairy', [DairyListController::class, 'store'])->middleware('permission:dairy.add')->name('farmer.dairy.store');
         Route::put('/dairy/{dairy}', [DairyListController::class, 'update'])->middleware('permission:dairy.edit')->name('farmer.dairy.update');
         Route::delete('/dairy/{dairy}', [DairyListController::class, 'destroy'])->middleware('permission:dairy.delete')->name('farmer.dairy.destroy');
+        Route::get('/feed-subtypes', [FeedSubtypeController::class, 'index'])->middleware('permission:farmer_feed_subtypes.view')->name('farmer.feed-subtypes.index');
+        Route::get('/feed-subtypes/create', [FeedSubtypeController::class, 'create'])->middleware('permission:farmer_feed_subtypes.add')->name('farmer.feed-subtypes.create');
+        Route::post('/feed-subtypes', [FeedSubtypeController::class, 'store'])->middleware('permission:farmer_feed_subtypes.add')->name('farmer.feed-subtypes.store');
+        Route::get('/feed-subtypes/{feedSubtype}/edit', [FeedSubtypeController::class, 'edit'])->middleware('permission:farmer_feed_subtypes.edit')->name('farmer.feed-subtypes.edit');
+        Route::put('/feed-subtypes/{feedSubtype}', [FeedSubtypeController::class, 'update'])->middleware('permission:farmer_feed_subtypes.edit')->name('farmer.feed-subtypes.update');
+        Route::post('/feed-subtypes/{feedSubtype}/toggle', [FeedSubtypeController::class, 'toggle'])->middleware('permission:farmer_feed_subtypes.status')->name('farmer.feed-subtypes.toggle');
+        Route::delete('/feed-subtypes/{feedSubtype}', [FeedSubtypeController::class, 'destroy'])->middleware('permission:farmer_feed_subtypes.delete')->name('farmer.feed-subtypes.destroy');
         Route::get('/settings', [FarmerSettingController::class, 'index'])->middleware('permission:farmer_settings.view')->name('farmer.settings');
         Route::post('/settings/support-contact', [FarmerSettingController::class, 'updateSupportContact'])->middleware('permission:farmer_settings.edit')->name('farmer.settings.support-contact.update');
         Route::post('/settings/banner', [FarmerSettingController::class, 'uploadBanner'])->middleware('permission:farmer_settings.edit')->name('farmer.settings.banner.upload');
@@ -207,3 +215,5 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::get('/backup/download', [BackupController::class, 'download'])->middleware('permission:settings_backup.export')->name('backup.download');
     });
 });
+
+

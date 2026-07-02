@@ -93,6 +93,16 @@ class AdminAccess
                             'delete' => 'Delete',
                         ],
                     ],
+                    'farmer_feed_subtypes' => [
+                        'label' => 'Feed Sub Type',
+                        'actions' => [
+                            'view' => 'View',
+                            'add' => 'Add',
+                            'edit' => 'Edit',
+                            'delete' => 'Delete',
+                            'status' => 'Status',
+                        ],
+                    ],
                     'farmer_settings' => [
                         'label' => 'Farmer Settings',
                         'actions' => [
@@ -375,6 +385,7 @@ class AdminAccess
             'diet_plan.view' => 'farmer.diet-plan',
             'pregnancy.view' => 'farmer.pregnancy',
             'dairy.view' => 'farmer.dairy',
+            'farmer_feed_subtypes.view' => 'farmer.feed-subtypes.index',
             'doctor_list.view' => 'doctor.index',
             'doctor_appointments.view' => 'doctor.appointments',
             'shop_products.view' => 'shop.index',
@@ -395,3 +406,4 @@ class AdminAccess
         return null;
     }
 }
+

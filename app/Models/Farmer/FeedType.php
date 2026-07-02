@@ -23,6 +23,17 @@ class FeedType extends Model
 
     public function subtypes()
     {
-        return $this->hasMany(FeedSubtype::class, 'feed_type_id')->orderBy('sort_order')->orderBy('name');
+        return $this->hasMany(FeedSubtype::class, 'feed_type_id')
+            ->whereNull('farmer_id')
+            ->orderBy('sort_order')
+            ->orderBy('name');
+    }
+
+    public function farmerSubtypes()
+    {
+        return $this->hasMany(FeedSubtype::class, 'feed_type_id')
+            ->whereNotNull('farmer_id')
+            ->orderBy('sort_order')
+            ->orderBy('name');
     }
 }

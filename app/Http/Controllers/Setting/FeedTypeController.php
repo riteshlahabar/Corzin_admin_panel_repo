@@ -3,18 +3,14 @@
 namespace App\Http\Controllers\Setting;
 
 use App\Http\Controllers\Controller;
-use App\Models\Farmer\FeedSubtype;
 use App\Models\Farmer\FeedType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class FeedTypeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = FeedType::query()
-            ->with(['subtypes' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')])
-            ->orderBy('name');
+        $query = FeedType::query()->orderBy('name');
 
         if ($request->filled('search')) {
             $search = strtolower(trim((string) $request->search));
@@ -31,43 +27,23 @@ class FeedTypeController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'default_unit' => ['required', 'string', 'max:30'],
-            'subtypes_text' => ['required', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $name = trim($data['name']);
+        $name = trim((string) $data['name']);
         $exists = FeedType::query()
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
             ->exists();
+
         if ($exists) {
             return back()->withErrors(['name' => 'Feed type already exists.'])->withInput();
         }
 
-        $subtypes = $this->parseSubtypeText($data['subtypes_text']);
-        if (empty($subtypes)) {
-            return back()->withErrors(['subtypes_text' => 'Please enter at least one subtype.'])->withInput();
-        }
-
-        DB::transaction(function () use ($data, $name, $subtypes) {
-            $type = FeedType::create([
-                'name' => $name,
-                'default_unit' => trim((string) $data['default_unit']),
-                'is_active' => (bool) ($data['is_active'] ?? true),
-            ]);
-
-            $rows = [];
-            foreach ($subtypes as $index => $subtypeName) {
-                $rows[] = [
-                    'feed_type_id' => $type->id,
-                    'name' => $subtypeName,
-                    'is_active' => true,
-                    'sort_order' => $index + 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            FeedSubtype::insert($rows);
-        });
+        FeedType::create([
+            'name' => $name,
+            'default_unit' => trim((string) $data['default_unit']),
+            'is_active' => (bool) ($data['is_active'] ?? true),
+        ]);
 
         return back()->with('success', 'Feed type added successfully.');
     }
@@ -77,45 +53,24 @@ class FeedTypeController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'default_unit' => ['required', 'string', 'max:30'],
-            'subtypes_text' => ['required', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $name = trim($data['name']);
+        $name = trim((string) $data['name']);
         $exists = FeedType::query()
             ->where('id', '!=', $feedType->id)
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
             ->exists();
+
         if ($exists) {
             return back()->withErrors(['name' => 'Feed type already exists.'])->withInput();
         }
 
-        $subtypes = $this->parseSubtypeText($data['subtypes_text']);
-        if (empty($subtypes)) {
-            return back()->withErrors(['subtypes_text' => 'Please enter at least one subtype.'])->withInput();
-        }
-
-        DB::transaction(function () use ($feedType, $data, $name, $subtypes) {
-            $feedType->update([
-                'name' => $name,
-                'default_unit' => trim((string) $data['default_unit']),
-                'is_active' => (bool) ($data['is_active'] ?? false),
-            ]);
-
-            FeedSubtype::where('feed_type_id', $feedType->id)->delete();
-            $rows = [];
-            foreach ($subtypes as $index => $subtypeName) {
-                $rows[] = [
-                    'feed_type_id' => $feedType->id,
-                    'name' => $subtypeName,
-                    'is_active' => true,
-                    'sort_order' => $index + 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            FeedSubtype::insert($rows);
-        });
+        $feedType->update([
+            'name' => $name,
+            'default_unit' => trim((string) $data['default_unit']),
+            'is_active' => (bool) ($data['is_active'] ?? false),
+        ]);
 
         return back()->with('success', 'Feed type updated successfully.');
     }
@@ -127,21 +82,5 @@ class FeedTypeController extends Controller
         ]);
 
         return back()->with('success', 'Feed type status updated.');
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function parseSubtypeText(string $text): array
-    {
-        $parts = preg_split('/[\r\n,]+/', $text) ?: [];
-        $clean = collect($parts)
-            ->map(fn ($value) => trim((string) $value))
-            ->filter()
-            ->unique(fn ($value) => mb_strtolower($value))
-            ->values()
-            ->all();
-
-        return array_values($clean);
     }
 }

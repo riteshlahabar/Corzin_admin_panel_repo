@@ -1,0 +1,61 @@
+@extends('layouts.app')
+@section('title', 'Add Feed Sub Type')
+
+@section('content')
+<div class="container-fluid">
+    <div class="row mt-4 mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="mb-0 text-dark">Add Feed Sub Type</h4>
+            <a href="{{ route('farmer.feed-subtypes.index') }}" class="btn btn-light border">Back</a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST" action="{{ route('farmer.feed-subtypes.store') }}" class="row g-3">
+                @csrf
+                <div class="col-md-6">
+                    <label class="form-label">Farmer <span class="text-danger">*</span></label>
+                    <select name="farmer_id" class="form-select @error('farmer_id') is-invalid @enderror" required>
+                        <option value="">Select farmer</option>
+                        @foreach($farmers as $farmer)
+                            <option value="{{ $farmer->id }}" {{ old('farmer_id') == $farmer->id ? 'selected' : '' }}>
+                                {{ trim(($farmer->first_name ?? '').' '.($farmer->last_name ?? '')) ?: 'Farmer #'.$farmer->id }} - {{ $farmer->mobile }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('farmer_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Feed Type <span class="text-danger">*</span></label>
+                    <select name="feed_type_id" class="form-select @error('feed_type_id') is-invalid @enderror" required>
+                        <option value="">Select feed type</option>
+                        @foreach($feedTypes as $feedType)
+                            <option value="{{ $feedType->id }}" {{ old('feed_type_id') == $feedType->id ? 'selected' : '' }}>
+                                {{ $feedType->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('feed_type_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Feed Sub Type Name(s) <span class="text-danger">*</span></label>
+                    <textarea name="subtype_names" rows="5" class="form-control @error('subtype_names') is-invalid @enderror" placeholder="Enter one subtype per line or separate with comma" required>{{ old('subtype_names') }}</textarea>
+                    @error('subtype_names')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="form-text">Example: Silage, Straw, Cotton Seed Cake</div>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="is_active" name="is_active" {{ old('is_active', '1') ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_active">Active</label>
+                    </div>
+                </div>
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <a href="{{ route('farmer.feed-subtypes.index') }}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" class="btn btn-success">Save Feed Sub Type</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection

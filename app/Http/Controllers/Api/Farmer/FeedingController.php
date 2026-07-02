@@ -140,8 +140,10 @@ class FeedingController extends Controller
 
     public function types(Request $request)
     {
-        $rows = FeedType::where('is_active', true)
-            ->with(['subtypes' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')->orderBy('name')])
+        $farmerId = (int) $request->query('farmer_id', 0);
+
+        $rows = FeedType::query()
+            ->where('is_active', true)
             ->orderBy('name')
             ->get();
 
@@ -154,16 +156,25 @@ class FeedingController extends Controller
         }
 
         $types = collect(array_values($byName))
-            ->map(fn (FeedType $type) => [
-                'id' => $type->id,
-                'name' => $type->name,
-                'default_unit' => $type->default_unit,
-                'can_add_farmer_subtype' => $type->subtypes->isEmpty(),
-                'subtypes' => $type->subtypes->map(fn (FeedSubtype $subtype) => [
-                    'id' => $subtype->id,
-                    'name' => $subtype->name,
-                ])->values(),
-            ]);
+            ->map(function (FeedType $type) use ($farmerId) {
+                $subtypes = $this->visibleSubtypesForType($type->id, $farmerId);
+
+                return [
+                    'id' => $type->id,
+                    'name' => $type->name,
+                    'default_unit' => $type->default_unit,
+                    'can_add_farmer_subtype' => $farmerId > 0,
+                    'subtypes' => $subtypes->map(fn (FeedSubtype $subtype) => [
+                        'id' => $subtype->id,
+                        'name' => $subtype->name,
+                        'farmer_id' => (int) ($subtype->farmer_id ?? 0),
+                        'is_farmer_subtype' => (int) ($subtype->farmer_id ?? 0) > 0,
+                        'is_editable' => $farmerId > 0 && (int) ($subtype->farmer_id ?? 0) === $farmerId,
+                    ])->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
 
         return response()->json([
             'status' => true,
@@ -171,7 +182,6 @@ class FeedingController extends Controller
             'data' => $types,
         ]);
     }
-
     public function createSubtype(Request $request, $feedTypeId = null)
     {
         $routeFeedTypeId = (int) ($feedTypeId ?? $request->route('feedTypeId') ?? 0);
@@ -195,6 +205,7 @@ class FeedingController extends Controller
             ], 422);
         }
 
+        $farmerId = (int) $request->input('farmer_id');
         $typeId = (int) $request->input('feed_type_id');
         $baseType = FeedType::query()->find($typeId);
         if (! $baseType) {
@@ -217,38 +228,52 @@ class FeedingController extends Controller
             ], 422);
         }
 
-        $targetType = $baseType;
+        $createdCount = 0;
 
-        DB::transaction(function () use ($targetType, $subtypes) {
-            $existingNames = FeedSubtype::query()
-                ->where('feed_type_id', $targetType->id)
-                ->pluck('name')
-                ->map(fn ($name) => mb_strtolower(trim((string) $name)))
-                ->all();
-            $existingMap = array_flip($existingNames);
-            $nextSort = ((int) FeedSubtype::query()->where('feed_type_id', $targetType->id)->max('sort_order')) + 1;
+        DB::transaction(function () use ($typeId, $farmerId, $subtypes, &$createdCount) {
+            $nextSort = ((int) FeedSubtype::query()
+                ->where('feed_type_id', $typeId)
+                ->where('farmer_id', $farmerId)
+                ->max('sort_order')) + 1;
 
             foreach ($subtypes as $subtypeName) {
-                $key = mb_strtolower($subtypeName);
-                if (isset($existingMap[$key])) {
+                $exists = FeedSubtype::query()
+                    ->where('feed_type_id', $typeId)
+                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($subtypeName)])
+                    ->where(function ($query) use ($farmerId) {
+                        $query->whereNull('farmer_id')
+                            ->orWhere('farmer_id', $farmerId);
+                    })
+                    ->exists();
+
+                if ($exists) {
                     continue;
                 }
+
                 FeedSubtype::create([
-                    'feed_type_id' => $targetType->id,
+                    'feed_type_id' => $typeId,
+                    'farmer_id' => $farmerId,
                     'name' => $subtypeName,
                     'is_active' => true,
                     'sort_order' => $nextSort++,
                 ]);
-                $existingMap[$key] = true;
+
+                $createdCount++;
             }
         });
+
+        if ($createdCount === 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'All entered subtypes already exist for this farmer.',
+            ], 422);
+        }
 
         return response()->json([
             'status' => true,
             'message' => 'Feed subtype saved successfully.',
         ]);
     }
-
     public function updateSubtype(Request $request, $feedTypeId, $subtypeId)
     {
         $resolvedFeedTypeId = (int) ($feedTypeId ?? 0);
@@ -271,6 +296,7 @@ class FeedingController extends Controller
             ], 422);
         }
 
+        $farmerId = (int) $request->input('farmer_id');
         $typeId = (int) $request->input('feed_type_id');
         if ($resolvedFeedTypeId > 0 && $typeId !== $resolvedFeedTypeId) {
             return response()->json([
@@ -282,6 +308,7 @@ class FeedingController extends Controller
         $subtype = FeedSubtype::query()
             ->where('id', $resolvedSubtypeId)
             ->where('feed_type_id', $typeId)
+            ->where('farmer_id', $farmerId)
             ->first();
 
         if (! $subtype) {
@@ -296,6 +323,10 @@ class FeedingController extends Controller
             ->where('feed_type_id', $typeId)
             ->where('id', '!=', $resolvedSubtypeId)
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->where(function ($query) use ($farmerId) {
+                $query->whereNull('farmer_id')
+                    ->orWhere('farmer_id', $farmerId);
+            })
             ->exists();
         if ($exists) {
             return response()->json([
@@ -313,7 +344,6 @@ class FeedingController extends Controller
             'message' => 'Feed subtype updated successfully.',
         ]);
     }
-
     public function deleteSubtype(Request $request, $feedTypeId, $subtypeId)
     {
         $resolvedFeedTypeId = (int) ($feedTypeId ?? 0);
@@ -335,6 +365,7 @@ class FeedingController extends Controller
             ], 422);
         }
 
+        $farmerId = (int) $request->input('farmer_id');
         $typeId = (int) $request->input('feed_type_id');
         if ($resolvedFeedTypeId > 0 && $typeId !== $resolvedFeedTypeId) {
             return response()->json([
@@ -346,6 +377,7 @@ class FeedingController extends Controller
         $subtype = FeedSubtype::query()
             ->where('id', $resolvedSubtypeId)
             ->where('feed_type_id', $typeId)
+            ->where('farmer_id', $farmerId)
             ->first();
 
         if (! $subtype) {
@@ -362,7 +394,6 @@ class FeedingController extends Controller
             'message' => 'Feed subtype deleted successfully.',
         ]);
     }
-
     public function dietPlans(Request $request, $farmer_id)
     {
         $animalId = (int) $request->query('animal_id', 0);
@@ -931,6 +962,36 @@ class FeedingController extends Controller
         ]);
     }
 
+    private function visibleSubtypesForType(int $feedTypeId, int $farmerId)
+    {
+        $rows = FeedSubtype::query()
+            ->where('feed_type_id', $feedTypeId)
+            ->where('is_active', true)
+            ->where(function ($query) use ($farmerId) {
+                $query->whereNull('farmer_id');
+                if ($farmerId > 0) {
+                    $query->orWhere('farmer_id', $farmerId);
+                }
+            })
+            ->orderByRaw('CASE WHEN farmer_id IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $seen = [];
+
+        return $rows->reject(function (FeedSubtype $subtype) use (&$seen) {
+            $key = mb_strtolower(trim((string) $subtype->name));
+            if ($key === '') {
+                return true;
+            }
+            if (isset($seen[$key])) {
+                return true;
+            }
+            $seen[$key] = true;
+            return false;
+        })->values();
+    }
     private function resolveFeedType(Request $request): ?FeedType
     {
         if ($request->filled('feed_type_id')) {

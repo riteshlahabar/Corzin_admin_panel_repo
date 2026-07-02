@@ -29,7 +29,7 @@
 
     @if($currentUser?->hasAnyPermission([
         'farmer_list.view','animal_list.view','pan_list.view','milk_production.view','feeding.view',
-        'diet_plan.view','pregnancy.view','dairy.view','farmer_settings.view','farmer_referred.view','farmer_plan.view',
+        'diet_plan.view','pregnancy.view','dairy.view','farmer_feed_subtypes.view','farmer_settings.view','farmer_referred.view','farmer_plan.view',
         'farmer_subscription.view'
     ]))
     <li class="nav-item">
@@ -63,6 +63,9 @@
                 @endif
                 @if($currentUser?->hasPermission('dairy.view'))
                 <li class="menu-item"><a href="{{ route('farmer.dairy') }}" class="nav-link"><i class="iconoir-building me-2"></i> Dairy</a></li>
+                @endif
+                @if($currentUser?->hasPermission('farmer_feed_subtypes.view'))
+                <li class="menu-item"><a href="{{ route('farmer.feed-subtypes.index') }}" class="nav-link {{ request()->routeIs('farmer.feed-subtypes.*') ? 'active' : '' }}"><i class="iconoir-leaf me-2"></i> Feed Sub Type</a></li>
                 @endif
                 @if($currentUser?->hasPermission('farmer_settings.view'))
                 <li class="menu-item"><a href="{{ route('farmer.settings') }}" class="nav-link {{ request()->routeIs('farmer.settings*') ? 'active' : '' }}"><i class="iconoir-settings me-2"></i> Settings</a></li>
@@ -406,3 +409,4 @@ document.addEventListener('click', function(e) {
     background: rgba(0,0,0,0.08);
 }
 </style>
+
