@@ -24,15 +24,20 @@
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <form method="GET" action="{{ route('settings.language.index') }}" class="row g-2 mb-3">
+                    <form id="translationSearchForm" method="GET" action="{{ route('settings.language.index') }}" class="d-flex justify-content-end mb-3">
                         @if(request('per_page'))
                             <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                         @endif
-                        <div class="col-md-10">
-                            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search translation values...">
-                        </div>
-                        <div class="col-md-2 d-grid">
-                            <button type="submit" class="btn btn-success">Search</button>
+                        <div style="width: min(320px, 100%);">
+                            <input
+                                type="text"
+                                id="translationSearchInput"
+                                name="search"
+                                value="{{ request('search') }}"
+                                class="form-control form-control-sm"
+                                placeholder="Search translation values..."
+                                autocomplete="off"
+                            >
                         </div>
                     </form>
 
@@ -61,19 +66,22 @@
                                             </span>
                                         </td>
                                         <td>
-                                            @perm('settings_language.edit')
-                                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTranslation{{ $translation->id }}">
-                                                Edit
-                                            </button>
-                                            @endperm
-                                            @perm('settings_language.status')
-                                            <form method="POST" action="{{ route('settings.language.toggle', $translation) }}" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-dark">
-                                                    {{ $translation->is_active ? 'Disable' : 'Enable' }}
+                                            <div class="d-flex flex-nowrap align-items-center gap-2">
+                                                @perm('settings_language.edit')
+                                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTranslation{{ $translation->id }}">
+                                                    Edit
                                                 </button>
-                                            </form>
-                                            @endperm
+                                                @endperm
+
+                                                @perm('settings_language.status')
+                                                <form method="POST" action="{{ route('settings.language.toggle', $translation) }}" class="m-0">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-dark text-nowrap">
+                                                        {{ $translation->is_active ? 'Disable' : 'Enable' }}
+                                                    </button>
+                                                </form>
+                                                @endperm
+                                            </div>
 
                                             @perm('settings_language.edit')
                                             <div class="modal fade" id="editTranslation{{ $translation->id }}" tabindex="-1" aria-hidden="true">
@@ -142,3 +150,24 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('translationSearchForm');
+        const input = document.getElementById('translationSearchInput');
+
+        if (!form || !input) {
+            return;
+        }
+
+        let timer;
+        input.addEventListener('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                form.submit();
+            }, 350);
+        });
+    });
+</script>
+@endpush
