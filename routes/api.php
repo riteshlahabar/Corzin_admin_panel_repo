@@ -215,3 +215,7 @@ Route::prefix('shop')->group(function () {
 Route::prefix('web-push')->group(function () {
     Route::post('/register-token', [WebPushTokenController::class, 'register']);
 });
+
+Route::prefix('app')->group(function () {
+    Route::get('/translations', [AppTranslationController::class, 'index']);
+});

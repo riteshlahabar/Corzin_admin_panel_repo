@@ -324,6 +324,9 @@ class AdminAccess
                         'label' => 'Language',
                         'actions' => [
                             'view' => 'View',
+                            'add' => 'Add',
+                            'edit' => 'Edit',
+                            'status' => 'Status',
                         ],
                     ],
                     'settings_backup' => [

@@ -213,6 +213,9 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggle'])->middleware('permission:settings_users.status')->name('users.toggle');
 
         Route::get('/language', [LanguageController::class, 'index'])->middleware('permission:settings_language.view')->name('language.index');
+        Route::post('/language', [LanguageController::class, 'store'])->middleware('permission:settings_language.add')->name('language.store');
+        Route::put('/language/{translation}', [LanguageController::class, 'update'])->middleware('permission:settings_language.edit')->name('language.update');
+        Route::post('/language/{translation}/toggle', [LanguageController::class, 'toggle'])->middleware('permission:settings_language.status')->name('language.toggle');
 
         Route::get('/backup', [BackupController::class, 'index'])->middleware('permission:settings_backup.view')->name('backup.index');
         Route::get('/backup/download', [BackupController::class, 'download'])->middleware('permission:settings_backup.export')->name('backup.download');
