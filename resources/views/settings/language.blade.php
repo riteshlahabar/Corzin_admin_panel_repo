@@ -21,7 +21,7 @@
     @endif
 
     <div class="row g-3">
-        <div class="col-12">
+        <div class="col-12" id="translationContentArea">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <form id="translationSearchForm" method="GET" action="{{ route('settings.language.index') }}" class="d-flex justify-content-end mb-3">
@@ -154,49 +154,143 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('translationSearchForm');
-        const input = document.getElementById('translationSearchInput');
-
-        if (!form || !input) {
-            return;
-        }
-
+        const areaSelector = '#translationContentArea';
         let timer;
-        let lastSubmitted = input.value.trim();
+        let activeController = null;
 
-        const submitSearch = function () {
-            const rawValue = input.value;
-            const trimmedValue = rawValue.trim();
+        const bindLanguageInteractions = function () {
+            const area = document.querySelector(areaSelector);
+            const form = document.getElementById('translationSearchForm');
+            const input = document.getElementById('translationSearchInput');
+            const perPage = area ? area.querySelector('.corzin-server-per-page') : null;
+            const paginationLinks = area ? area.querySelectorAll('.pagination a.page-link') : [];
 
-            if (rawValue.endsWith(' ')) {
-                return;
+            if (form && input) {
+                let lastRequested = input.value.trim();
+
+                const requestSearch = function (force = false) {
+                    const rawValue = input.value;
+                    const trimmedValue = rawValue.trim();
+
+                    if (!force && rawValue.endsWith(' ')) {
+                        return;
+                    }
+
+                    if (!force && trimmedValue === lastRequested) {
+                        return;
+                    }
+
+                    lastRequested = trimmedValue;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new FormData(form);
+                    params.set('search', rawValue);
+                    url.search = new URLSearchParams(params).toString();
+                    loadTranslationArea(url.toString(), true);
+                };
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    clearTimeout(timer);
+                    requestSearch(true);
+                });
+
+                input.addEventListener('input', function () {
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        requestSearch(false);
+                    }, 700);
+                });
+
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        clearTimeout(timer);
+                        requestSearch(true);
+                    }
+                });
             }
 
-            if (trimmedValue === lastSubmitted) {
-                return;
+            if (perPage) {
+                perPage.addEventListener('change', function () {
+                    const formData = new FormData(form || document.createElement('form'));
+                    formData.set('per_page', perPage.value);
+                    if (input) {
+                        formData.set('search', input.value);
+                    }
+                    const url = new URL((form && form.action) || window.location.href, window.location.origin);
+                    url.search = new URLSearchParams(formData).toString();
+                    loadTranslationArea(url.toString(), true);
+                });
             }
 
-            lastSubmitted = trimmedValue;
-            form.submit();
+            paginationLinks.forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    const href = link.getAttribute('href');
+                    if (!href) {
+                        return;
+                    }
+                    loadTranslationArea(href, true);
+                });
+            });
         };
 
-        input.addEventListener('input', function () {
-            clearTimeout(timer);
-            timer = setTimeout(submitSearch, 700);
-        });
-
-        input.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                clearTimeout(timer);
-                submitSearch();
+        const loadTranslationArea = async function (url, pushState) {
+            const area = document.querySelector(areaSelector);
+            if (!area) {
+                return;
             }
-        });
 
-        input.addEventListener('blur', function () {
-            clearTimeout(timer);
-            submitSearch();
-        });
+            if (activeController) {
+                activeController.abort();
+            }
+
+            activeController = new AbortController();
+            area.style.opacity = '0.55';
+            area.style.pointerEvents = 'none';
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    signal: activeController.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const nextArea = doc.querySelector(areaSelector);
+
+                if (!nextArea) {
+                    throw new Error('Updated content not found');
+                }
+
+                area.outerHTML = nextArea.outerHTML;
+
+                if (pushState) {
+                    window.history.replaceState({}, '', url);
+                }
+
+                bindLanguageInteractions();
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    window.location.href = url;
+                }
+            } finally {
+                const refreshedArea = document.querySelector(areaSelector);
+                if (refreshedArea) {
+                    refreshedArea.style.opacity = '1';
+                    refreshedArea.style.pointerEvents = 'auto';
+                }
+            }
+        };
+
+        bindLanguageInteractions();
     });
 </script>
 @endpush
