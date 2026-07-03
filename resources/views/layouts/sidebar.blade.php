@@ -365,7 +365,7 @@
                     </a>
                 </li>
                 @endif
-                @if($currentUser?->hasPermission('settings_language.view'))
+                @if($currentUser?->hasPermission('settings_language.view') && Route::has('settings.language.index'))
                 <li class="menu-item">
                     <a href="{{ route('settings.language.index') }}" class="nav-link {{ request()->routeIs('settings.language.*') ? 'active' : '' }}">
                         <i class="iconoir-language me-2"></i> Language
@@ -416,5 +416,6 @@ document.addEventListener('click', function(e) {
     background: rgba(0,0,0,0.08);
 }
 </style>
+
 
 
