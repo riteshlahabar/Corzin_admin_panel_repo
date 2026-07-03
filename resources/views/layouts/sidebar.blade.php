@@ -313,7 +313,7 @@
     @endif
 
     @if($currentUser?->hasAnyPermission([
-        'settings_diseases.view','settings_feed_types.view','settings_vaccines.view','settings_templates.view','settings_roles.view','settings_users.view','settings_backup.view'
+        'settings_diseases.view','settings_feed_types.view','settings_vaccines.view','settings_templates.view','settings_roles.view','settings_users.view','settings_language.view','settings_backup.view'
     ]))
     <li class="nav-item">
         <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" href="#settingsMenu" data-bs-toggle="collapse" role="button" aria-expanded="{{ request()->routeIs('settings.*') ? 'true' : 'false' }}">
@@ -365,6 +365,13 @@
                     </a>
                 </li>
                 @endif
+                @if($currentUser?->hasPermission('settings_language.view'))
+                <li class="menu-item">
+                    <a href="{{ route('settings.language.index') }}" class="nav-link {{ request()->routeIs('settings.language.*') ? 'active' : '' }}">
+                        <i class="iconoir-language me-2"></i> Language
+                    </a>
+                </li>
+                @endif
                 @if($currentUser?->hasPermission('settings_backup.view'))
                 <li class="menu-item">
                     <a href="{{ route('settings.backup.index') }}" class="nav-link {{ request()->routeIs('settings.backup.*') ? 'active' : '' }}">
@@ -409,4 +416,5 @@ document.addEventListener('click', function(e) {
     background: rgba(0,0,0,0.08);
 }
 </style>
+
 

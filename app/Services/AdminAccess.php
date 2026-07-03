@@ -320,6 +320,12 @@ class AdminAccess
                             'status' => 'Status',
                         ],
                     ],
+                    'settings_language' => [
+                        'label' => 'Language',
+                        'actions' => [
+                            'view' => 'View',
+                        ],
+                    ],
                     'settings_backup' => [
                         'label' => 'Backup Data',
                         'actions' => [
@@ -394,6 +400,7 @@ class AdminAccess
             'settings_vaccines.view' => 'settings.vaccines.index',
             'settings_roles.view' => 'settings.roles.index',
             'settings_users.view' => 'settings.users.index',
+            'settings_language.view' => 'settings.language.index',
             'health_vaccination.view' => 'health.vaccination',
         ];
 
@@ -406,4 +413,5 @@ class AdminAccess
         return null;
     }
 }
+
 

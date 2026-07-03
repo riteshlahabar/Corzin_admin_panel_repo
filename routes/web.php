@@ -31,6 +31,7 @@ use App\Http\Controllers\Setting\AdminUserController;
 use App\Http\Controllers\Setting\BackupController;
 use App\Http\Controllers\Setting\DiseaseController;
 use App\Http\Controllers\Setting\FeedTypeController;
+use App\Http\Controllers\Setting\LanguageController;
 use App\Http\Controllers\Setting\NotificationTemplateController;
 use App\Http\Controllers\Setting\VaccineController;
 use App\Http\Controllers\Shop\AnimalBuySellController;
@@ -211,9 +212,12 @@ Route::middleware(['auth', 'admin.active'])->group(function () {
         Route::put('/users/{user}', [AdminUserController::class, 'update'])->middleware('permission:settings_users.edit')->name('users.update');
         Route::post('/users/{user}/toggle', [AdminUserController::class, 'toggle'])->middleware('permission:settings_users.status')->name('users.toggle');
 
+        Route::get('/language', [LanguageController::class, 'index'])->middleware('permission:settings_language.view')->name('language.index');
+
         Route::get('/backup', [BackupController::class, 'index'])->middleware('permission:settings_backup.view')->name('backup.index');
         Route::get('/backup/download', [BackupController::class, 'download'])->middleware('permission:settings_backup.export')->name('backup.download');
     });
 });
+
 
 
