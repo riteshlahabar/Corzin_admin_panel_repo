@@ -162,11 +162,40 @@
         }
 
         let timer;
+        let lastSubmitted = input.value.trim();
+
+        const submitSearch = function () {
+            const rawValue = input.value;
+            const trimmedValue = rawValue.trim();
+
+            if (rawValue.endsWith(' ')) {
+                return;
+            }
+
+            if (trimmedValue === lastSubmitted) {
+                return;
+            }
+
+            lastSubmitted = trimmedValue;
+            form.submit();
+        };
+
         input.addEventListener('input', function () {
             clearTimeout(timer);
-            timer = setTimeout(function () {
-                form.submit();
-            }, 350);
+            timer = setTimeout(submitSearch, 700);
+        });
+
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                clearTimeout(timer);
+                submitSearch();
+            }
+        });
+
+        input.addEventListener('blur', function () {
+            clearTimeout(timer);
+            submitSearch();
         });
     });
 </script>
