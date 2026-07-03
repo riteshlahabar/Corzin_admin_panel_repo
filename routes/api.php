@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AppTranslationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Farmer\AuthController;
 use App\Http\Controllers\Api\Farmer\FarmerController;
@@ -219,3 +220,4 @@ Route::prefix('web-push')->group(function () {
 Route::prefix('app')->group(function () {
     Route::get('/translations', [AppTranslationController::class, 'index']);
 });
+
