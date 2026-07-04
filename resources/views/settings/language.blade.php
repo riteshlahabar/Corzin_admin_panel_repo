@@ -49,7 +49,7 @@
 
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
-                            <thead>
+                            <thead style="background-color: #f3f4f6;">
                                 <tr>
                                     <th>#</th>
                                     <th>English</th>
