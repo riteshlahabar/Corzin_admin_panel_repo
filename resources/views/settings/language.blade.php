@@ -90,22 +90,15 @@
                                                         <form method="POST" action="{{ route('settings.language.update', $translation) }}">
                                                             @csrf
                                                             @method('PUT')
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Edit Translation</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            <div class="modal-header bg-success text-white">
+                                                                <h5 class="modal-title text-white">Edit Translation</h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                             </div>
                                                             <div class="modal-body row g-3">
-                                                                <div class="col-md-6">
-                                                                    <label class="form-label">Group</label>
-                                                                    <input type="text" name="group_name" class="form-control" value="{{ $translation->group_name }}" required>
-                                                                </div>
-                                                                <div class="col-md-6">
-                                                                    <label class="form-label">Translation Key</label>
-                                                                    <input type="text" name="translation_key" class="form-control" value="{{ $translation->translation_key }}" required>
-                                                                </div>
+
                                                                 <div class="col-12">
                                                                     <label class="form-label">English</label>
-                                                                    <textarea name="en_value" rows="2" class="form-control">{{ $translation->en_value }}</textarea>
+                                                                    <textarea name="en_value" rows="2" class="form-control bg-light" readonly>{{ $translation->en_value }}</textarea>
                                                                 </div>
                                                                 <div class="col-12">
                                                                     <label class="form-label">Hindi</label>
@@ -294,3 +287,4 @@
     });
 </script>
 @endpush
+

@@ -70,18 +70,12 @@ class LanguageController extends Controller
     public function update(Request $request, AppTranslation $translation): RedirectResponse
     {
         $data = $request->validate([
-            'group_name' => ['required', 'string', 'max:100'],
-            'translation_key' => ['required', 'string', 'max:190', 'unique:app_translations,translation_key,' . $translation->id],
-            'en_value' => ['nullable', 'string'],
             'hi_value' => ['nullable', 'string'],
             'mr_value' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $translation->update([
-            'group_name' => trim($data['group_name']),
-            'translation_key' => trim($data['translation_key']),
-            'en_value' => $data['en_value'] ?? null,
             'hi_value' => $data['hi_value'] ?? null,
             'mr_value' => $data['mr_value'] ?? null,
             'is_active' => (bool) ($data['is_active'] ?? false),
