@@ -24,10 +24,16 @@
         <div class="col-12" id="translationContentArea">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <form id="translationSearchForm" method="GET" action="{{ route('settings.language.index') }}" class="d-flex justify-content-end mb-3">
+                    <form id="translationSearchForm" method="GET" action="{{ route('settings.language.index') }}" class="d-flex flex-wrap justify-content-end align-items-center gap-2 mb-3">
                         @if(request('per_page'))
                             <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                         @endif
+                        <div style="width: min(180px, 100%);">
+                            <select id="translationSearchMode" name="search_mode" class="form-select form-select-sm">
+                                <option value="single_keyword" {{ request('search_mode') === 'single_keyword' ? 'selected' : '' }}>Single Keyword</option>
+                                <option value="phrase" {{ request('search_mode', 'phrase') === 'phrase' ? 'selected' : '' }}>Phrase</option>
+                            </select>
+                        </div>
                         <div style="width: min(320px, 100%);">
                             <input
                                 type="text"
@@ -155,25 +161,29 @@
             const area = document.querySelector(areaSelector);
             const form = document.getElementById('translationSearchForm');
             const input = document.getElementById('translationSearchInput');
+            const modeSelect = document.getElementById('translationSearchMode');
             const perPage = area ? area.querySelector('.corzin-server-per-page') : null;
             const paginationLinks = area ? area.querySelectorAll('.pagination a.page-link') : [];
 
             if (form && input) {
                 let lastRequested = input.value.trim();
+                let lastRequestedMode = modeSelect ? modeSelect.value : 'phrase';
 
                 const requestSearch = function (force = false) {
                     const rawValue = input.value;
                     const trimmedValue = rawValue.trim();
+                    const currentMode = modeSelect ? modeSelect.value : 'phrase';
 
                     if (!force && rawValue.endsWith(' ')) {
                         return;
                     }
 
-                    if (!force && trimmedValue === lastRequested) {
+                    if (!force && trimmedValue === lastRequested && currentMode === lastRequestedMode) {
                         return;
                     }
 
                     lastRequested = trimmedValue;
+                    lastRequestedMode = currentMode;
                     const url = new URL(form.action, window.location.origin);
                     const params = new FormData(form);
                     params.set('search', rawValue);
@@ -201,6 +211,13 @@
                         requestSearch(true);
                     }
                 });
+
+                if (modeSelect) {
+                    modeSelect.addEventListener('change', function () {
+                        clearTimeout(timer);
+                        requestSearch(true);
+                    });
+                }
             }
 
             if (perPage) {
@@ -287,4 +304,6 @@
     });
 </script>
 @endpush
+
+
 

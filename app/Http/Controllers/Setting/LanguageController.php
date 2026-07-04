@@ -15,11 +15,17 @@ class LanguageController extends Controller
     {
         $tableReady = Schema::hasTable('app_translations');
         $search = trim((string) $request->query('search', ''));
+        $searchMode = $request->query('search_mode') === 'single_keyword' ? 'single_keyword' : 'phrase';
 
         $translations = collect();
         if ($tableReady) {
             $translations = AppTranslation::query()
-                ->when($search !== '', function ($query) use ($search) {
+                ->when($search !== '', function ($query) use ($search, $searchMode) {
+                    if ($searchMode === 'single_keyword') {
+                        $query->where('translation_key', $search);
+                        return;
+                    }
+
                     $query->where(function ($inner) use ($search) {
                         $inner->where('group_name', 'like', "%{$search}%")
                             ->orWhere('translation_key', 'like', "%{$search}%")
@@ -93,3 +99,5 @@ class LanguageController extends Controller
         return redirect()->route('settings.language.index')->with('success', 'Translation status updated successfully.');
     }
 }
+
+
