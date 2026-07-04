@@ -15,7 +15,6 @@ class AppTranslationController extends Controller
                 'status' => true,
                 'message' => 'Translations table not ready.',
                 'data' => [
-                    'en' => [],
                     'hi' => [],
                     'mr' => [],
                 ],
@@ -29,7 +28,6 @@ class AppTranslationController extends Controller
             ->get();
 
         $mapped = [
-            'en' => [],
             'hi' => [],
             'mr' => [],
         ];
@@ -40,14 +38,13 @@ class AppTranslationController extends Controller
                 continue;
             }
 
-            $enValue = trim((string) ($translation->en_value ?? ''));
             $hiValue = trim((string) ($translation->hi_value ?? ''));
             $mrValue = trim((string) ($translation->mr_value ?? ''));
 
-            $mapped['en'][$key] = $enValue !== '' ? $enValue : $key;
             if ($hiValue !== '') {
                 $mapped['hi'][$key] = $hiValue;
             }
+
             if ($mrValue !== '') {
                 $mapped['mr'][$key] = $mrValue;
             }
