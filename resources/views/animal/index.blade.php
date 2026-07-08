@@ -102,13 +102,18 @@
                 </a>
                 @endperm
                 @perm('animal_list.import')
-                <form method="POST" action="{{ route('animal.import') }}" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
-                    @csrf
-                    <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.txt,.xls,.xlsx" required style="max-width:220px;">
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="fa-solid fa-upload me-1"></i> Upload List
-                    </button>
-                </form>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <form method="POST" action="{{ route('animal.import') }}" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+                        @csrf
+                        <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.txt,.xls,.xlsx" required style="max-width:220px;">
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="fa-solid fa-upload me-1"></i> Upload List
+                        </button>
+                    </form>
+                    <div class="small text-muted text-end">
+                        Use the template and fill <strong>pregnancy_status</strong> to create a pregnancy record for that animal. Upload supports CSV and Excel <strong>(.xlsx)</strong>. For old <strong>.xls</strong>, save as <strong>.xlsx</strong> first.
+                    </div>
+                </div>
                 @endperm
                 <button type="button" class="btn btn-light border" onclick="exportTableToPdf('animalTableExport', 'Animal List')" title="Download PDF">
                     <i class="fa-solid fa-file-pdf text-danger"></i>

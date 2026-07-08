@@ -23,7 +23,9 @@ class AnimalPregnancy extends Model
         'expected_calving_date',
         'dry_off_date',
         'calving_date',
-        'status',
+'abort_date',
+'abort_reason',
+'status',
         'calf_animal_id',
         'notes',
         'is_current',
@@ -37,7 +39,8 @@ class AnimalPregnancy extends Model
         'expected_calving_date' => 'date',
         'dry_off_date' => 'date',
         'calving_date' => 'date',
-        'is_current' => 'boolean',
+'abort_date' => 'date',
+'is_current' => 'boolean',
     ];
 
     public function farmer()

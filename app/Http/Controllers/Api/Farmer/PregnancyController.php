@@ -32,7 +32,7 @@ class PregnancyController extends Controller
             ->latest('ai_date')
             ->latest('id')
             ->get()
-            ->map(fn (AnimalPregnancy $record) => $this->transform($record));
+            ->map(fn(AnimalPregnancy $record) => $this->transform($record));
 
         return response()->json([
             'status' => true,
@@ -52,7 +52,7 @@ class PregnancyController extends Controller
         }
 
         $animal = Animal::find($request->animal_id);
-        if (! $animal) {
+        if (!$animal) {
             return response()->json([
                 'status' => false,
                 'message' => 'Animal not found.',
@@ -85,7 +85,7 @@ class PregnancyController extends Controller
         }
 
         $animal = Animal::find($request->animal_id);
-        if (! $animal) {
+        if (!$animal) {
             return response()->json([
                 'status' => false,
                 'message' => 'Animal not found.',
@@ -116,6 +116,9 @@ class PregnancyController extends Controller
             'pregnancy_result' => 'nullable|in:pending,pregnant,not_pregnant',
             'pregnancy_check_date' => 'nullable|date',
             'calving_date' => 'nullable|date',
+            'abort_date' => 'nullable|date',
+            'abort_reason' => 'nullable|string',
+            'breed_name' => 'nullable|string|max:255',
             'calf_animal_id' => 'nullable|exists:animals,id',
             'notes' => 'nullable|string',
         ]);
@@ -127,6 +130,7 @@ class PregnancyController extends Controller
             ], 422);
         }
 
+        $previousStatus = $record->status;
         $status = $request->status;
         $payload = [
             'status' => $status,
@@ -134,7 +138,7 @@ class PregnancyController extends Controller
             'pregnancy_result' => $request->pregnancy_result ?: $this->resultForStatus($status, $record->pregnancy_result),
         ];
 
-        foreach (['pregnancy_check_date', 'calving_date', 'calf_animal_id', 'notes'] as $field) {
+        foreach (['pregnancy_check_date', 'calving_date', 'abort_date', 'abort_reason', 'calf_animal_id', 'notes'] as $field) {
             if ($request->has($field)) {
                 $payload[$field] = $request->input($field);
             }
@@ -143,6 +147,26 @@ class PregnancyController extends Controller
         if ($status === 'calved' && empty($payload['calving_date'])) {
             $payload['calving_date'] = now()->toDateString();
         }
+
+        if ($status === 'aborted' && empty($payload['abort_date'])) {
+    $payload['abort_date'] = now()->toDateString();
+}
+
+if ($status === 'calved') {
+    $animal = $record->animal;
+
+    if ($animal) {
+        if ($previousStatus !== 'calved') {
+            $animal->lactation_number = ((int) ($animal->lactation_number ?? 0)) + 1;
+        }
+
+        if ($request->filled('breed_name')) {
+            $animal->breed_name = trim((string) $request->breed_name);
+        }
+
+        $animal->save();
+    }
+}
 
         if ((bool) $payload['is_current']) {
             $this->closeOtherCurrentRecords($record->animal_id, $record->id);
@@ -232,7 +256,7 @@ class PregnancyController extends Controller
             ->latest('id')
             ->first();
 
-        if (! $latest) {
+        if (!$latest) {
             return ['pregnancy_no' => 1, 'service_no' => 1];
         }
 
@@ -251,7 +275,7 @@ class PregnancyController extends Controller
     {
         AnimalPregnancy::where('animal_id', $animalId)
             ->where('is_current', true)
-            ->when($exceptId, fn ($query) => $query->where('id', '!=', $exceptId))
+            ->when($exceptId, fn($query) => $query->where('id', '!=', $exceptId))
             ->update(['is_current' => false]);
     }
 
@@ -263,7 +287,7 @@ class PregnancyController extends Controller
     private function resultForStatus(string $status, ?string $fallback): string
     {
         return match ($status) {
-            'pregnant', 'calved' => 'pregnant',
+            'pregnant', 'calved', 'aborted' => 'pregnant',
             'not_pregnant', 'repeat_heat' => 'not_pregnant',
             default => $fallback ?: 'pending',
         };
@@ -271,7 +295,7 @@ class PregnancyController extends Controller
 
     private function syncAnimalLactationNumber(Animal $animal, Request $request): void
     {
-        if (! $request->filled('lactation_number')) {
+        if (!$request->filled('lactation_number')) {
             return;
         }
 
@@ -314,7 +338,10 @@ class PregnancyController extends Controller
             'expected_calving_date' => optional($record->expected_calving_date)->format('Y-m-d'),
             'dry_off_date' => optional($record->dry_off_date)->format('Y-m-d'),
             'calving_date' => optional($record->calving_date)->format('Y-m-d'),
-            'status' => $record->status,
+'abort_date' => optional($record->abort_date)->format('Y-m-d'),
+'abort_reason' => $record->abort_reason,
+'breed_name' => optional($record->animal)->breed_name,
+'status' => $record->status,
             'calf_animal_id' => $record->calf_animal_id,
             'calf_animal_name' => optional($record->calfAnimal)->animal_name,
             'notes' => $record->notes,

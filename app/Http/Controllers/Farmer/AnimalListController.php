@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Farmer;
 use App\Http\Controllers\Controller;
 use App\Models\Farmer\Animal;
 use App\Models\Farmer\AnimalLifecycleHistory;
+use App\Models\Farmer\AnimalPregnancy;
 use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\AnimalType;
 use App\Models\Farmer\Farmer;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use ZipArchive;
 
 class AnimalListController extends Controller
 {
@@ -246,18 +248,22 @@ class AnimalListController extends Controller
             'weight',
             'default_milk_per_session',
             'is_active',
+            'pregnancy_status',
+            'pregnancy_service_type',
+            'pregnancy_check_due_date',
+            'pregnancy_notes',
         ];
 
         $sampleRows = [
             [
                 '9876543210', 'Ritesh Deshmukh', 'Rani', 'TAG1001', 'Milking Cows',
                 '2', '15/05/2026', 'HF', '10/01/2023', '12/01/2024', 'Female',
-                '450', '8.5', '1',
+                '450', '8.5', '1', 'pregnant', 'ai', '15/06/2026', 'Imported pregnancy record',
             ],
             [
                 '9876543210', 'Ritesh Deshmukh', 'Gauri', 'TAG1002', 'Dry Cows',
                 '1', '', 'Jersey', '08/03/2022', '15/03/2023', 'Female',
-                '390', '', '1',
+                '390', '', '1', '', '', '', '',
             ],
         ];
 
@@ -282,31 +288,37 @@ class AnimalListController extends Controller
 
         $file = $request->file('file');
         $extension = Str::lower($file->getClientOriginalExtension() ?: '');
-        if (in_array($extension, ['xls', 'xlsx'], true)) {
+
+        try {
+            $rows = match ($extension) {
+                'csv', 'txt' => $this->readCsvRows($file->getRealPath()),
+                'xlsx' => $this->readXlsxRows($file->getRealPath()),
+                'xls' => throw new \RuntimeException('Old .xls files are not supported yet. Please save the sheet as .xlsx or CSV and upload again.'),
+                default => throw new \RuntimeException('Unsupported import file format. Please upload CSV or Excel (.xlsx).'),
+            };
+        } catch (\Throwable $exception) {
             return redirect()
                 ->route('farmer.animals')
-                ->with('error', 'Excel format upload is enabled, but this server currently imports CSV only. Please save Excel as CSV and upload.');
+                ->with('error', $exception->getMessage());
         }
-        $handle = fopen($file->getRealPath(), 'r');
-        if (! $handle) {
+
+        if (empty($rows)) {
             return redirect()->route('farmer.animals')->with('error', 'Unable to read import file.');
         }
 
-        $header = fgetcsv($handle);
+        $header = array_shift($rows);
         if (! is_array($header) || empty($header)) {
-            fclose($handle);
             return redirect()->route('farmer.animals')->with('error', 'Invalid template format.');
         }
 
         $headerMap = collect($header)
-            ->map(fn ($item) => Str::lower(trim((string) $item)))
+            ->map(fn ($item) => Str::lower(ltrim(trim((string) $item), "\xEF\xBB\xBF")))
             ->values()
             ->all();
 
         $requiredColumns = ['animal_name', 'tag_number', 'birth_date'];
         foreach ($requiredColumns as $column) {
             if (! in_array($column, $headerMap, true)) {
-                fclose($handle);
                 return redirect()
                     ->route('farmer.animals')
                     ->with('error', "Missing required column in file: {$column}");
@@ -317,9 +329,9 @@ class AnimalListController extends Controller
         $errors = [];
         $rowNo = 1;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        foreach ($rows as $row) {
             $rowNo++;
-            if ($this->isCsvRowBlank($row)) {
+            if (! is_array($row) || $this->isImportRowBlank($row)) {
                 continue;
             }
 
@@ -335,7 +347,6 @@ class AnimalListController extends Controller
                 $errors[] = $result['error'];
             }
         }
-        fclose($handle);
 
         if ($created === 0 && count($errors) > 0) {
             return redirect()
@@ -478,12 +489,12 @@ class AnimalListController extends Controller
     {
         $farmer = $this->resolveFarmerForImport($payload);
         if (! $farmer) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id, farmer_mobile, or exact farmer_name)."];
+            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id, farmer_mobile, or exact farmer_name)."]; 
         }
 
         $animalType = $this->resolveAnimalTypeForImport($payload);
         if (! $animalType) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Animal type not found (use animal_type_id or animal_type_name)."];
+            return ['ok' => false, 'error' => "Row {$rowNo}: Animal type not found (use animal_type_id or animal_type_name)."]; 
         }
 
         $normalized = [
@@ -530,39 +541,54 @@ class AnimalListController extends Controller
             ->whereRaw('LOWER(tag_number) = ?', [Str::lower($normalized['tag_number'])])
             ->exists();
         if ($duplicateTag) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Tag number already exists for this farmer."];
+            return ['ok' => false, 'error' => "Row {$rowNo}: Tag number already exists for this farmer."]; 
         }
 
-        $animalTypeName = $animalType->name ?? 'XX';
-        $animalTypeCode = strtoupper(substr($animalTypeName, 0, 2));
-        $prefix = "C/$animalTypeCode";
-        $lastAnimal = Animal::query()
-            ->where('unique_id', 'like', "$prefix/%")
-            ->latest('id')
-            ->first();
-        $nextNumber = $lastAnimal
-            ? str_pad(((int) substr((string) $lastAnimal->unique_id, -3)) + 1, 3, '0', STR_PAD_LEFT)
-            : '001';
+        $pregnancyImport = $this->buildPregnancyImportPayload($payload, $normalized, $rowNo);
+        if (! $pregnancyImport['ok']) {
+            return ['ok' => false, 'error' => $pregnancyImport['error']];
+        }
 
-        Animal::create([
-            'farmer_id' => $normalized['farmer_id'],
-            'unique_id' => "$prefix/$nextNumber",
-            'animal_name' => $normalized['animal_name'],
-            'tag_number' => $normalized['tag_number'],
-            'animal_type_id' => $normalized['animal_type_id'],
-            'lactation_number' => $normalized['lactation_number'],
-            'ai_date' => $normalized['ai_date'],
-            'breed_name' => $normalized['breed_name'],
-            'age' => Carbon::parse($normalized['birth_date'])->age,
-            'birth_date' => $normalized['birth_date'],
-            'purchase_date' => $normalized['purchase_date'],
-            'gender' => $normalized['gender'],
-            'weight' => $normalized['weight'],
-            'default_milk_per_session' => $normalized['default_milk_per_session'],
-            'lifecycle_status' => $normalized['is_active'] ? 'active' : 'inactive',
-            'is_active' => $normalized['is_active'],
-            'is_for_sale' => false,
-        ]);
+        try {
+            DB::transaction(function () use ($animalType, $normalized, $pregnancyImport) {
+                $animalTypeName = $animalType->name ?? 'XX';
+                $animalTypeCode = strtoupper(substr($animalTypeName, 0, 2));
+                $prefix = "C/$animalTypeCode";
+                $lastAnimal = Animal::query()
+                    ->where('unique_id', 'like', "$prefix/%")
+                    ->latest('id')
+                    ->first();
+                $nextNumber = $lastAnimal
+                    ? str_pad(((int) substr((string) $lastAnimal->unique_id, -3)) + 1, 3, '0', STR_PAD_LEFT)
+                    : '001';
+
+                $animal = Animal::create([
+                    'farmer_id' => $normalized['farmer_id'],
+                    'unique_id' => "$prefix/$nextNumber",
+                    'animal_name' => $normalized['animal_name'],
+                    'tag_number' => $normalized['tag_number'],
+                    'animal_type_id' => $normalized['animal_type_id'],
+                    'lactation_number' => $normalized['lactation_number'],
+                    'ai_date' => $normalized['ai_date'],
+                    'breed_name' => $normalized['breed_name'],
+                    'age' => Carbon::parse($normalized['birth_date'])->age,
+                    'birth_date' => $normalized['birth_date'],
+                    'purchase_date' => $normalized['purchase_date'],
+                    'gender' => $normalized['gender'],
+                    'weight' => $normalized['weight'],
+                    'default_milk_per_session' => $normalized['default_milk_per_session'],
+                    'lifecycle_status' => $normalized['is_active'] ? 'active' : 'inactive',
+                    'is_active' => $normalized['is_active'],
+                    'is_for_sale' => false,
+                ]);
+
+                if (is_array($pregnancyImport['data'])) {
+                    $this->createImportedPregnancyRecord($animal, $pregnancyImport['data']);
+                }
+            });
+        } catch (\Throwable $exception) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: ".$exception->getMessage()];
+        }
 
         return ['ok' => true];
     }
@@ -620,6 +646,19 @@ class AnimalListController extends Controller
         $raw = trim((string) $value);
         if ($raw === '') {
             return null;
+        }
+
+        if (is_numeric($raw)) {
+            $excelSerial = (float) $raw;
+            if ($excelSerial > 59 && $excelSerial < 100000) {
+                try {
+                    return Carbon::create(1899, 12, 30, 0, 0, 0)
+                        ->addDays((int) floor($excelSerial))
+                        ->format('Y-m-d');
+                } catch (\Throwable) {
+                    // continue
+                }
+            }
         }
 
         $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'm-d-Y'];
@@ -693,7 +732,7 @@ class AnimalListController extends Controller
         return 'Female';
     }
 
-    private function isCsvRowBlank(array $row): bool
+    private function isImportRowBlank(array $row): bool
     {
         foreach ($row as $cell) {
             if (trim((string) $cell) !== '') {
@@ -701,6 +740,346 @@ class AnimalListController extends Controller
             }
         }
         return true;
+    }
+
+    private function readCsvRows(string $path): array
+    {
+        $handle = fopen($path, 'r');
+        if (! $handle) {
+            throw new \RuntimeException('Unable to read import file.');
+        }
+
+        $rows = [];
+        while (($row = fgetcsv($handle)) !== false) {
+            $rows[] = $row;
+        }
+        fclose($handle);
+
+        return $rows;
+    }
+
+    private function readXlsxRows(string $path): array
+    {
+        if (! class_exists(ZipArchive::class)) {
+            throw new \RuntimeException('Zip extension is not available for Excel import.');
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) {
+            throw new \RuntimeException('Unable to open Excel file.');
+        }
+
+        try {
+            $sheetPath = $this->resolveFirstWorksheetPath($zip);
+            if (! $sheetPath) {
+                throw new \RuntimeException('Worksheet not found in Excel file.');
+            }
+
+            $sheetXml = $zip->getFromName($sheetPath);
+            if ($sheetXml === false) {
+                throw new \RuntimeException('Unable to read worksheet data from Excel file.');
+            }
+
+            return $this->parseXlsxSheetRows($sheetXml, $this->readXlsxSharedStrings($zip));
+        } finally {
+            $zip->close();
+        }
+    }
+
+    private function resolveFirstWorksheetPath(ZipArchive $zip): ?string
+    {
+        $sheetPaths = [];
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+            if (is_string($name) && preg_match('#^xl/worksheets/sheet\\d+\\.xml$#i', $name)) {
+                $sheetPaths[] = $name;
+            }
+        }
+
+        if (empty($sheetPaths)) {
+            return null;
+        }
+
+        sort($sheetPaths, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $sheetPaths[0] ?? null;
+    }
+
+    private function readXlsxSharedStrings(ZipArchive $zip): array
+    {
+        $xmlString = $zip->getFromName('xl/sharedStrings.xml');
+        if ($xmlString === false) {
+            return [];
+        }
+
+        $xml = @simplexml_load_string($xmlString);
+        if (! $xml) {
+            return [];
+        }
+
+        $xml->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $items = $xml->xpath('//a:si') ?: [];
+
+        $strings = [];
+        foreach ($items as $item) {
+            $item->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+            $texts = $item->xpath('.//a:t') ?: [];
+            $strings[] = collect($texts)
+                ->map(fn ($textNode) => (string) $textNode)
+                ->implode('');
+        }
+
+        return $strings;
+    }
+
+    private function parseXlsxSheetRows(string $sheetXml, array $sharedStrings): array
+    {
+        $xml = @simplexml_load_string($sheetXml);
+        if (! $xml) {
+            throw new \RuntimeException('Invalid worksheet XML in Excel file.');
+        }
+
+        $xml->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $rowNodes = $xml->xpath('//a:sheetData/a:row') ?: [];
+
+        $rows = [];
+        foreach ($rowNodes as $rowNode) {
+            $cells = [];
+            $rowNode->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+            $cellNodes = $rowNode->xpath('./a:c') ?: [];
+
+            foreach ($cellNodes as $cellNode) {
+                $reference = (string) $cellNode['r'];
+                $columnIndex = $this->xlsxColumnIndexFromReference($reference);
+                $cells[$columnIndex] = $this->readXlsxCellValue($cellNode, $sharedStrings);
+            }
+
+            if (empty($cells)) {
+                $rows[] = [];
+                continue;
+            }
+
+            ksort($cells);
+            $maxIndex = max(array_keys($cells));
+            $row = array_fill(0, $maxIndex + 1, '');
+            foreach ($cells as $columnIndex => $value) {
+                $row[$columnIndex] = $value;
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    private function xlsxColumnIndexFromReference(string $reference): int
+    {
+        $letters = preg_replace('/[^A-Z]/i', '', strtoupper($reference)) ?: 'A';
+        $index = 0;
+
+        foreach (str_split($letters) as $character) {
+            $index = ($index * 26) + (ord($character) - 64);
+        }
+
+        return max($index - 1, 0);
+    }
+
+    private function readXlsxCellValue(\SimpleXMLElement $cellNode, array $sharedStrings): string
+    {
+        $cellNode->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $type = (string) $cellNode['t'];
+
+        if ($type === 'inlineStr') {
+            $texts = $cellNode->xpath('./a:is//a:t') ?: [];
+            return collect($texts)
+                ->map(fn ($textNode) => (string) $textNode)
+                ->implode('');
+        }
+
+        $value = isset($cellNode->v) ? (string) $cellNode->v : '';
+        if ($type === 's') {
+            return (string) ($sharedStrings[(int) $value] ?? '');
+        }
+
+        if ($type === 'b') {
+            return $value == '1' ? '1' : '0';
+        }
+
+        return $value;
+    }
+
+    private function buildPregnancyImportPayload(array $payload, array $normalized, int $rowNo): array
+    {
+        $statusRaw = $payload['pregnancy_status'] ?? null;
+        $serviceTypeRaw = $payload['pregnancy_service_type'] ?? null;
+        $checkDueRaw = $payload['pregnancy_check_due_date'] ?? null;
+        $notesRaw = $payload['pregnancy_notes'] ?? null;
+
+        $hasPregnancyInput = collect([$statusRaw, $serviceTypeRaw, $checkDueRaw, $notesRaw])
+            ->contains(fn ($value) => $this->hasImportValue($value));
+
+        if (! $hasPregnancyInput) {
+            return ['ok' => true, 'data' => null];
+        }
+
+        if (blank($normalized['ai_date'])) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: AI date is required when pregnancy details are filled."]; 
+        }
+
+        $status = $this->normalizePregnancyStatus($statusRaw);
+        if ($status === '__invalid__') {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_status. Use served, pregnancy_check_due, pregnant, not_pregnant, repeat_heat, aborted, or calved."]; 
+        }
+        $status ??= 'served';
+
+        $serviceType = $this->normalizePregnancyServiceType($serviceTypeRaw);
+        if ($serviceType === '__invalid__') {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_service_type. Use ai or natural."]; 
+        }
+        $serviceType ??= 'ai';
+
+        $checkDueDate = $this->parseDateValue($checkDueRaw);
+        if ($this->hasImportValue($checkDueRaw) && $checkDueDate === null) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_due_date. Use a valid date."]; 
+        }
+
+        $aiDate = Carbon::parse($normalized['ai_date']);
+
+        return [
+            'ok' => true,
+            'data' => [
+                'status' => $status,
+                'service_type' => $serviceType,
+                'pregnancy_check_due_date' => $checkDueDate ?: $aiDate->copy()->addDays(30)->toDateString(),
+                'pregnancy_result' => $this->pregnancyResultForStatus($status),
+                'expected_calving_date' => $aiDate->copy()->addDays(283)->toDateString(),
+                'dry_off_date' => $aiDate->copy()->addDays(223)->toDateString(),
+                'notes' => $this->toNullableString($notesRaw),
+                'is_current' => $this->isCurrentPregnancyStatus($status),
+            ],
+        ];
+    }
+
+    private function createImportedPregnancyRecord(Animal $animal, array $pregnancyData): void
+    {
+        if ($pregnancyData['is_current']) {
+            $this->closeCurrentPregnancyRecords($animal->id);
+        }
+
+        $numbers = $this->nextPregnancyNumbers($animal->id);
+
+        AnimalPregnancy::create([
+            'farmer_id' => $animal->farmer_id,
+            'animal_id' => $animal->id,
+            'pregnancy_no' => $numbers['pregnancy_no'],
+            'service_no' => $numbers['service_no'],
+            'heat_date' => null,
+            'ai_date' => $animal->ai_date,
+            'service_type' => $pregnancyData['service_type'],
+            'bull_name' => null,
+            'semen_no' => null,
+            'doctor_name' => null,
+            'pregnancy_check_due_date' => $pregnancyData['pregnancy_check_due_date'],
+            'pregnancy_check_date' => null,
+            'pregnancy_result' => $pregnancyData['pregnancy_result'],
+            'expected_calving_date' => $pregnancyData['expected_calving_date'],
+            'dry_off_date' => $pregnancyData['dry_off_date'],
+            'calving_date' => null,
+            'status' => $pregnancyData['status'],
+            'calf_animal_id' => null,
+            'notes' => $pregnancyData['notes'],
+            'is_current' => $pregnancyData['is_current'],
+        ]);
+    }
+
+    private function nextPregnancyNumbers(int $animalId): array
+    {
+        $latest = AnimalPregnancy::query()
+            ->where('animal_id', $animalId)
+            ->latest('pregnancy_no')
+            ->latest('service_no')
+            ->latest('id')
+            ->first();
+
+        if (! $latest) {
+            return ['pregnancy_no' => 1, 'service_no' => 1];
+        }
+
+        if ($latest->status === 'calved') {
+            return ['pregnancy_no' => (int) $latest->pregnancy_no + 1, 'service_no' => 1];
+        }
+
+        if (in_array($latest->status, ['not_pregnant', 'repeat_heat', 'aborted'], true)) {
+            return ['pregnancy_no' => (int) $latest->pregnancy_no, 'service_no' => (int) $latest->service_no + 1];
+        }
+
+        return ['pregnancy_no' => (int) $latest->pregnancy_no, 'service_no' => (int) $latest->service_no + 1];
+    }
+
+    private function closeCurrentPregnancyRecords(int $animalId): void
+    {
+        AnimalPregnancy::query()
+            ->where('animal_id', $animalId)
+            ->where('is_current', true)
+            ->update(['is_current' => false]);
+    }
+
+    private function pregnancyResultForStatus(string $status): string
+    {
+        return match ($status) {
+            'pregnant', 'calved' => 'pregnant',
+            'not_pregnant', 'repeat_heat' => 'not_pregnant',
+            default => 'pending',
+        };
+    }
+
+    private function isCurrentPregnancyStatus(string $status): bool
+    {
+        return in_array($status, ['served', 'pregnancy_check_due', 'pregnant'], true);
+    }
+
+    private function normalizePregnancyStatus(?string $value): ?string
+    {
+        $text = Str::of((string) $value)
+            ->trim()
+            ->lower()
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->value();
+
+        return match ($text) {
+            '', 'na', 'n/a', 'none', 'no' => null,
+            'served' => 'served',
+            'pregnancy check due', 'check due', 'due' => 'pregnancy_check_due',
+            'pregnant' => 'pregnant',
+            'not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant' => 'not_pregnant',
+            'repeat heat', 'repeatheat' => 'repeat_heat',
+            'aborted', 'abortion' => 'aborted',
+            'calved', 'calving' => 'calved',
+            default => '__invalid__',
+        };
+    }
+
+    private function normalizePregnancyServiceType(?string $value): ?string
+    {
+        $text = Str::of((string) $value)
+            ->trim()
+            ->lower()
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->value();
+
+        return match ($text) {
+            '', 'na', 'n/a', 'none' => null,
+            'ai', 'artificial', 'artificial insemination' => 'ai',
+            'natural', 'natural service' => 'natural',
+            default => '__invalid__',
+        };
+    }
+
+    private function hasImportValue($value): bool
+    {
+        return trim((string) $value) !== '';
     }
 
     private function isMilkingAnimalTypeName(string $typeName): bool
