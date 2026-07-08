@@ -43,15 +43,15 @@
                     <option value="all">All Columns</option>
                     <option value="farmer">Farmer</option>
                     <option value="cow">Cow</option>
-                    <option value="pregnancy-no">Pregnancy No</option>
-                    <option value="service-no">Service No</option>
-                    <option value="ai-date">AI Date</option>
-                    <option value="check-due">Check Due</option>
-                    <option value="expected-calving">Expected Calving</option>
-                    <option value="result">Result</option>
-                    <option value="status">Status</option>
-                    <option value="current">Current</option>
-                    <option value="notes">Notes</option>
+                    <option value="lactation-no">Lactation No</option>
+<option value="ai-date">AI Date</option>
+<option value="check-due">Check Due</option>
+<option value="expected-calving">Expected Calving</option>
+<option value="status">Status</option>
+<option value="delivery-date">Delivery Date</option>
+<option value="breed-name">Breed Name</option>
+<option value="abort-date">Abort Date</option>
+<option value="abort-reason">Abort Reason</option>
                 </select>
                 <input type="text" id="pregnancySearch" class="form-control" placeholder="Search selected field..." style="width:280px;">
                 <button type="button" class="btn btn-light border" onclick="exportTableToPdf('pregnancyTableExport', 'Pregnancy Records')" title="Download PDF">
@@ -78,15 +78,15 @@
                             <th>#</th>
                             <th>Farmer</th>
                             <th>Cow</th>
-                            <th>Pregnancy No</th>
-                            <th>Service No</th>
-                            <th>AI Date</th>
-                            <th>Check Due</th>
-                            <th>Expected Calving</th>
-                            <th>Result</th>
-                            <th>Status</th>
-                            <th>Current</th>
-                            <th>Notes</th>
+                            <th>Lactation No</th>
+<th>AI Date</th>
+<th>Check Due</th>
+<th>Expected Calving</th>
+<th>Status</th>
+<th>Delivery Date</th>
+<th>Breed Name</th>
+<th>Abort Date</th>
+<th>Abort Reason</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -95,38 +95,29 @@
                         @php
                             $farmerName = trim(($record->farmer->first_name ?? '').' '.($record->farmer->last_name ?? ''));
                             $animalName = trim(($record->animal->animal_name ?? '').' '.(!empty($record->animal->tag_number) ? '(Tag: '.$record->animal->tag_number.')' : ''));
-                            $pregnancyNo = (string) ($record->pregnancy_no ?? '-');
-                            $serviceNo = (string) ($record->service_no ?? '-');
-                            $aiDate = optional($record->ai_date)->format('d-m-Y') ?: '-';
+                            $lactationNo = (string) ($record->animal->lactation_number ?? '-');
+$aiDate = optional($record->ai_date)->format('d-m-Y') ?: '-';
                             $checkDue = optional($record->pregnancy_check_due_date)->format('d-m-Y') ?: '-';
                             $shouldShowExpectedCalving = in_array($record->pregnancy_result, ['pending', 'pregnant'], true)
                                 && !in_array($record->status, ['not_pregnant', 'repeat_heat', 'aborted'], true);
                             $expectedCalving = $shouldShowExpectedCalving
                                 ? (optional($record->expected_calving_date)->format('d-m-Y') ?: '-')
                                 : '-';
-                            $resultRaw = strtolower((string) ($record->pregnancy_result ?? ''));
                             $statusRaw = strtolower((string) ($record->status ?? ''));
-                            $result = str_replace('_', ' ', ucfirst($record->pregnancy_result));
-                            $status = str_replace('_', ' ', ucfirst($record->status));
-                            $current = $record->is_current ? 'Yes' : 'No';
-                            $notes = $record->notes ?: '-';
-                            $resultAliases = [
-                                $resultRaw,
-                                str_replace('_', ' ', $resultRaw),
-                                str_replace('_', '', $resultRaw),
-                            ];
+$status = $statusRaw === 'calved'
+    ? 'Delivery'
+    : str_replace('_', ' ', ucfirst($record->status));
+
+$deliveryDate = optional($record->calving_date)->format('d-m-Y') ?: '-';
+$breedName = $record->animal->breed_name ?? '-';
+$abortDate = optional($record->abort_date)->format('d-m-Y') ?: '-';
+$abortReason = $record->abort_reason ?: '-';
+                           
                             $statusAliases = [
                                 $statusRaw,
                                 str_replace('_', ' ', $statusRaw),
                                 str_replace('_', '', $statusRaw),
-                            ];
-
-                            if ($resultRaw === 'not_pregnant') {
-                                $resultAliases = array_merge($resultAliases, ['not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant', 'non preganant']);
-                            }
-                            if ($resultRaw === 'pregnant') {
-                                $resultAliases = array_merge($resultAliases, ['preganant']);
-                            }
+                            ];                            
 
                             if ($statusRaw === 'not_pregnant') {
                                 $statusAliases = array_merge($statusAliases, ['not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant', 'non preganant']);
@@ -135,6 +126,14 @@
                                 $statusAliases = array_merge($statusAliases, ['preganant']);
                             }
 
+                            if ($statusRaw === 'calved') {
+    $statusAliases = array_merge($statusAliases, ['delivery', 'delivered', 'calved']);
+}
+
+if ($statusRaw === 'aborted') {
+    $statusAliases = array_merge($statusAliases, ['abort', 'aborted']);
+}
+
                             if ($statusRaw === 'pregnancy_check_due') {
                                 $statusAliases = array_merge($statusAliases, ['pregnancy check due', 'check due']);
                             }
@@ -142,52 +141,49 @@
                             if ($statusRaw === 'repeat_heat') {
                                 $statusAliases = array_merge($statusAliases, ['repeat heat', 'repeatheat']);
                             }
-
-                            $resultSearch = strtolower(implode('|', array_values(array_unique(array_filter($resultAliases)))));
+                           
                             $statusSearch = strtolower(implode('|', array_values(array_unique(array_filter($statusAliases)))));
                             $allSearch = strtolower(implode(' ', [
                                 $farmerName,
                                 $animalName,
-                                $pregnancyNo,
-                                $serviceNo,
-                                $aiDate,
-                                $checkDue,
-                                $expectedCalving,
-                                $result,
-                                $status,
-                                str_replace('|', ' ', $resultSearch),
-                                str_replace('|', ' ', $statusSearch),
-                                $current,
-                                $notes,
+                                $lactationNo,
+$aiDate,
+$checkDue,
+$expectedCalving,
+$status,
+str_replace('|', ' ', $statusSearch),
+$deliveryDate,
+$breedName,
+$abortDate,
+$abortReason,
                             ]));
                         @endphp
                         <tr class="pregnancy-row"
                             data-all="{{ $allSearch }}"
                             data-farmer="{{ strtolower($farmerName) }}"
                             data-cow="{{ strtolower($animalName) }}"
-                            data-pregnancy-no="{{ strtolower($pregnancyNo) }}"
-                            data-service-no="{{ strtolower($serviceNo) }}"
-                            data-ai-date="{{ strtolower($aiDate) }}"
-                            data-check-due="{{ strtolower($checkDue) }}"
-                            data-expected-calving="{{ strtolower($expectedCalving) }}"
-                            data-result="{{ strtolower($result) }}"
-                            data-result-search="{{ $resultSearch }}"
-                            data-status="{{ strtolower($status) }}"
-                            data-status-search="{{ $statusSearch }}"
-                            data-current="{{ strtolower($current) }}"
-                            data-notes="{{ strtolower($notes) }}">
+                           data-lactation-no="{{ strtolower($lactationNo) }}"
+data-ai-date="{{ strtolower($aiDate) }}"
+data-check-due="{{ strtolower($checkDue) }}"
+data-expected-calving="{{ strtolower($expectedCalving) }}"
+data-status="{{ strtolower($status) }}"
+data-status-search="{{ $statusSearch }}"
+data-delivery-date="{{ strtolower($deliveryDate) }}"
+data-breed-name="{{ strtolower($breedName) }}"
+data-abort-date="{{ strtolower($abortDate) }}"
+data-abort-reason="{{ strtolower($abortReason) }}">
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $farmerName ?: '-' }}</td>
                             <td>{{ $animalName ?: '-' }}</td>
-                            <td>{{ $record->pregnancy_no }}</td>
-                            <td>{{ $record->service_no }}</td>
-                            <td>{{ $aiDate }}</td>
-                            <td>{{ $checkDue }}</td>
-                            <td>{{ $expectedCalving }}</td>
-                            <td><span class="badge bg-light text-dark">{{ $result }}</span></td>
-                            <td><span class="badge bg-success-subtle text-success">{{ $status }}</span></td>
-                            <td>{{ $current }}</td>
-                            <td>{{ $notes }}</td>
+                            <td>{{ $lactationNo }}</td>
+<td>{{ $aiDate }}</td>
+<td>{{ $checkDue }}</td>
+<td>{{ $expectedCalving }}</td>
+<td><span class="badge bg-success-subtle text-success">{{ $status }}</span></td>
+<td>{{ $deliveryDate }}</td>
+<td>{{ $breedName }}</td>
+<td>{{ $abortDate }}</td>
+<td>{{ $abortReason }}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     @perm('pregnancy.edit')
@@ -220,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const input = document.getElementById('pregnancySearch');
     const field = document.getElementById('pregnancySearchField');
     if (!input || !field) return;
-    const exactAliasFields = new Set(['status', 'result']);
+    const exactAliasFields = new Set(['status']);
 
     function normalizeTerm(value) {
         return (value || '')
