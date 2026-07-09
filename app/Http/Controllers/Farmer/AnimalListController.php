@@ -147,7 +147,7 @@ class AnimalListController extends Controller
                     }
 
                     $animal->update(['pan_id' => $pan->id]);
-                    $this->logPanTransferHistory($animal->fresh(), $fromPanId, $pan->id, 'Assigned in admin Pen creation.');
+                    $this->logPanTransferHistory($animal, $fromPanId, $pan->id, 'Assigned in admin Pen creation.');
                 }
             });
         } catch (\Throwable $exception) {
@@ -187,7 +187,7 @@ class AnimalListController extends Controller
         $fromPanId = $animal->pan_id;
         $animal->update(['pan_id' => $toPan->id]);
         $this->logPanTransferHistory(
-            $animal->fresh(),
+            $animal,
             $fromPanId,
             $toPan->id,
             $data['notes'] ?? 'Transferred from admin Pen list.'

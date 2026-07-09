@@ -267,6 +267,88 @@ document.addEventListener('DOMContentLoaded', function () {
     const initialFeedTypeId = @json((string) old('feed_type_id', $plan->feed_type_id ?? ''));
     const initialSubtypeDetails = @json(old('subtype_details', $plan->subtype_details ?? []));
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function getSelectedFarmerId() {
+        return editForm?.querySelector('.diet-plan-farmer')?.value || '';
+    }
+
+    function findFeedType(typeId) {
+        return feedTypes.find((item) => String(item.id) === String(typeId));
+    }
+
+    function availableSubtypesForType(typeId) {
+        const type = findFeedType(typeId);
+        if (!type) {
+            return [];
+        }
+
+        const selectedFarmerId = getSelectedFarmerId();
+        return Array.isArray(type.subtypes)
+            ? type.subtypes.filter((subtype) => {
+                const subtypeFarmerId = String(subtype?.farmer_id || '');
+                return subtypeFarmerId === '' || (selectedFarmerId !== '' && subtypeFarmerId === selectedFarmerId);
+            })
+            : [];
+    }
+
+    function normalizedSubtypeDetails(details) {
+        return Array.isArray(details)
+            ? details.map((item) => ({
+                subtype_id: String(item?.subtype_id || item?.id || '').trim(),
+                name: String(item?.name || '').trim().toLowerCase(),
+                quantity: String(item?.quantity || ''),
+                dm_percent: String(item?.dm_percent || ''),
+            })).filter((item) => item.subtype_id !== '' || item.name !== '')
+            : [];
+    }
+
+    function findSubtypeMatch(detailMap, subtypeId, name) {
+        return detailMap.find((item) => {
+            if (subtypeId && item.subtype_id) {
+                return item.subtype_id === subtypeId;
+            }
+            return item.name === name;
+        });
+    }
+
+    function captureBlockSubtypeState(block) {
+        const details = [];
+        block.querySelectorAll('.diet-subtype-card').forEach((card) => {
+            const checkbox = card.querySelector('.diet-subtype-check');
+            if (!checkbox || !checkbox.checked) {
+                return;
+            }
+
+            details.push({
+                subtype_id: String(card.getAttribute('data-subtype-id') || '').trim(),
+                name: String(card.getAttribute('data-name') || '').trim(),
+                quantity: card.querySelector('.diet-subtype-qty')?.value || '',
+                dm_percent: card.querySelector('.diet-subtype-dm')?.value || '',
+            });
+        });
+        return details;
+    }
+
+    function rerenderAllFeedBlocks() {
+        feedBlocksContainer?.querySelectorAll('.diet-block').forEach((block) => {
+            const typeSelect = block.querySelector('.diet-feed-type-select');
+            if (!typeSelect) {
+                return;
+            }
+
+            const currentDetails = captureBlockSubtypeState(block);
+            renderSubtypeCards(block, typeSelect.value, currentDetails);
+        });
+    }
+
     function syncTargetOptions(form) {
         if (!form) return;
 
@@ -398,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const unitInput = document.getElementById('dietPlanUnit');
         if (unitInput) {
             const selectedType = editForm.querySelector('.diet-feed-type-select');
-            const type = feedTypes.find((item) => String(item.id) === String(selectedType?.value || ''));
+            const type = findFeedType(selectedType?.value || '');
             unitInput.value = type?.default_unit || 'Kg';
         }
 
@@ -415,21 +497,29 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!editForm) return;
 
         const fields = [];
-        feedBlocksContainer?.querySelectorAll('.diet-subtype-card').forEach((card) => {
-            const checkbox = card.querySelector('.diet-subtype-check');
-            if (!checkbox || !checkbox.checked) {
-                return;
-            }
-            const name = card.getAttribute('data-name') || '';
-            const qty = card.querySelector('.diet-subtype-qty')?.value || '';
-            const dm = card.querySelector('.diet-subtype-dm')?.value || '';
-            fields.push({ name, quantity: qty, dm_percent: dm });
+        feedBlocksContainer?.querySelectorAll('.diet-block').forEach((block) => {
+            const feedTypeId = block.querySelector('.diet-feed-type-select')?.value || '';
+            block.querySelectorAll('.diet-subtype-card').forEach((card) => {
+                const checkbox = card.querySelector('.diet-subtype-check');
+                if (!checkbox || !checkbox.checked) {
+                    return;
+                }
+
+                fields.push({
+                    subtype_id: card.getAttribute('data-subtype-id') || '',
+                    feed_type_id: card.getAttribute('data-feed-type-id') || feedTypeId,
+                    farmer_id: card.getAttribute('data-farmer-id') || '',
+                    name: card.getAttribute('data-name') || '',
+                    quantity: card.querySelector('.diet-subtype-qty')?.value || '',
+                    dm_percent: card.querySelector('.diet-subtype-dm')?.value || '',
+                });
+            });
         });
 
         editForm.querySelectorAll('input[name^="subtype_details["]').forEach((input) => input.remove());
 
         fields.forEach((item, index) => {
-            ['name', 'quantity', 'dm_percent'].forEach((key) => {
+            ['subtype_id', 'feed_type_id', 'farmer_id', 'name', 'quantity', 'dm_percent'].forEach((key) => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = `subtype_details[${index}][${key}]`;
@@ -451,23 +541,14 @@ document.addEventListener('DOMContentLoaded', function () {
             '<option value="">Select feed type</option>',
             ...feedTypes
                 .filter((type) => currentValue === String(type.id) || !taken.includes(String(type.id)))
-                .map((type) => `<option value="${type.id}" ${currentValue === String(type.id) ? 'selected' : ''}>${type.name}</option>`),
+                .map((type) => `<option value="${type.id}" ${currentValue === String(type.id) ? 'selected' : ''}>${escapeHtml(type.name)}</option>`),
         ].join('');
-    }
-
-    function normalizedSubtypeDetails(details) {
-        return Array.isArray(details)
-            ? details.map((item) => ({
-                name: String(item?.name || '').trim().toLowerCase(),
-                quantity: String(item?.quantity || ''),
-                dm_percent: String(item?.dm_percent || ''),
-            }))
-            : [];
     }
 
     function renderSubtypeCards(block, typeId, initialDetails = []) {
         const container = block.querySelector('.diet-subtypes-wrap');
-        const type = feedTypes.find((item) => String(item.id) === String(typeId));
+        const type = findFeedType(typeId);
+        const subtypes = availableSubtypesForType(typeId);
 
         if (!container) return;
         if (!type) {
@@ -477,36 +558,59 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        container.innerHTML = type.subtypes.map((subtype) => `
-            <div class="col-md-6">
-                <div class="diet-subtype-card" data-name="${subtype.name}">
-                    <div class="d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <div class="diet-subtype-name">${subtype.name}</div>
-                            <div class="diet-subtype-meta">Enter quantity and DM %</div>
+        if (!subtypes.length) {
+            container.innerHTML = `
+                <div class="col-12">
+                    <div class="diet-subtype-card text-muted small">No subtypes available for the selected feed type and farmer.</div>
+                </div>
+            `;
+            updateSummary();
+            refreshSubtypeNames();
+            return;
+        }
+
+        container.innerHTML = subtypes.map((subtype) => {
+            const subtypeId = String(subtype?.id || '');
+            const subtypeFarmerId = subtype?.farmer_id ? String(subtype.farmer_id) : '';
+            const feedTypeId = String(subtype?.feed_type_id || typeId || '');
+            const subtypeName = String(subtype?.name || '');
+
+            return `
+                <div class="col-md-6">
+                    <div class="diet-subtype-card"
+                        data-subtype-id="${escapeHtml(subtypeId)}"
+                        data-feed-type-id="${escapeHtml(feedTypeId)}"
+                        data-farmer-id="${escapeHtml(subtypeFarmerId)}"
+                        data-name="${escapeHtml(subtypeName)}">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div>
+                                <div class="diet-subtype-name">${escapeHtml(subtypeName)}</div>
+                                <div class="diet-subtype-meta">Enter quantity and DM %</div>
+                            </div>
+                            <div class="form-check m-0">
+                                <input class="form-check-input diet-subtype-check" type="checkbox">
+                            </div>
                         </div>
-                        <div class="form-check m-0">
-                            <input class="form-check-input diet-subtype-check" type="checkbox">
-                        </div>
-                    </div>
-                    <div class="row g-2 mt-1">
-                        <div class="col-6">
-                            <label class="form-label small mb-1">Quantity</label>
-                            <input type="number" step="0.01" min="0" class="form-control form-control-sm diet-subtype-qty">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small mb-1">DM %</label>
-                            <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm diet-subtype-dm">
+                        <div class="row g-2 mt-1">
+                            <div class="col-6">
+                                <label class="form-label small mb-1">Quantity</label>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm diet-subtype-qty">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1">DM %</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm diet-subtype-dm">
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         const detailMap = normalizedSubtypeDetails(initialDetails);
         container.querySelectorAll('.diet-subtype-card').forEach((card) => {
+            const subtypeId = String(card.getAttribute('data-subtype-id') || '').trim();
             const name = String(card.getAttribute('data-name') || '').trim().toLowerCase();
-            const match = detailMap.find((item) => item.name === name);
+            const match = findSubtypeMatch(detailMap, subtypeId, name);
             if (!match) {
                 return;
             }
@@ -539,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const removeBtn = block.querySelector('.diet-remove-block');
         if (typeSelect) {
             typeSelect.addEventListener('change', function () {
-                renderSubtypeCards(block, typeSelect.value, []);
+                renderSubtypeCards(block, typeSelect.value, captureBlockSubtypeState(block));
                 feedBlocksContainer.querySelectorAll('.diet-feed-type-select').forEach((select) => {
                     const current = select.value;
                     select.innerHTML = feedTypeOptionsMarkup(current);
@@ -606,6 +710,7 @@ document.addEventListener('DOMContentLoaded', function () {
     farmerSelect?.addEventListener('change', function () {
         syncTargetOptions(editForm);
         syncContextSelection('');
+        rerenderAllFeedBlocks();
         updateSummary();
     });
     syncTargetOptions(editForm);

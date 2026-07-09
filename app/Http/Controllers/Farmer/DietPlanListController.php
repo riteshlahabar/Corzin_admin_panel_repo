@@ -7,6 +7,7 @@ use App\Models\Farmer\Animal;
 use App\Models\Farmer\Farmer;
 use App\Models\Farmer\FarmerPan;
 use App\Models\Farmer\FeedType;
+use App\Models\Farmer\FeedSubtype;
 use App\Models\Farmer\FeedDietPlan;
 use App\Models\Farmer\MilkProduction;
 use Carbon\Carbon;
@@ -214,6 +215,9 @@ class DietPlanListController extends Controller
             'unit' => ['required', 'string', 'max:30'],
             'subtype_details_text' => ['nullable', 'string'],
             'subtype_details' => ['nullable', 'array'],
+            'subtype_details.*.subtype_id' => ['nullable', 'integer', 'exists:feed_subtypes,id'],
+            'subtype_details.*.feed_type_id' => ['nullable', 'integer', 'exists:feed_types,id'],
+            'subtype_details.*.farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
             'subtype_details.*.name' => ['nullable', 'string', 'max:255'],
             'subtype_details.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'subtype_details.*.dm_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -232,6 +236,9 @@ class DietPlanListController extends Controller
             'unit' => ['required', 'string', 'max:30'],
             'subtype_details_text' => ['nullable', 'string'],
             'subtype_details' => ['nullable', 'array'],
+            'subtype_details.*.subtype_id' => ['nullable', 'integer', 'exists:feed_subtypes,id'],
+            'subtype_details.*.feed_type_id' => ['nullable', 'integer', 'exists:feed_types,id'],
+            'subtype_details.*.farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
             'subtype_details.*.name' => ['nullable', 'string', 'max:255'],
             'subtype_details.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'subtype_details.*.dm_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -254,6 +261,9 @@ class DietPlanListController extends Controller
             'unit' => ['required', 'string', 'max:30'],
             'subtype_details_text' => ['nullable', 'string'],
             'subtype_details' => ['nullable', 'array'],
+            'subtype_details.*.subtype_id' => ['nullable', 'integer', 'exists:feed_subtypes,id'],
+            'subtype_details.*.feed_type_id' => ['nullable', 'integer', 'exists:feed_types,id'],
+            'subtype_details.*.farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
             'subtype_details.*.name' => ['nullable', 'string', 'max:255'],
             'subtype_details.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'subtype_details.*.dm_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -278,21 +288,30 @@ class DietPlanListController extends Controller
             ->with('farmer')
             ->orderBy('name')
             ->get();
+        $subtypesByTypeId = FeedSubtype::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'feed_type_id', 'farmer_id', 'name'])
+            ->groupBy('feed_type_id');
         $feedTypes = FeedType::query()
-            ->with(['subtypes' => fn ($query) => $query->where('is_active', true)])
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
         $feedTypesJson = $feedTypes
-            ->map(function ($type) {
+            ->map(function (FeedType $type) use ($subtypesByTypeId) {
+                $availableSubtypes = $subtypesByTypeId->get($type->id, collect());
+
                 return [
-                    'id' => $type->id,
+                    'id' => (int) $type->id,
                     'name' => $type->name,
                     'default_unit' => $type->default_unit ?: 'Kg',
-                    'subtypes' => $type->subtypes
-                        ->map(function ($subtype) {
+                    'subtypes' => $availableSubtypes
+                        ->map(function (FeedSubtype $subtype) {
                             return [
-                                'id' => $subtype->id,
+                                'id' => (int) $subtype->id,
+                                'feed_type_id' => (int) $subtype->feed_type_id,
+                                'farmer_id' => $subtype->farmer_id ? (int) $subtype->farmer_id : null,
                                 'name' => $subtype->name,
                             ];
                         })
@@ -495,6 +514,9 @@ class DietPlanListController extends Controller
     {
         $structured = collect((array) $request->input('subtype_details', []))
             ->map(function ($item) {
+                $subtypeId = (int) data_get($item, 'subtype_id', 0);
+                $feedTypeId = (int) data_get($item, 'feed_type_id', 0);
+                $farmerId = (int) data_get($item, 'farmer_id', 0);
                 $name = trim((string) data_get($item, 'name', ''));
                 $quantity = round((float) data_get($item, 'quantity', 0), 2);
                 $dmPercent = round((float) data_get($item, 'dm_percent', 0), 2);
@@ -503,12 +525,26 @@ class DietPlanListController extends Controller
                     return null;
                 }
 
-                return [
+                $payload = [
                     'name' => $name,
                     'quantity' => $quantity,
                     'dm_percent' => $dmPercent,
                     'dry_matter_quantity' => round(($quantity * $dmPercent) / 100, 2),
                 ];
+
+                if ($subtypeId > 0) {
+                    $payload['subtype_id'] = $subtypeId;
+                }
+
+                if ($feedTypeId > 0) {
+                    $payload['feed_type_id'] = $feedTypeId;
+                }
+
+                if ($farmerId > 0) {
+                    $payload['farmer_id'] = $farmerId;
+                }
+
+                return $payload;
             })
             ->filter()
             ->values()
