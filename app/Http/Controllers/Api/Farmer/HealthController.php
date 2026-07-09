@@ -652,7 +652,7 @@ public function dmiList(Request $request, $farmerId)
         return str_contains($typeName, 'milking')
             && ! str_contains($typeName, 'non')
             && ! str_contains($typeName, 'dry')
-            && ! str_contains($typeName, 'calf')
+            && ! str_contains($typeName, 'calves')
             && ! str_contains($typeName, 'heifer');
     }
 
@@ -661,7 +661,7 @@ public function dmiList(Request $request, $farmerId)
         return str_contains($typeName, 'non')
             || str_contains($typeName, 'dry')
             || str_contains($typeName, 'heifer')
-            || str_contains($typeName, 'calf')
+            || str_contains($typeName, 'calves')
             || str_contains($typeName, 'bull');
     }
 
