@@ -74,8 +74,8 @@ class AnimalListController extends Controller
         $milkShifts = $panType === 'non_milking'
             ? []
             : collect($data['milk_shifts'] ?? ['Morning', 'Afternoon', 'Evening'])
-                ->map(fn ($item) => trim((string) $item))
-                ->filter(fn ($item) => in_array($item, ['Morning', 'Afternoon', 'Evening'], true))
+                ->map(fn($item) => trim((string) $item))
+                ->filter(fn($item) => in_array($item, ['Morning', 'Afternoon', 'Evening'], true))
                 ->unique()
                 ->values()
                 ->all();
@@ -88,7 +88,7 @@ class AnimalListController extends Controller
         }
 
         $animalIds = collect($data['animal_ids'] ?? [])
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->unique()
             ->values();
 
@@ -105,7 +105,7 @@ class AnimalListController extends Controller
 
             $invalidAnimals = $selectedAnimals->filter(function (Animal $animal) use ($panType) {
                 $isMilking = $this->isMilkingAnimalTypeName((string) optional($animal->animalType)->name);
-                return $panType === 'milking' ? ! $isMilking : $isMilking;
+                return $panType === 'milking' ? !$isMilking : $isMilking;
             });
 
             if ($selectedAnimals->count() !== $animalIds->count() || $invalidAnimals->isNotEmpty()) {
@@ -153,7 +153,7 @@ class AnimalListController extends Controller
         } catch (\Throwable $exception) {
             return redirect()
                 ->route('farmer.pans')
-                ->with('error', 'Failed to create Pen. '.$exception->getMessage());
+                ->with('error', 'Failed to create Pen. ' . $exception->getMessage());
         }
 
         return redirect()->route('farmer.pans')->with('success', 'Pen created successfully.');
@@ -176,7 +176,7 @@ class AnimalListController extends Controller
             ->where('farmer_id', $animal->farmer_id)
             ->first();
 
-        if (! $toPan) {
+        if (!$toPan) {
             return redirect()->route('farmer.pans')->with('error', 'Destination Pen not found for this farmer.');
         }
 
@@ -248,26 +248,64 @@ class AnimalListController extends Controller
             'weight',
             'default_milk_per_session',
             'is_active',
-           'pregnancy_status',
-'pregnancy_service_type',
-'pregnancy_check_due_date',
-'pregnancy_check_date',
-'delivery_date',
-'abort_date',
-'abort_reason',
-'pregnancy_notes',
+            'pregnancy_status',
+            'pregnancy_service_type',
+            'pregnancy_check_due_date',
+            'pregnancy_check_date',
+            'delivery_date',
+            'abort_date',
+            'abort_reason',
+            'pregnancy_notes',
         ];
 
         $sampleRows = [
             [
-                '9876543210', 'Ritesh Deshmukh', 'Rani', 'TAG1001', 'Milking Cows',
-                '2', '15/05/2026', 'HF', '10/01/2023', '12/01/2024', 'Female',
-                '450', '8.5', '1', 'pregnant', 'ai', '15/06/2026', '', '', '', '', 'Imported pregnancy record',
+                '9876543210',
+                'Ritesh Deshmukh',
+                'Rani',
+                'TAG1001',
+                'Milking Cows',
+                '2',
+                '15/05/2026',
+                'HF',
+                '10/01/2023',
+                '12/01/2024',
+                'Female',
+                '450',
+                '8.5',
+                '1',
+                'pregnant',
+                'ai',
+                '15/06/2026',
+                '',
+                '',
+                '',
+                '',
+                'Imported pregnancy record',
             ],
             [
-                '9876543210', 'Ritesh Deshmukh', 'Gauri', 'TAG1002', 'Dry Cows',
-                '1', '', 'Jersey', '08/03/2022', '15/03/2023', 'Female',
-                '390', '', '1', '', '', '', '', '', '', '', '',
+                '9876543210',
+                'Ritesh Deshmukh',
+                'Gauri',
+                'TAG1002',
+                'Dry Cows',
+                '1',
+                '',
+                'Jersey',
+                '08/03/2022',
+                '15/03/2023',
+                'Female',
+                '390',
+                '',
+                '1',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
             ],
         ];
 
@@ -311,18 +349,18 @@ class AnimalListController extends Controller
         }
 
         $header = array_shift($rows);
-        if (! is_array($header) || empty($header)) {
+        if (!is_array($header) || empty($header)) {
             return redirect()->route('farmer.animals')->with('error', 'Invalid template format.');
         }
 
         $headerMap = collect($header)
-            ->map(fn ($item) => Str::lower(ltrim(trim((string) $item), "\xEF\xBB\xBF")))
+            ->map(fn($item) => Str::lower(ltrim(trim((string) $item), "\xEF\xBB\xBF")))
             ->values()
             ->all();
 
         $requiredColumns = ['animal_name', 'tag_number', 'birth_date'];
         foreach ($requiredColumns as $column) {
-            if (! in_array($column, $headerMap, true)) {
+            if (!in_array($column, $headerMap, true)) {
                 return redirect()
                     ->route('farmer.animals')
                     ->with('error', "Missing required column in file: {$column}");
@@ -335,7 +373,7 @@ class AnimalListController extends Controller
 
         foreach ($rows as $row) {
             $rowNo++;
-            if (! is_array($row) || $this->isImportRowBlank($row)) {
+            if (!is_array($row) || $this->isImportRowBlank($row)) {
                 continue;
             }
 
@@ -461,7 +499,7 @@ class AnimalListController extends Controller
 
     public function toggle(Animal $animal)
     {
-        $nextActive = ! $animal->is_active;
+        $nextActive = !$animal->is_active;
 
         $animal->update([
             'is_active' => $nextActive,
@@ -473,12 +511,12 @@ class AnimalListController extends Controller
 
     private function storeImage(Request $request, ?string $currentImage = null): ?string
     {
-        if (! $request->hasFile('image')) {
+        if (!$request->hasFile('image')) {
             return $currentImage;
         }
 
         $directory = public_path('assets/animal_images');
-        if (! is_dir($directory)) {
+        if (!is_dir($directory)) {
             mkdir($directory, 0755, true);
         }
 
@@ -492,13 +530,13 @@ class AnimalListController extends Controller
     private function importAnimalRow(array $payload, int $rowNo): array
     {
         $farmer = $this->resolveFarmerForImport($payload);
-        if (! $farmer) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id, farmer_mobile, or exact farmer_name)."]; 
+        if (!$farmer) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Farmer not found (use farmer_id, farmer_mobile, or exact farmer_name)."];
         }
 
         $animalType = $this->resolveAnimalTypeForImport($payload);
-        if (! $animalType) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Animal type not found (use animal_type_id or animal_type_name)."]; 
+        if (!$animalType) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Animal type not found (use animal_type_id or animal_type_name)."];
         }
 
         $normalized = [
@@ -536,7 +574,7 @@ class AnimalListController extends Controller
         if ($validator->fails()) {
             return [
                 'ok' => false,
-                'error' => "Row {$rowNo}: ".collect($validator->errors()->all())->implode(' | '),
+                'error' => "Row {$rowNo}: " . collect($validator->errors()->all())->implode(' | '),
             ];
         }
 
@@ -545,11 +583,11 @@ class AnimalListController extends Controller
             ->whereRaw('LOWER(tag_number) = ?', [Str::lower($normalized['tag_number'])])
             ->exists();
         if ($duplicateTag) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Tag number already exists for this farmer."]; 
+            return ['ok' => false, 'error' => "Row {$rowNo}: Tag number already exists for this farmer."];
         }
 
         $pregnancyImport = $this->buildPregnancyImportPayload($payload, $normalized, $rowNo);
-        if (! $pregnancyImport['ok']) {
+        if (!$pregnancyImport['ok']) {
             return ['ok' => false, 'error' => $pregnancyImport['error']];
         }
 
@@ -591,7 +629,7 @@ class AnimalListController extends Controller
                 }
             });
         } catch (\Throwable $exception) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: ".$exception->getMessage()];
+            return ['ok' => false, 'error' => "Row {$rowNo}: " . $exception->getMessage()];
         }
 
         return ['ok' => true];
@@ -605,7 +643,7 @@ class AnimalListController extends Controller
         }
 
         $mobile = preg_replace('/\D+/', '', (string) ($payload['farmer_mobile'] ?? ''));
-        if (! blank($mobile)) {
+        if (!blank($mobile)) {
             return Farmer::query()->where('mobile', $mobile)->first();
         }
 
@@ -703,7 +741,7 @@ class AnimalListController extends Controller
         if ($text === '') {
             return null;
         }
-        if (! is_numeric($text)) {
+        if (!is_numeric($text)) {
             return null;
         }
         return (int) $text;
@@ -715,7 +753,7 @@ class AnimalListController extends Controller
         if ($text === '') {
             return null;
         }
-        if (! is_numeric($text)) {
+        if (!is_numeric($text)) {
             return null;
         }
         return (float) $text;
@@ -749,7 +787,7 @@ class AnimalListController extends Controller
     private function readCsvRows(string $path): array
     {
         $handle = fopen($path, 'r');
-        if (! $handle) {
+        if (!$handle) {
             throw new \RuntimeException('Unable to read import file.');
         }
 
@@ -764,7 +802,7 @@ class AnimalListController extends Controller
 
     private function readXlsxRows(string $path): array
     {
-        if (! class_exists(ZipArchive::class)) {
+        if (!class_exists(ZipArchive::class)) {
             throw new \RuntimeException('Zip extension is not available for Excel import.');
         }
 
@@ -775,7 +813,7 @@ class AnimalListController extends Controller
 
         try {
             $sheetPath = $this->resolveFirstWorksheetPath($zip);
-            if (! $sheetPath) {
+            if (!$sheetPath) {
                 throw new \RuntimeException('Worksheet not found in Excel file.');
             }
 
@@ -817,7 +855,7 @@ class AnimalListController extends Controller
         }
 
         $xml = @simplexml_load_string($xmlString);
-        if (! $xml) {
+        if (!$xml) {
             return [];
         }
 
@@ -829,7 +867,7 @@ class AnimalListController extends Controller
             $item->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
             $texts = $item->xpath('.//a:t') ?: [];
             $strings[] = collect($texts)
-                ->map(fn ($textNode) => (string) $textNode)
+                ->map(fn($textNode) => (string) $textNode)
                 ->implode('');
         }
 
@@ -839,7 +877,7 @@ class AnimalListController extends Controller
     private function parseXlsxSheetRows(string $sheetXml, array $sharedStrings): array
     {
         $xml = @simplexml_load_string($sheetXml);
-        if (! $xml) {
+        if (!$xml) {
             throw new \RuntimeException('Invalid worksheet XML in Excel file.');
         }
 
@@ -896,7 +934,7 @@ class AnimalListController extends Controller
         if ($type === 'inlineStr') {
             $texts = $cellNode->xpath('./a:is//a:t') ?: [];
             return collect($texts)
-                ->map(fn ($textNode) => (string) $textNode)
+                ->map(fn($textNode) => (string) $textNode)
                 ->implode('');
         }
 
@@ -912,98 +950,98 @@ class AnimalListController extends Controller
         return $value;
     }
 
-   private function buildPregnancyImportPayload(array $payload, array $normalized, int $rowNo): array
-{
-    $statusRaw = $payload['pregnancy_status'] ?? null;
-    $serviceTypeRaw = $payload['pregnancy_service_type'] ?? null;
-    $checkDueRaw = $payload['pregnancy_check_due_date'] ?? null;
-    $checkDateRaw = $payload['pregnancy_check_date'] ?? null;
-    $deliveryDateRaw = $payload['delivery_date'] ?? null;
-    $abortDateRaw = $payload['abort_date'] ?? null;
-    $abortReasonRaw = $payload['abort_reason'] ?? null;
-    $notesRaw = $payload['pregnancy_notes'] ?? null;
+    private function buildPregnancyImportPayload(array $payload, array $normalized, int $rowNo): array
+    {
+        $statusRaw = $payload['pregnancy_status'] ?? null;
+        $serviceTypeRaw = $payload['pregnancy_service_type'] ?? null;
+        $checkDueRaw = $payload['pregnancy_check_due_date'] ?? null;
+        $checkDateRaw = $payload['pregnancy_check_date'] ?? null;
+        $deliveryDateRaw = $payload['delivery_date'] ?? null;
+        $abortDateRaw = $payload['abort_date'] ?? null;
+        $abortReasonRaw = $payload['abort_reason'] ?? null;
+        $notesRaw = $payload['pregnancy_notes'] ?? null;
 
-    $hasPregnancyInput = collect([
-        $statusRaw,
-        $serviceTypeRaw,
-        $checkDueRaw,
-        $checkDateRaw,
-        $deliveryDateRaw,
-        $abortDateRaw,
-        $abortReasonRaw,
-        $notesRaw,
-    ])->contains(fn ($value) => $this->hasImportValue($value));
+        $hasPregnancyInput = collect([
+            $statusRaw,
+            $serviceTypeRaw,
+            $checkDueRaw,
+            $checkDateRaw,
+            $deliveryDateRaw,
+            $abortDateRaw,
+            $abortReasonRaw,
+            $notesRaw,
+        ])->contains(fn($value) => $this->hasImportValue($value));
 
-    if (! $hasPregnancyInput) {
-        return ['ok' => true, 'data' => null];
+        if (!$hasPregnancyInput) {
+            return ['ok' => true, 'data' => null];
+        }
+
+        if (blank($normalized['ai_date'])) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: AI date is required when pregnancy details are filled."];
+        }
+
+        $status = $this->normalizePregnancyStatus($statusRaw);
+
+        if ($status === '__invalid__') {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_status. Use pregnancy_check_due, pregnant, not_pregnant, repeat_heat, aborted, calved, delivery, or abort."];
+        }
+
+        $deliveryDate = $this->parseDateValue($deliveryDateRaw);
+        if ($this->hasImportValue($deliveryDateRaw) && $deliveryDate === null) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid delivery_date. Use a valid date."];
+        }
+
+        $abortDate = $this->parseDateValue($abortDateRaw);
+        if ($this->hasImportValue($abortDateRaw) && $abortDate === null) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid abort_date. Use a valid date."];
+        }
+
+        if ($deliveryDate && blank($statusRaw)) {
+            $status = 'calved';
+        }
+
+        if ($abortDate && blank($statusRaw)) {
+            $status = 'aborted';
+        }
+
+        $status ??= 'pregnancy_check_due';
+
+        $serviceType = $this->normalizePregnancyServiceType($serviceTypeRaw);
+        if ($serviceType === '__invalid__') {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_service_type. Use ai or natural."];
+        }
+        $serviceType ??= 'ai';
+
+        $checkDueDate = $this->parseDateValue($checkDueRaw);
+        if ($this->hasImportValue($checkDueRaw) && $checkDueDate === null) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_due_date. Use a valid date."];
+        }
+
+        $checkDate = $this->parseDateValue($checkDateRaw);
+        if ($this->hasImportValue($checkDateRaw) && $checkDate === null) {
+            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_date. Use a valid date."];
+        }
+
+        $aiDate = Carbon::parse($normalized['ai_date']);
+
+        return [
+            'ok' => true,
+            'data' => [
+                'status' => $status,
+                'service_type' => $serviceType,
+                'pregnancy_check_due_date' => $checkDueDate ?: $aiDate->copy()->addDays(30)->toDateString(),
+                'pregnancy_check_date' => $checkDate,
+                'pregnancy_result' => $this->pregnancyResultForStatus($status),
+                'expected_calving_date' => $aiDate->copy()->addDays(283)->toDateString(),
+                'dry_off_date' => $aiDate->copy()->addDays(223)->toDateString(),
+                'calving_date' => $deliveryDate,
+                'abort_date' => $abortDate,
+                'abort_reason' => $this->toNullableString($abortReasonRaw),
+                'notes' => $this->toNullableString($notesRaw),
+                'is_current' => $this->isCurrentPregnancyStatus($status),
+            ],
+        ];
     }
-
-    if (blank($normalized['ai_date'])) {
-        return ['ok' => false, 'error' => "Row {$rowNo}: AI date is required when pregnancy details are filled."];
-    }
-
-    $status = $this->normalizePregnancyStatus($statusRaw);
-
-    if ($status === '__invalid__') {
-        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_status. Use pregnancy_check_due, pregnant, not_pregnant, repeat_heat, aborted, calved, delivery, or abort."];
-    }
-
-    $deliveryDate = $this->parseDateValue($deliveryDateRaw);
-    if ($this->hasImportValue($deliveryDateRaw) && $deliveryDate === null) {
-        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid delivery_date. Use a valid date."];
-    }
-
-    $abortDate = $this->parseDateValue($abortDateRaw);
-    if ($this->hasImportValue($abortDateRaw) && $abortDate === null) {
-        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid abort_date. Use a valid date."];
-    }
-
-    if ($deliveryDate && blank($statusRaw)) {
-        $status = 'calved';
-    }
-
-    if ($abortDate && blank($statusRaw)) {
-        $status = 'aborted';
-    }
-
-    $status ??= 'pregnancy_check_due';
-
-    $serviceType = $this->normalizePregnancyServiceType($serviceTypeRaw);
-    if ($serviceType === '__invalid__') {
-        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_service_type. Use ai or natural."];
-    }
-    $serviceType ??= 'ai';
-
-    $checkDueDate = $this->parseDateValue($checkDueRaw);
-    if ($this->hasImportValue($checkDueRaw) && $checkDueDate === null) {
-        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_due_date. Use a valid date."];
-    }
-
-    $checkDate = $this->parseDateValue($checkDateRaw);
-    if ($this->hasImportValue($checkDateRaw) && $checkDate === null) {
-        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_date. Use a valid date."];
-    }
-
-    $aiDate = Carbon::parse($normalized['ai_date']);
-
-    return [
-        'ok' => true,
-        'data' => [
-            'status' => $status,
-            'service_type' => $serviceType,
-            'pregnancy_check_due_date' => $checkDueDate ?: $aiDate->copy()->addDays(30)->toDateString(),
-            'pregnancy_check_date' => $checkDate,
-            'pregnancy_result' => $this->pregnancyResultForStatus($status),
-            'expected_calving_date' => $aiDate->copy()->addDays(283)->toDateString(),
-            'dry_off_date' => $aiDate->copy()->addDays(223)->toDateString(),
-            'calving_date' => $deliveryDate,
-            'abort_date' => $abortDate,
-            'abort_reason' => $this->toNullableString($abortReasonRaw),
-            'notes' => $this->toNullableString($notesRaw),
-            'is_current' => $this->isCurrentPregnancyStatus($status),
-        ],
-    ];
-}
 
     private function createImportedPregnancyRecord(Animal $animal, array $pregnancyData): void
     {
@@ -1030,8 +1068,8 @@ class AnimalListController extends Controller
             'expected_calving_date' => $pregnancyData['expected_calving_date'],
             'dry_off_date' => $pregnancyData['dry_off_date'],
             'calving_date' => $pregnancyData['calving_date'],
-'abort_date' => $pregnancyData['abort_date'],
-'abort_reason' => $pregnancyData['abort_reason'],
+            'abort_date' => $pregnancyData['abort_date'],
+            'abort_reason' => $pregnancyData['abort_reason'],
             'status' => $pregnancyData['status'],
             'calf_animal_id' => null,
             'notes' => $pregnancyData['notes'],
@@ -1048,7 +1086,7 @@ class AnimalListController extends Controller
             ->latest('id')
             ->first();
 
-        if (! $latest) {
+        if (!$latest) {
             return ['pregnancy_no' => 1, 'service_no' => 1];
         }
 
@@ -1073,11 +1111,11 @@ class AnimalListController extends Controller
 
     private function pregnancyResultForStatus(string $status): string
     {
-       return match ($status) {
-    'pregnant', 'calved', 'aborted' => 'pregnant',
-    'not_pregnant', 'repeat_heat' => 'not_pregnant',
-    default => 'pending',
-};
+        return match ($status) {
+            'pregnant', 'calved', 'aborted' => 'pregnant',
+            'not_pregnant', 'repeat_heat' => 'not_pregnant',
+            default => 'pending',
+        };
     }
 
     private function isCurrentPregnancyStatus(string $status): bool
@@ -1102,7 +1140,7 @@ class AnimalListController extends Controller
             'not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant' => 'not_pregnant',
             'repeat heat', 'repeatheat' => 'repeat_heat',
             'aborted', 'abortion', 'abort' => 'aborted',
-'calved', 'calving', 'delivery', 'delivered' => 'calved',
+            'calved', 'calving', 'delivery', 'delivered' => 'calved',
             default => '__invalid__',
         };
     }
