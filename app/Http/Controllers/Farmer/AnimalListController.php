@@ -248,22 +248,26 @@ class AnimalListController extends Controller
             'weight',
             'default_milk_per_session',
             'is_active',
-            'pregnancy_status',
-            'pregnancy_service_type',
-            'pregnancy_check_due_date',
-            'pregnancy_notes',
+           'pregnancy_status',
+'pregnancy_service_type',
+'pregnancy_check_due_date',
+'pregnancy_check_date',
+'delivery_date',
+'abort_date',
+'abort_reason',
+'pregnancy_notes',
         ];
 
         $sampleRows = [
             [
                 '9876543210', 'Ritesh Deshmukh', 'Rani', 'TAG1001', 'Milking Cows',
                 '2', '15/05/2026', 'HF', '10/01/2023', '12/01/2024', 'Female',
-                '450', '8.5', '1', 'pregnant', 'ai', '15/06/2026', 'Imported pregnancy record',
+                '450', '8.5', '1', 'pregnant', 'ai', '15/06/2026', '', '', '', '', 'Imported pregnancy record',
             ],
             [
                 '9876543210', 'Ritesh Deshmukh', 'Gauri', 'TAG1002', 'Dry Cows',
                 '1', '', 'Jersey', '08/03/2022', '15/03/2023', 'Female',
-                '390', '', '1', '', '', '', '',
+                '390', '', '1', '', '', '', '', '', '', '', '',
             ],
         ];
 
@@ -908,57 +912,98 @@ class AnimalListController extends Controller
         return $value;
     }
 
-    private function buildPregnancyImportPayload(array $payload, array $normalized, int $rowNo): array
-    {
-        $statusRaw = $payload['pregnancy_status'] ?? null;
-        $serviceTypeRaw = $payload['pregnancy_service_type'] ?? null;
-        $checkDueRaw = $payload['pregnancy_check_due_date'] ?? null;
-        $notesRaw = $payload['pregnancy_notes'] ?? null;
+   private function buildPregnancyImportPayload(array $payload, array $normalized, int $rowNo): array
+{
+    $statusRaw = $payload['pregnancy_status'] ?? null;
+    $serviceTypeRaw = $payload['pregnancy_service_type'] ?? null;
+    $checkDueRaw = $payload['pregnancy_check_due_date'] ?? null;
+    $checkDateRaw = $payload['pregnancy_check_date'] ?? null;
+    $deliveryDateRaw = $payload['delivery_date'] ?? null;
+    $abortDateRaw = $payload['abort_date'] ?? null;
+    $abortReasonRaw = $payload['abort_reason'] ?? null;
+    $notesRaw = $payload['pregnancy_notes'] ?? null;
 
-        $hasPregnancyInput = collect([$statusRaw, $serviceTypeRaw, $checkDueRaw, $notesRaw])
-            ->contains(fn ($value) => $this->hasImportValue($value));
+    $hasPregnancyInput = collect([
+        $statusRaw,
+        $serviceTypeRaw,
+        $checkDueRaw,
+        $checkDateRaw,
+        $deliveryDateRaw,
+        $abortDateRaw,
+        $abortReasonRaw,
+        $notesRaw,
+    ])->contains(fn ($value) => $this->hasImportValue($value));
 
-        if (! $hasPregnancyInput) {
-            return ['ok' => true, 'data' => null];
-        }
-
-        if (blank($normalized['ai_date'])) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: AI date is required when pregnancy details are filled."]; 
-        }
-
-        $status = $this->normalizePregnancyStatus($statusRaw);
-        if ($status === '__invalid__') {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_status. Use served, pregnancy_check_due, pregnant, not_pregnant, repeat_heat, aborted, or calved."]; 
-        }
-        $status ??= 'served';
-
-        $serviceType = $this->normalizePregnancyServiceType($serviceTypeRaw);
-        if ($serviceType === '__invalid__') {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_service_type. Use ai or natural."]; 
-        }
-        $serviceType ??= 'ai';
-
-        $checkDueDate = $this->parseDateValue($checkDueRaw);
-        if ($this->hasImportValue($checkDueRaw) && $checkDueDate === null) {
-            return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_due_date. Use a valid date."]; 
-        }
-
-        $aiDate = Carbon::parse($normalized['ai_date']);
-
-        return [
-            'ok' => true,
-            'data' => [
-                'status' => $status,
-                'service_type' => $serviceType,
-                'pregnancy_check_due_date' => $checkDueDate ?: $aiDate->copy()->addDays(30)->toDateString(),
-                'pregnancy_result' => $this->pregnancyResultForStatus($status),
-                'expected_calving_date' => $aiDate->copy()->addDays(283)->toDateString(),
-                'dry_off_date' => $aiDate->copy()->addDays(223)->toDateString(),
-                'notes' => $this->toNullableString($notesRaw),
-                'is_current' => $this->isCurrentPregnancyStatus($status),
-            ],
-        ];
+    if (! $hasPregnancyInput) {
+        return ['ok' => true, 'data' => null];
     }
+
+    if (blank($normalized['ai_date'])) {
+        return ['ok' => false, 'error' => "Row {$rowNo}: AI date is required when pregnancy details are filled."];
+    }
+
+    $status = $this->normalizePregnancyStatus($statusRaw);
+
+    if ($status === '__invalid__') {
+        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_status. Use pregnancy_check_due, pregnant, not_pregnant, repeat_heat, aborted, calved, delivery, or abort."];
+    }
+
+    $deliveryDate = $this->parseDateValue($deliveryDateRaw);
+    if ($this->hasImportValue($deliveryDateRaw) && $deliveryDate === null) {
+        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid delivery_date. Use a valid date."];
+    }
+
+    $abortDate = $this->parseDateValue($abortDateRaw);
+    if ($this->hasImportValue($abortDateRaw) && $abortDate === null) {
+        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid abort_date. Use a valid date."];
+    }
+
+    if ($deliveryDate && blank($statusRaw)) {
+        $status = 'calved';
+    }
+
+    if ($abortDate && blank($statusRaw)) {
+        $status = 'aborted';
+    }
+
+    $status ??= 'pregnancy_check_due';
+
+    $serviceType = $this->normalizePregnancyServiceType($serviceTypeRaw);
+    if ($serviceType === '__invalid__') {
+        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_service_type. Use ai or natural."];
+    }
+    $serviceType ??= 'ai';
+
+    $checkDueDate = $this->parseDateValue($checkDueRaw);
+    if ($this->hasImportValue($checkDueRaw) && $checkDueDate === null) {
+        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_due_date. Use a valid date."];
+    }
+
+    $checkDate = $this->parseDateValue($checkDateRaw);
+    if ($this->hasImportValue($checkDateRaw) && $checkDate === null) {
+        return ['ok' => false, 'error' => "Row {$rowNo}: Invalid pregnancy_check_date. Use a valid date."];
+    }
+
+    $aiDate = Carbon::parse($normalized['ai_date']);
+
+    return [
+        'ok' => true,
+        'data' => [
+            'status' => $status,
+            'service_type' => $serviceType,
+            'pregnancy_check_due_date' => $checkDueDate ?: $aiDate->copy()->addDays(30)->toDateString(),
+            'pregnancy_check_date' => $checkDate,
+            'pregnancy_result' => $this->pregnancyResultForStatus($status),
+            'expected_calving_date' => $aiDate->copy()->addDays(283)->toDateString(),
+            'dry_off_date' => $aiDate->copy()->addDays(223)->toDateString(),
+            'calving_date' => $deliveryDate,
+            'abort_date' => $abortDate,
+            'abort_reason' => $this->toNullableString($abortReasonRaw),
+            'notes' => $this->toNullableString($notesRaw),
+            'is_current' => $this->isCurrentPregnancyStatus($status),
+        ],
+    ];
+}
 
     private function createImportedPregnancyRecord(Animal $animal, array $pregnancyData): void
     {
@@ -980,11 +1025,13 @@ class AnimalListController extends Controller
             'semen_no' => null,
             'doctor_name' => null,
             'pregnancy_check_due_date' => $pregnancyData['pregnancy_check_due_date'],
-            'pregnancy_check_date' => null,
+            'pregnancy_check_date' => $pregnancyData['pregnancy_check_date'],
             'pregnancy_result' => $pregnancyData['pregnancy_result'],
             'expected_calving_date' => $pregnancyData['expected_calving_date'],
             'dry_off_date' => $pregnancyData['dry_off_date'],
-            'calving_date' => null,
+            'calving_date' => $pregnancyData['calving_date'],
+'abort_date' => $pregnancyData['abort_date'],
+'abort_reason' => $pregnancyData['abort_reason'],
             'status' => $pregnancyData['status'],
             'calf_animal_id' => null,
             'notes' => $pregnancyData['notes'],
@@ -1026,11 +1073,11 @@ class AnimalListController extends Controller
 
     private function pregnancyResultForStatus(string $status): string
     {
-        return match ($status) {
-            'pregnant', 'calved' => 'pregnant',
-            'not_pregnant', 'repeat_heat' => 'not_pregnant',
-            default => 'pending',
-        };
+       return match ($status) {
+    'pregnant', 'calved', 'aborted' => 'pregnant',
+    'not_pregnant', 'repeat_heat' => 'not_pregnant',
+    default => 'pending',
+};
     }
 
     private function isCurrentPregnancyStatus(string $status): bool
@@ -1054,8 +1101,8 @@ class AnimalListController extends Controller
             'pregnant' => 'pregnant',
             'not pregnant', 'notpregnant', 'non pregnant', 'nonpregnant' => 'not_pregnant',
             'repeat heat', 'repeatheat' => 'repeat_heat',
-            'aborted', 'abortion' => 'aborted',
-            'calved', 'calving' => 'calved',
+            'aborted', 'abortion', 'abort' => 'aborted',
+'calved', 'calving', 'delivery', 'delivered' => 'calved',
             default => '__invalid__',
         };
     }

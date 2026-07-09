@@ -109,10 +109,7 @@
                         <button type="submit" class="btn btn-success btn-sm">
                             <i class="fa-solid fa-upload me-1"></i> Upload List
                         </button>
-                    </form>
-                    <div class="small text-muted text-end">
-                        Use the template and fill <strong>pregnancy_status</strong> to create a pregnancy record for that animal. Upload supports CSV and Excel <strong>(.xlsx)</strong>. For old <strong>.xls</strong>, save as <strong>.xlsx</strong> first.
-                    </div>
+                    </form>                    
                 </div>
                 @endperm
                 <button type="button" class="btn btn-light border" onclick="exportTableToPdf('animalTableExport', 'Animal List')" title="Download PDF">
