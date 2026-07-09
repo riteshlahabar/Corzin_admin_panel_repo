@@ -93,6 +93,7 @@ class AnimalListController extends Controller
             ->values();
 
         if ($animalIds->isNotEmpty()) {
+            /** @var \Illuminate\Database\Eloquent\Collection<int, Animal> $selectedAnimals */
             $selectedAnimals = Animal::query()
                 ->with('animalType')
                 ->where('farmer_id', $farmerId)
@@ -133,6 +134,7 @@ class AnimalListController extends Controller
                     return;
                 }
 
+                /** @var \Illuminate\Database\Eloquent\Collection<int, Animal> $animals */
                 $animals = Animal::query()
                     ->with('animalType')
                     ->where('farmer_id', $farmerId)
@@ -141,6 +143,10 @@ class AnimalListController extends Controller
                     ->get();
 
                 foreach ($animals as $animal) {
+                    if (! $animal instanceof Animal) {
+                        continue;
+                    }
+
                     $fromPanId = $animal->pan_id;
                     if ($fromPanId === $pan->id) {
                         continue;
