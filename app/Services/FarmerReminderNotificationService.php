@@ -23,13 +23,17 @@ class FarmerReminderNotificationService
 
     public function sendScheduledReminders(): void
     {
+        Log::info('Reminder scheduler started', [
+            'time' => now()->toDateTimeString(),
+        ]);
         foreach ([
-            'milk_entry' => fn () => $this->sendMilkEntryReminders(),
-            'feed_entry' => fn () => $this->sendFeedingEntryReminders(),
-            'mastitis_check' => fn () => $this->sendMastitisCheckReminders(),
-            'delivery_near' => fn () => $this->sendDeliveryNearReminders(),
-            'doctor_rating' => fn () => $this->sendDoctorRatingReminders(),
+            'milk_entry' => fn() => $this->sendMilkEntryReminders(),
+            'feed_entry' => fn() => $this->sendFeedingEntryReminders(),
+            'mastitis_check' => fn() => $this->sendMastitisCheckReminders(),
+            'delivery_near' => fn() => $this->sendDeliveryNearReminders(),
+            'doctor_rating' => fn() => $this->sendDoctorRatingReminders(),
         ] as $name => $callback) {
+            Log::info('Running reminder: ' . $name);
             try {
                 $callback();
             } catch (Throwable $exception) {
@@ -43,12 +47,12 @@ class FarmerReminderNotificationService
 
     public function sendMilkTrendAlert(?Animal $animal, string $date, string $shift, float $currentQuantity): void
     {
-        if (! $animal || $currentQuantity <= 0) {
+        if (!$animal || $currentQuantity <= 0) {
             return;
         }
 
         $entryDate = Carbon::parse($date)->startOfDay();
-        if (! $entryDate->isSameDay(now())) {
+        if (!$entryDate->isSameDay(now())) {
             return;
         }
 
@@ -65,7 +69,7 @@ class FarmerReminderNotificationService
             ->latest('id')
             ->first();
 
-        if (! $previous) {
+        if (!$previous) {
             return;
         }
 
@@ -78,15 +82,15 @@ class FarmerReminderNotificationService
         $animalName = $this->animalName($animal);
         $key = "farmer_reminder:milk_trend:{$animal->id}:{$entryDate->toDateString()}:{$shift}:{$direction}";
 
-        if (! Cache::add($key, true, now()->addDays(2))) {
+        if (!Cache::add($key, true, now()->addDays(2))) {
             return;
         }
 
         $this->sendToFarmer(
             $animal->farmer,
-            "({$animalName}) Milk ".($direction === 'increase' ? 'Increase' : 'Decrease'),
+            "({$animalName}) Milk " . ($direction === 'increase' ? 'Increase' : 'Decrease'),
             "{$animalName}'s {$shift} milk changed from {$this->formatNumber($previousQuantity)} L to {$this->formatNumber($currentQuantity)} L. Please check feed, health, or routine changes.",
-            'milk_'.$direction,
+            'milk_' . $direction,
             [
                 'animal_id' => $animal->id,
                 'shift' => $shift,
@@ -97,10 +101,18 @@ class FarmerReminderNotificationService
 
     protected function sendMilkEntryReminders(): void
     {
+        Log::info('Milk reminder function entered');
+
         foreach ($this->shiftReminderConfig('Milk') as $config) {
-            if (! $this->shouldRunAt((int) $config['hour'])) {
+            Log::info('Checking shift', $config);
+            if (!$this->shouldRunAt((int) $config['hour'])) {
+                Log::info('Time window skipped', [
+                    'current' => now()->toDateTimeString(),
+                    'hour' => $config['hour'],
+                ]);
                 continue;
             }
+            Log::info('Time window matched');
 
             $shift = $config['shift'];
             $column = $this->milkColumnForShift($shift);
@@ -108,26 +120,45 @@ class FarmerReminderNotificationService
                 continue;
             }
 
-            foreach ($this->eligibleFarmers()->get() as $farmer) {
-                if ($shift === 'Afternoon' && ! $this->farmerHasAfternoonShift((int) $farmer->id)) {
+            Log::info('Time window matched');
+
+            $farmers = $this->eligibleFarmers()->get();
+
+            Log::info('Eligible farmers', [
+                'count' => $farmers->count(),
+            ]);
+
+            foreach ($farmers as $farmer) {
+                Log::info('Checking farmer', [
+                    'id' => $farmer->id,
+                    'name' => $farmer->first_name,
+                ]);
+                if ($shift === 'Afternoon' && !$this->farmerHasAfternoonShift((int) $farmer->id)) {
                     continue;
                 }
 
                 $hasEntry = MilkProduction::query()
-                    ->whereHas('animal', fn ($query) => $query->where('farmer_id', $farmer->id))
+                    ->whereHas('animal', fn($query) => $query->where('farmer_id', $farmer->id))
                     ->whereDate('date', today()->toDateString())
                     ->where($column, '>', 0)
                     ->exists();
+                Log::info('Milk entry exists', [
+                    'farmer' => $farmer->id,
+                    'exists' => $hasEntry,
+                ]);
 
                 if ($hasEntry) {
                     continue;
                 }
 
+                Log::info('Sending milk reminder', [
+                    'farmer' => $farmer->id,
+                ]);
                 $this->sendDailyReminder(
                     $farmer,
                     "Please Enter Today's {$shift} Milk",
                     "Today's {$shift} milk entry is pending.",
-                    'milk_entry_'.$shift
+                    'milk_entry_' . $shift
                 );
             }
         }
@@ -136,14 +167,14 @@ class FarmerReminderNotificationService
     protected function sendFeedingEntryReminders(): void
     {
         foreach ($this->shiftReminderConfig('Feed') as $config) {
-            if (! $this->shouldRunAt((int) $config['hour'])) {
+            if (!$this->shouldRunAt((int) $config['hour'])) {
                 continue;
             }
 
             $shift = $config['shift'];
 
             foreach ($this->eligibleFarmers()->get() as $farmer) {
-                if ($shift === 'Afternoon' && ! $this->farmerHasAfternoonShift((int) $farmer->id)) {
+                if ($shift === 'Afternoon' && !$this->farmerHasAfternoonShift((int) $farmer->id)) {
                     continue;
                 }
 
@@ -161,7 +192,7 @@ class FarmerReminderNotificationService
                     $farmer,
                     "Please Enter Today's {$shift} Feed",
                     "Today's {$shift} feed entry is pending.",
-                    'feed_entry_'.$shift
+                    'feed_entry_' . $shift
                 );
             }
         }
@@ -178,12 +209,12 @@ class FarmerReminderNotificationService
             $basisDate = $latestDate
                 ? Carbon::parse($latestDate)
                 : ($farmer->created_at ? Carbon::parse($farmer->created_at) : null);
-            if (! $basisDate || $basisDate->gt(now()->subMonth())) {
+            if (!$basisDate || $basisDate->gt(now()->subMonth())) {
                 continue;
             }
 
             $key = "farmer_reminder:mastitis_check:{$farmer->id}";
-            if (! Cache::add($key, true, now()->addDays(10))) {
+            if (!Cache::add($key, true, now()->addDays(10))) {
                 continue;
             }
 
@@ -209,12 +240,12 @@ class FarmerReminderNotificationService
 
         foreach ($records as $record) {
             $animal = $record->animal;
-            if (! $animal) {
+            if (!$animal) {
                 continue;
             }
 
             $key = "farmer_reminder:delivery_near:{$record->id}:{$targetDate}";
-            if (! Cache::add($key, true, now()->addDays(15))) {
+            if (!Cache::add($key, true, now()->addDays(15))) {
                 continue;
             }
 
@@ -245,7 +276,7 @@ class FarmerReminderNotificationService
 
         foreach ($appointments as $appointment) {
             $key = "farmer_reminder:doctor_rating:{$appointment->id}";
-            if (! Cache::add($key, true, now()->addDays(7))) {
+            if (!Cache::add($key, true, now()->addDays(7))) {
                 continue;
             }
 
@@ -267,8 +298,8 @@ class FarmerReminderNotificationService
 
     protected function sendDailyReminder(Farmer $farmer, string $title, string $body, string $event): void
     {
-        $key = 'farmer_reminder:'.$event.':'.$farmer->id.':'.today()->toDateString();
-        if (! Cache::add($key, true, now()->addDay())) {
+        $key = 'farmer_reminder:' . $event . ':' . $farmer->id . ':' . today()->toDateString();
+        if (!Cache::add($key, true, now()->addDay())) {
             return;
         }
 
@@ -277,11 +308,11 @@ class FarmerReminderNotificationService
 
     protected function sendToFarmer(?Farmer $farmer, string $title, string $body, string $event, array $data = []): bool
     {
-        if (! $farmer || blank($farmer->fcm_token)) {
+        if (!$farmer || blank($farmer->fcm_token)) {
             return false;
         }
 
-        return $this->firebaseService->sendToDevice(
+        $result = $this->firebaseService->sendToDevice(
             $farmer->fcm_token,
             $title,
             $body,
@@ -291,6 +322,13 @@ class FarmerReminderNotificationService
                 'farmer_id' => (string) $farmer->id,
             ], $data)
         );
+
+        Log::info('Reminder send result', [
+            'farmer' => $farmer->id,
+            'result' => $result,
+        ]);
+
+        return $result;
     }
 
     protected function eligibleFarmers()
@@ -314,7 +352,7 @@ class FarmerReminderNotificationService
             ->contains(function (FarmerPan $pan) {
                 $shifts = is_array($pan->milk_shifts) ? $pan->milk_shifts : [];
                 return collect($shifts)
-                    ->map(fn ($shift) => strtolower(trim((string) $shift)))
+                    ->map(fn($shift) => strtolower(trim((string) $shift)))
                     ->contains('afternoon');
             });
     }
