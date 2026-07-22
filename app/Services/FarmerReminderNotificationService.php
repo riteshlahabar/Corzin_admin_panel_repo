@@ -360,7 +360,7 @@ class FarmerReminderNotificationService
     protected function shiftReminderConfig(string $type): array
     {
         return [
-            ['shift' => 'Morning', 'hour' => 14, 'type' => $type],
+            ['shift' => 'Morning', 'hour' => 11, 'type' => $type],
             ['shift' => 'Afternoon', 'hour' => 15, 'type' => $type],
             ['shift' => 'Evening', 'hour' => 21, 'type' => $type],
         ];
